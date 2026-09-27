@@ -63,7 +63,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="chart-foot"><span><i class="ema-fast"></i>EMA 9 <i class="ema-slow"></i>EMA 21</span><span>เวลาไทย · UTC+7</span><span>ข้อมูล Last price</span><span>Charts by TradingView</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">BROWSER V4</span></div>
+  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">BROWSER V4.2</span></div>
   <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><small>ถ้าเข้าที่ราคาตอนนี้ · เป้าหมาย +10 นาที</small><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
   <div class="strong-banner" id="strong-banner" hidden><span>STRONG SETUP</span><strong>จังหวะเข้าเด่น</strong><small>ระบบยืนยันเงื่อนไขต่อเนื่องแล้ว · จุดเข้าจะถูกล็อกไว้ด้านล่าง</small></div>
   <div class="signal-description" id="signal-description">โหลดข้อมูล 1m / 5m / 15m และแรงซื้อขายก่อนเริ่มวิเคราะห์</div>
@@ -94,14 +94,17 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   const SYMBOL = 'BTCUSDT';
   const REST_BASE = 'https://fapi.binance.com';
   const REST = REST_BASE + '/fapi/v1/klines';
-  const WS = 'wss://fstream.binance.com/stream?streams=' + [
+  const MARKET_WS = 'wss://fstream.binance.com/market/stream?streams=' + [
     'btcusdt@aggTrade',
-    'btcusdt@depth10@100ms',
     'btcusdt@forceOrder',
     'btcusdt@kline_1m',
     'btcusdt@kline_5m',
     'btcusdt@kline_15m'
   ].join('/');
+  const PUBLIC_WS = 'wss://fstream.binance.com/public/stream?streams=' + [
+    'btcusdt@depth10@100ms'
+  ].join('/');
+  const SPOT_REST = 'https://data-api.binance.vision/api/v3/klines';
   const ANALYSIS_INTERVAL_MS = 800;
   const STRONG_LIKELIHOOD = 70;
   const STRONG_READINESS = 78;
@@ -121,7 +124,9 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     tradeTape: [],
     liquidationTape: [],
     book: null,
-    socket: null,
+    marketSocket: null,
+    publicSocket: null,
+    wsGeneration: 0,
     reconnectTimer: null,
     reconnectCount: 0,
     lastMessageAt: 0,
@@ -144,6 +149,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     booted: false,
     fallbackBusy: false,
     fallbackActive: false,
+    historyFallback: false,
   };
 
   function median(values) {
@@ -411,7 +417,22 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 
   function normalizeKline(row){return {time:Math.floor(Number(row[0])/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4],volume:+row[5],closed:Number(row[6])<Date.now()};}
   async function loadHistory(interval){
-    const r=await fetch(`${REST}?symbol=${SYMBOL}&interval=${interval}&limit=240`,{cache:'no-store'});if(!r.ok)throw new Error(`โหลด ${interval} ไม่สำเร็จ (HTTP ${r.status})`);const rows=await r.json();return rows.map(normalizeKline);
+    const sources=[
+      {name:'Futures',url:`${REST}?symbol=${SYMBOL}&interval=${interval}&limit=240`},
+      {name:'Spot fallback',url:`${SPOT_REST}?symbol=${SYMBOL}&interval=${interval}&limit=240`}
+    ];
+    let lastError=null;
+    for(const src of sources){
+      try{
+        const r=await fetch(src.url,{cache:'no-store'});
+        if(!r.ok)throw new Error(`HTTP ${r.status}`);
+        const rows=await r.json();
+        if(!Array.isArray(rows)||rows.length<30)throw new Error('ข้อมูลแท่งไม่ครบ');
+        if(src.name!=='Futures')state.historyFallback=true;
+        return rows.map(normalizeKline);
+      }catch(err){lastError=err;console.warn('history source failed',src.name,interval,err);}
+    }
+    throw new Error(`โหลด ${interval} ไม่สำเร็จ: ${lastError?.message||'unknown error'}`);
   }
   async function boot(){
     statusView('syncing','กำลังโหลดแท่ง 1m / 5m / 15m จาก Binance Futures');
@@ -474,12 +495,32 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   }
 
   function connect(){
-    clearTimeout(state.reconnectTimer);if(state.socket){try{state.socket.close();}catch{}}statusView('connecting','กำลังต่อ Binance Futures WebSocket โดยตรงจากเบราว์เซอร์');
-    const ws=new WebSocket(WS);state.socket=ws;
-    ws.onopen=()=>{state.reconnectCount=0;};
-    ws.onmessage=(evt)=>{state.lastMessageAt=Date.now();state.fallbackActive=false;statusView('live');try{const w=JSON.parse(evt.data);ingest(w.data||w);}catch(e){console.error(e);}};
-    ws.onerror=()=>statusView('stale','WebSocket มีปัญหา กำลังเชื่อมต่อใหม่');
-    ws.onclose=()=>{statusView('offline','การเชื่อมต่อขาด กำลังลองใหม่');const delay=Math.min(30000,1500*2**Math.min(state.reconnectCount++,4));state.reconnectTimer=setTimeout(connect,delay);};
+    clearTimeout(state.reconnectTimer);
+    const generation=++state.wsGeneration;
+    for(const key of ['marketSocket','publicSocket']){
+      const old=state[key];
+      if(old){old.onclose=null;old.onerror=null;old.onmessage=null;try{old.close();}catch{}}
+      state[key]=null;
+    }
+    statusView('connecting','กำลังต่อ Binance Futures WebSocket รุ่นปัจจุบัน (/market + /public)');
+    const attach=(url,key)=>{
+      const ws=new WebSocket(url);state[key]=ws;
+      ws.onopen=()=>{if(generation!==state.wsGeneration)return;state.reconnectCount=0;};
+      ws.onmessage=(evt)=>{
+        if(generation!==state.wsGeneration)return;
+        state.lastMessageAt=Date.now();state.fallbackActive=false;statusView('live');
+        try{const w=JSON.parse(evt.data);ingest(w.data||w);}catch(e){console.error(e);}
+      };
+      ws.onerror=()=>{if(generation===state.wsGeneration)statusView('stale','WebSocket มีปัญหา กำลังเชื่อมต่อใหม่');};
+      ws.onclose=()=>{
+        if(generation!==state.wsGeneration)return;
+        statusView('offline','การเชื่อมต่อขาด กำลังลองใหม่');
+        const delay=Math.min(30000,1500*2**Math.min(state.reconnectCount++,4));
+        clearTimeout(state.reconnectTimer);state.reconnectTimer=setTimeout(connect,delay);
+      };
+    };
+    attach(MARKET_WS,'marketSocket');
+    attach(PUBLIC_WS,'publicSocket');
   }
   function statusView(s,msg=''){document.body.dataset.feed=s;$('mode').textContent=s==='live'?'● ข้อมูลจริง':'ข้อมูลจริง · '+({connecting:'กำลังเชื่อม',syncing:'กำลังโหลด',stale:'ข้อมูลล่าช้า',offline:'ขาดการเชื่อมต่อ'}[s]||s);$('connection-text').textContent=s==='live'?'เชื่อมต่อ Binance แล้ว':({connecting:'กำลังเชื่อม Binance',syncing:'กำลังโหลดแท่งเทียน',stale:'ข้อมูลล่าช้า',offline:'การเชื่อมต่อขาด'}[s]||s);$('feed-banner').hidden=s==='live';$('feed-banner').textContent=msg||'กำลังเชื่อมต่อข้อมูลตลาด';}
 
