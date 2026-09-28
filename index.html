@@ -103,40 +103,51 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </script>
 <script>
 
-/* Event Engine 6.0 — +10 minute horizon first, causal, 1m-first.
-   Market regime routes each setup: SIDEWAY, BREAKOUT WATCH, or TREND.
+/* Event Engine 7.0 — +10 minute horizon first, causal, 1m-first.
+   Market Phase routes each setup: RANGE, TREND, IMPULSE, MATURE_IMPULSE, EXHAUSTION, REVERSAL.
    RSI/MACD are chart-only and never enter signal decisions. */
 (function(root){
 'use strict';
 const CFG=Object.freeze({
- version:'6.6.0',horizonMs:600000,settlementToleranceMs:5000,
+ version:'7.0.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,
  minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
  rangeEdge:.26,rangeEntryLimit:.40,rangeMinSamples:3,rangeMinWinRate:.58,rangeMinScore:5,breakoutMinScore:5,
- statsTrendMin:.10,failedBreakTrendMin:.15,
+ phaseTrendMin:.24,impulseBodyAtr:.55,impulseRangeAtr:.80,impulseRelVol:1.45,impulseVolume3:1.25,
+ matureExtensionAtr:1.45,climaxExtensionAtr:2.25,climaxRelVol:2.40,exhaustionScoreMin:2,
+ episodeWindowMs:480000,episodeAtrDistance:3,maxSameDirectionPerEpisode:2,minSameDirectionGapMs:90000,
  maxHistory:1500,maxAudit:2500
 });
 const VERSION_PROFILE=Object.freeze({
- name:'V6.6 Statistical Entry',
- basis:'V6.5 observed T+10 dataset',
- source:Object.freeze({version:'6.5.0',completedSignals:52,wins:30,winRate:.576923,detailedSignals:20}),
+ name:'V7.0 Market Phase + Volume/Impulse',
+ basis:'V6.6 out-of-sample T+10 dataset + observed impulse failure cluster',
+ source:Object.freeze({version:'6.6.0',completedSignals:18,wins:11,winRate:.611111,pendingSignals:2}),
  observed:Object.freeze({
-  breakout:Object.freeze({n:17,winRate:.764706,policy:'inverse_setup'}),
-  pullback:Object.freeze({n:5,winRate:.80,policy:'inverse_setup'}),
-  range_reversal:Object.freeze({n:24,winRate:.458333,counterTrendHypothesis:.75,policy:'counter_1m_trend'}),
-  failed_break:Object.freeze({n:4,winRate:.25,counterTrendHypothesis:1.0,policy:'counter_1m_trend_low_sample'}),
-  trend_continuation:Object.freeze({n:2,winRate:.50,policy:'candidate_only_until_more_data'})
+  breakout:Object.freeze({n:5,wins:2,winRate:.40}),
+  pullback:Object.freeze({n:7,wins:4,winRate:.571429}),
+  range_reversal:Object.freeze({n:4,wins:4,winRate:1}),
+  failed_break:Object.freeze({n:2,wins:1,winRate:.50}),
+  side:Object.freeze({HIGH:{n:10,wins:9,winRate:.90},LOW:{n:8,wins:2,winRate:.25}})
  }),
- notes:Object.freeze(['สถิติเป็น in-sample ใช้เป็นสมมติฐานสำหรับ V6.6','เก็บผล V6.6 แยกเพื่อทดสอบกับข้อมูลใหม่'])
+ lessons:Object.freeze([
+  'inverse breakout/pullback จาก V6.5 ไม่คงผลใน V6.6',
+  'ช่วง impulse เดียว V6.6 ยิง LOW ซ้ำ 6 ไม้และผิดครบ 6',
+  'ต้องแยก early/mid impulse ออกจาก climax ก่อนอนุญาตให้สวน',
+  'volume และ candle expansion ต้องเป็น feature ตัดสินใจ ไม่ใช่แค่แสดงผล',
+  'trend continuation ต้องกลับมาเป็นจุดเข้าจริงเมื่อ phase สนับสนุน'
+ ])
 });
+const V65_CONFIG=Object.freeze({
+ horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
+ maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
+ rangeEdge:.26,rangeEntryLimit:.40,rangeMinSamples:3,rangeMinWinRate:.58,rangeMinScore:5,breakoutMinScore:5,maxHistory:1500,maxAudit:2500
+});
+const V66_CONFIG=Object.freeze({...V65_CONFIG,version:'6.6.0',statsTrendMin:.10,failedBreakTrendMin:.15});
 const VERSION_SETTINGS_SEED=Object.freeze({
- '6.5.0':Object.freeze({name:'V6.5 Inverse All',config:Object.freeze({
-  horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
-  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
-  rangeEdge:.26,rangeEntryLimit:.40,rangeMinSamples:3,rangeMinWinRate:.58,rangeMinScore:5,breakoutMinScore:5,maxHistory:1500,maxAudit:2500
- }),strategy:Object.freeze({direction:'inverse_all_setup_directions',zones:'1m_support_resistance',trendlines:false})}),
- '6.6.0':Object.freeze({name:'V6.6 Statistical Entry',config:Object.freeze({...CFG}),strategy:VERSION_PROFILE})
+ '6.5.0':Object.freeze({name:'V6.5 Inverse All',config:V65_CONFIG,strategy:Object.freeze({direction:'inverse_all_setup_directions',zones:'1m_support_resistance',trendlines:false})}),
+ '6.6.0':Object.freeze({name:'V6.6 Statistical Entry',config:V66_CONFIG,strategy:Object.freeze({direction:'setup_specific_inverse_or_countertrend',basis:'V6.5 observed dataset',zones:'1m_support_resistance',trendlines:false})}),
+ '7.0.0':Object.freeze({name:'V7.0 Market Phase + Volume/Impulse',config:Object.freeze({...CFG}),strategy:VERSION_PROFILE})
 });
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
@@ -171,15 +182,27 @@ function horizon10Stats(b){
  return {upper,lower};
 }
 function features(bars,p){
- const b=bars.filter(x=>x.closed).slice(-140);if(b.length<35)return null;
+ const b=bars.filter(x=>x.closed).slice(-160);if(b.length<35)return null;
  const c=b.map(x=>x.close),e8=ema(c,8),e21=ema(c,21);
  const atr=Math.max(atrOf(b.slice(-20),14),p*.00008,1e-9),r=b.slice(-CFG.rangeBars);
  const trend=clamp((e8.at(-1)-e21.at(-1))/atr,-1,1),mom=(c.at(-1)-c.at(-4))/atr;
+ const momPrev=(c.at(-4)-c.at(-7))/atr,momAccel=mom-momPrev;
  const path=c.slice(-11).slice(1).reduce((s,x,i)=>s+Math.abs(x-c.slice(-11)[i]),0);
  const eff=path?Math.abs(c.at(-1)-c.at(-11))/path:0;
  const high=Math.max(...r.map(x=>x.high)),low=Math.min(...r.map(x=>x.low)),width=Math.max(high-low,atr*.1);
  const fair=median(r.map(x=>x.close));
  const emaSepAtr=Math.abs(e8.at(-1)-e21.at(-1))/atr,emaSlopeAtr=(e21.at(-1)-e21.at(-6))/atr;
+ const last=b.at(-1),priorVol=b.slice(-24,-1).map(x=>x.volume).filter(v=>v>0);
+ const volumeMedian=Math.max(median(priorVol)||1,1e-9),relVolume=(last?.volume||0)/volumeMedian;
+ const volume3Ratio=avg(b.slice(-3).map(x=>x.volume))/volumeMedian;
+ const candleRange=Math.max((last?.high||p)-(last?.low||p),1e-9);
+ const bodyAtr=Math.abs((last?.close||p)-(last?.open||p))/atr,rangeAtr=candleRange/atr;
+ const closeLocation=clamp(((last?.close||p)-(last?.low||p))/candleRange,0,1);
+ const upperWickRatio=clamp(((last?.high||p)-Math.max(last?.open||p,last?.close||p))/candleRange,0,1);
+ const lowerWickRatio=clamp((Math.min(last?.open||p,last?.close||p)-(last?.low||p))/candleRange,0,1);
+ const extensionEma21Atr=(p-e21.at(-1))/atr;
+ let impulseSeq=0,lastDir=Math.sign((last?.close||p)-(last?.open||p));
+ if(lastDir)for(let i=b.length-1;i>=Math.max(0,b.length-6);i--){const q=b[i],d=Math.sign(q.close-q.open),body=Math.abs(q.close-q.open)/atr;if(d===lastDir&&body>=.20)impulseSeq++;else break;}
  let sideCrosses=0,prevSide=0;
  const start=Math.max(0,c.length-12);
  for(let i=start;i<c.length;i++){
@@ -195,27 +218,38 @@ function features(bars,p){
   if(cur.low<pl-atr*.05&&(cur.close>=pl||next.close>=pl))lowerRejects++;
  }
  const h10=horizon10Stats(b);
- return {b,atr,high,low,fair,ema8:e8.at(-1),ema21:e21.at(-1),trend,mom,eff,
+ return {b,atr,high,low,fair,ema8:e8.at(-1),ema21:e21.at(-1),trend,mom,momPrev,momAccel,eff,
   emaSepAtr,emaSlopeAtr,sideCrosses,falseBreaks:upperRejects+lowerRejects,upperRejects,lowerRejects,
-  rangeWidthAtr:(high-low)/atr,rangePosition:clamp((p-low)/width,0,1),h10};
+  rangeWidthAtr:(high-low)/atr,rangePosition:clamp((p-low)/width,0,1),h10,
+  volumeMedian,relVolume,volume3Ratio,bodyAtr,rangeAtr,closeLocation,upperWickRatio,lowerWickRatio,extensionEma21Atr,impulseSeq};
 }
-const DATASET_SCHEMA='btc-t10-training-v1';
+const DATASET_SCHEMA='btc-t10-training-v2';
 function compactBars(bars,n=20){return (bars||[]).filter(x=>x.closed).slice(-n).map(x=>[x.time,x.open,x.high,x.low,x.close,x.volume]);}
-function candidateFeatures(f,x,type,d,level){return {schema:DATASET_SCHEMA,type,modelDirection:d>0?'HIGH':'LOW',detectedPrice:x.price,level,atr:f.atr,flow:Number.isFinite(x.flow)?x.flow:null,book:Number.isFinite(x.book)?x.book:null,coverage:x.coverage||0,bookValid:!!x.bookValid,trend:f.trend,momentum:f.mom,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects};}
-function selectOutputDecision(type,modelD,trend){
- const modelDirection=modelD>0?'HIGH':'LOW',inverseDirection=modelD>0?'LOW':'HIGH',strength=Math.abs(trend||0);
- if(type==='trend_continuation')return {direction:null,modelDirection,policy:'candidate_only',strength,reason:'TREND continuation มีข้อมูลเพียง 2 ไม้ / 50% · เก็บเป็น candidate ก่อน'};
- if(type==='range_reversal'){
-  if(strength<CFG.statsTrendMin)return {direction:null,modelDirection,policy:'wait_weak_trend',strength,reason:`Range reversal · |Trend 1m| ${strength.toFixed(2)} < ${CFG.statsTrendMin.toFixed(2)} · ยังไม่มี edge สถิติพอ`};
-  return {direction:trend>0?'LOW':'HIGH',modelDirection,policy:'counter_1m_trend',strength,reason:'Range reversal · ใช้ฝั่งสวน Trend 1m ตามสถิติ V6.5'};
+function candidateFeatures(f,x,type,d,level){const ph=x.phase||null;return {schema:DATASET_SCHEMA,type,modelDirection:d>0?'HIGH':'LOW',detectedPrice:x.price,level,atr:f.atr,flow:Number.isFinite(x.flow)?x.flow:null,book:Number.isFinite(x.book)?x.book:null,coverage:x.coverage||0,bookValid:!!x.bookValid,trend:f.trend,momentum:f.mom,momentumAccel:f.momAccel,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,impulseSeq:f.impulseSeq,marketPhase:ph?.phase||null,phaseDir:ph?.dir||0,phaseScore:ph?.score||0,liveVolumePace:ph?.liveVolumePace??null,liveBodyAtr:ph?.liveBodyAtr??null,extensionAtr:ph?.extensionAtr??null,exhaustionScore:ph?.exhaustionScore??null};}
+function selectOutputDecision(type,modelD,f,phase){
+ const modelDirection=modelD>0?'HIGH':'LOW',p=phase||{phase:'TRANSITION',dir:0},setupDir=modelD;
+ const follow=()=>({direction:modelDirection,modelDirection,policy:'follow_market_phase',strength:Math.abs(f?.trend||0),reason:'ตาม '+p.phase+' '+(p.dir>0?'ขึ้น':'ลง')+' · setup ไปทิศเดียวกับ phase'});
+ if(['IMPULSE','MATURE_IMPULSE','TREND'].includes(p.phase)){
+  if(p.dir&&setupDir!==p.dir)return {direction:null,modelDirection,policy:'block_counter_impulse',strength:Math.abs(f?.trend||0),reason:p.phase+' ยังเดินแรง · ห้ามสวน '+(p.dir>0?'ขาขึ้น':'ขาลง')};
+  return follow();
  }
- if(type==='failed_break'){
-  if(strength<CFG.failedBreakTrendMin)return {direction:null,modelDirection,policy:'wait_weak_trend',strength,reason:`Failed break · |Trend 1m| ${strength.toFixed(2)} < ${CFG.failedBreakTrendMin.toFixed(2)} · ตัวอย่างยังน้อย`};
-  return {direction:trend>0?'LOW':'HIGH',modelDirection,policy:'counter_1m_trend_low_sample',strength,reason:'Failed break · สวน Trend 1m แต่ยังถือเป็นกลุ่มตัวอย่างน้อย'};
+ if(p.phase==='EXHAUSTION'){
+  if(['range_reversal','failed_break','exhaustion_reversal'].includes(type)&&p.dir&&setupDir===-p.dir)return {direction:modelDirection,modelDirection,policy:'exhaustion_reversal',strength:p.exhaustionScore||0,reason:'ปลายขา + มี exhaustion ยืนยัน · อนุญาตสวน'};
+  return {direction:null,modelDirection,policy:'wait_exhaustion_confirmation',strength:p.exhaustionScore||0,reason:'EXHAUSTION · ยังไม่ไล่ตามและยังไม่สวนจนมี reversal trigger'};
  }
- if(type==='breakout')return {direction:inverseDirection,modelDirection,policy:'inverse_breakout',strength,reason:'Breakout trigger · ใช้ฝั่งตรงข้าม setup ตามสถิติ 13/17'};
- if(type==='pullback')return {direction:inverseDirection,modelDirection,policy:'inverse_pullback',strength,reason:'Pullback trigger · ใช้ฝั่งตรงข้าม setup ตามสถิติ 4/5'};
- return {direction:inverseDirection,modelDirection,policy:'inverse_fallback',strength,reason:'ใช้ฝั่งตรงข้าม setup เป็น fallback'};
+ if(p.phase==='REVERSAL'){
+  if(!p.dir||setupDir===p.dir)return {direction:modelDirection,modelDirection,policy:'follow_confirmed_reversal',strength:p.exhaustionScore||0,reason:'REVERSAL ยืนยัน · ตามทิศกลับตัว'};
+  return {direction:null,modelDirection,policy:'block_against_reversal',strength:p.exhaustionScore||0,reason:'REVERSAL ยืนยันแล้ว · setup สวนทิศกลับตัว'};
+ }
+ if(p.phase==='RANGE'){
+  if(['range_reversal','failed_break'].includes(type))return {direction:modelDirection,modelDirection,policy:'range_edge_reversal',strength:Math.abs(f?.trend||0),reason:'RANGE · ใช้จุดกลับจากขอบตาม setup'};
+  if(type==='breakout')return {direction:null,modelDirection,policy:'wait_breakout_acceptance',strength:0,reason:'RANGE · รอ breakout เปลี่ยน phase/ยืนยัน acceptance ก่อน'};
+  return {direction:null,modelDirection,policy:'range_blocks_trend_setup',strength:0,reason:'RANGE · ไม่ใช้ trend-follow setup'};
+ }
+ if(type==='breakout'||type==='failed_break')return {direction:modelDirection,modelDirection,policy:'transition_structure',strength:Math.abs(f?.trend||0),reason:'TRANSITION · ใช้ทิศ setup หลังหลักฐานโครงสร้างผ่าน'};
+ if((type==='pullback'||type==='trend_continuation')&&Math.abs(f?.trend||0)>=CFG.phaseTrendMin&&Math.sign(f.trend)===setupDir)return follow();
+ if(type==='range_reversal')return {direction:modelDirection,modelDirection,policy:'transition_edge_reversal',strength:Math.abs(f?.trend||0),reason:'TRANSITION · edge reversal ผ่านหลักฐาน'};
+ return {direction:null,modelDirection,policy:'wait_transition',strength:Math.abs(f?.trend||0),reason:'TRANSITION · ยังไม่มี phase edge ชัด'};
 }
 function classifyRegime(f,p){
  let rangeScore=0,trendScore=0;
@@ -240,6 +274,47 @@ function classifyRegime(f,p){
  return {raw,mode:raw,rangeScore,trendScore,breakoutCandidate:!!breakoutDir,breakoutDir,acceptedDir,
   position:f.rangePosition,eff:f.eff,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,sideCrosses:f.sideCrosses,
   falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects};
+}
+function marketPhase(f,x,regime){
+ const live=x.current||x.bars?.at(-1)||f.b.at(-1),atr=Math.max(f.atr,1e-9),p=x.price;
+ const elapsed=live&&Number.isFinite(x.ts)?clamp(x.ts/1000-live.time,8,60):60,frac=clamp(elapsed/60,.25,1);
+ const liveVolumePace=live?clamp((live.volume/frac)/Math.max(f.volumeMedian,1e-9),0,10):f.relVolume;
+ const liveHigh=Math.max(live?.high??p,p),liveLow=Math.min(live?.low??p,p),liveRange=Math.max(liveHigh-liveLow,1e-9);
+ const liveBodyAtr=live?Math.abs(p-live.open)/atr:0,liveRangeAtr=liveRange/atr,liveDir=live?Math.sign(p-live.open):0;
+ const liveCloseLocation=clamp((p-liveLow)/liveRange,0,1);
+ const trendDir=Math.abs(f.trend)>=.18?Math.sign(f.trend):(Math.abs(f.mom)>=.25?Math.sign(f.mom):liveDir);
+ const dir=trendDir||liveDir||0,flowAligned=dir*(x.flow||0),bookAligned=dir*(x.bookValid?x.book||0:0);
+ const extensionAtr=dir?dir*(p-f.ema21)/atr:0,alignedClose=dir>0?liveCloseLocation:dir<0?1-liveCloseLocation:.5;
+ const oppositeWick=dir>0?(liveHigh-p)/liveRange:dir<0?(p-liveLow)/liveRange:0;
+ const relVol=Math.max(f.relVolume||0,f.volume3Ratio||0,liveVolumePace||0);
+ const priceExpansion=Math.max(f.bodyAtr||0,f.rangeAtr||0,liveBodyAtr,liveRangeAtr);
+ let score=0;
+ if(dir&&dir*f.trend>=.30)score++;
+ if(dir&&dir*f.mom>=.30)score++;
+ if(priceExpansion>=CFG.impulseBodyAtr||liveRangeAtr>=CFG.impulseRangeAtr)score++;
+ if(relVol>=CFG.impulseRelVol||f.volume3Ratio>=CFG.impulseVolume3)score++;
+ if(flowAligned>=.08)score++;
+ if(alignedClose>=.66)score++;
+ if(dir&&dir*f.emaSlopeAtr>=.16)score++;
+ const impulse=!!dir&&score>=4&&(priceExpansion>=CFG.impulseBodyAtr||liveRangeAtr>=CFG.impulseRangeAtr)&&(relVol>=CFG.impulseRelVol||f.volume3Ratio>=CFG.impulseVolume3);
+ let exhaustionScore=0;
+ const climaxBase=!!dir&&extensionAtr>=CFG.climaxExtensionAtr&&relVol>=CFG.climaxRelVol;
+ if(climaxBase){
+  if(oppositeWick>=.22)exhaustionScore++;
+  if(dir*f.momAccel<=-.18)exhaustionScore++;
+  if(flowAligned<=-.05)exhaustionScore++;
+  if(bookAligned<=-.12&&x.bookValid)exhaustionScore++;
+  if(liveDir===-dir&&liveBodyAtr>=.18)exhaustionScore++;
+ }
+ const reversal=climaxBase&&exhaustionScore>=3&&liveDir===-dir&&flowAligned<-.06&&dir*(p-f.ema8)<-.08;
+ let phase='TRANSITION',phaseDir=dir;
+ if(reversal){phase='REVERSAL';phaseDir=-dir;}
+ else if(climaxBase&&exhaustionScore>=CFG.exhaustionScoreMin)phase='EXHAUSTION';
+ else if(impulse&&(extensionAtr>=CFG.matureExtensionAtr||f.impulseSeq>=3))phase='MATURE_IMPULSE';
+ else if(impulse)phase='IMPULSE';
+ else if(regime?.mode==='RANGE')phase='RANGE';
+ else if(regime?.mode==='TREND'&&dir)phase='TREND';
+ return {phase,dir:phaseDir||0,priorDir:dir||0,score,exhaustionScore,extensionAtr,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,liveVolumePace,liveBodyAtr,liveRangeAtr,liveCloseLocation,oppositeWick,flowAligned,bookAligned,impulseSeq:f.impulseSeq,climaxBase};
 }
 // 1m swing points only: two closed candles on either side are required.
 function confirmedSwings(bars,atr,limit=150){
@@ -535,7 +610,7 @@ class Engine{
   return this.lastView={...view,status:'new',reason:signal.reason,signal};
  }
 }
-root.EventSignalV6={Engine,CFG,DATASET_SCHEMA,VERSION_PROFILE,VERSION_SETTINGS_SEED,selectOutputDecision,features,zones,classifyRegime};
+root.EventSignalV6={Engine,CFG,DATASET_SCHEMA,VERSION_PROFILE,VERSION_SETTINGS_SEED,selectOutputDecision,features,zones,classifyRegime,marketPhase};
 if(typeof module!=='undefined')module.exports=root.EventSignalV6;
 })(typeof globalThis!=='undefined'?globalThis:window);
 
