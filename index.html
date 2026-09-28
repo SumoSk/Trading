@@ -285,6 +285,93 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .engine-version-picker select:focus{border-color:#536b8c}
 @media(max-width:700px){.engine-version-picker{order:3;width:100%;margin-left:0}.engine-version-picker select{max-width:none;flex:1}}
 
+
+/* Inline realtime setup profile: top row = direction | entry | setup */
+.signal-panel>.signal-card-direction{grid-column:span 4!important}
+.signal-panel>.signal-card-entry{grid-column:span 4!important}
+.signal-panel>.setup-profile-panel{
+ grid-column:span 4!important;
+ min-width:0;align-self:stretch;
+ margin:0!important;padding:10px!important;
+ border:1px solid var(--card-border)!important;
+ border-radius:10px!important;
+ background:var(--card-bg)!important;
+ box-shadow:none!important;
+ overflow:hidden
+}
+.signal-panel>.setup-profile-panel .setup-profile-head{
+ padding:0 0 7px!important;margin:0 0 6px!important;
+ border-bottom:1px solid var(--card-border)!important;
+ gap:7px!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-head h2{
+ font-size:13px!important;line-height:1.15;margin:1px 0 0!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-kicker{
+ font-size:7.5px!important;letter-spacing:.75px!important;margin:0 0 2px!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-status{
+ padding:3px 6px!important;font-size:8px!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-hero{padding:2px 0 6px!important}
+.signal-panel>.setup-profile-panel .setup-profile-hero>span{font-size:8px!important}
+.signal-panel>.setup-profile-panel .setup-profile-hero h3{
+ font-size:12px!important;line-height:1.25!important;margin:2px 0 3px!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-hero p{
+ font-size:8px!important;line-height:1.35!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+}
+.signal-panel>.setup-profile-panel .setup-profile-rate{padding:7px 8px!important;border-radius:8px!important}
+.signal-panel>.setup-profile-panel .setup-rate-main span{font-size:8px!important}
+.signal-panel>.setup-profile-panel .setup-rate-main strong{font-size:23px!important}
+.signal-panel>.setup-profile-panel .setup-rate-main b{font-size:9px!important}
+.signal-panel>.setup-profile-panel .setup-rate-track{height:4px!important;margin-top:6px!important}
+.signal-panel>.setup-profile-panel .setup-rate-meta{font-size:7.5px!important;margin-top:5px!important}
+.signal-panel>.setup-profile-panel .setup-exact-row{
+ padding:6px 1px!important;gap:1px 7px!important
+}
+.signal-panel>.setup-profile-panel .setup-exact-row span{font-size:8px!important}
+.signal-panel>.setup-profile-panel .setup-exact-row b{font-size:11px!important}
+.signal-panel>.setup-profile-panel .setup-exact-row small{font-size:7.5px!important}
+.signal-panel>.setup-profile-panel .setup-live-grid{
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:4px!important;margin:6px 0!important
+}
+.signal-panel>.setup-profile-panel .setup-live-grid>div{padding:5px 6px!important;border-radius:6px!important}
+.signal-panel>.setup-profile-panel .setup-live-grid span{font-size:7px!important;margin-bottom:2px!important}
+.signal-panel>.setup-profile-panel .setup-live-grid b{font-size:9px!important}
+.signal-panel>.setup-profile-panel .setup-profile-reasons{
+ display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:3px
+}
+.signal-panel>.setup-profile-panel .setup-profile-section{
+ min-width:0;padding:6px!important;margin:0!important;
+ border:1px solid #1e2b3d!important;border-radius:7px;background:#0b141f
+}
+.signal-panel>.setup-profile-panel .setup-profile-section h4{font-size:8.5px!important;margin:0 0 4px!important}
+.signal-panel>.setup-profile-panel .setup-profile-section ul{gap:3px!important}
+.signal-panel>.setup-profile-panel .setup-profile-section li{
+ font-size:7.5px!important;line-height:1.3!important;padding-left:10px!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-section li:before{
+ width:4px!important;height:4px!important;left:0!important
+}
+.signal-panel>.setup-profile-panel .setup-profile-section li:nth-child(n+4){display:none}
+.signal-panel>.setup-profile-panel .setup-profile-foot{
+ margin-top:5px!important;padding-top:5px!important;
+ font-size:7px!important;line-height:1.25!important;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+@media(max-width:900px){
+ .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry{grid-column:span 3!important}
+ .signal-panel>.setup-profile-panel{grid-column:1/-1!important}
+ .signal-panel>.setup-profile-panel .setup-profile-reasons{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+ .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry,.signal-panel>.setup-profile-panel{grid-column:1/-1!important}
+ .signal-panel>.setup-profile-panel .setup-profile-reasons{grid-template-columns:1fr}
+ .signal-panel>.setup-profile-panel .setup-profile-section li{font-size:8.5px!important}
+}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -339,29 +426,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     </div>
   </section>
 
-  <section class="signal-card signal-card-market">
-    <div class="signal-card-title"><span>ข้อมูลตลาดตอนนี้</span></div>
-    <div class="analysis-grid">
-      <div><span>สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
-      <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
-      <div><span>แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
-      <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
-      <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
-      <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
-      <div><span>ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
-      <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
-      <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
-      <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
-    </div>
-  </section>
-
-  <div class="last-entry" id="last-entry" hidden>
-    <div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div>
-    <div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div>
-    <small class="last-entry-meta" id="last-entry-meta">—</small>
-  </div>
-</aside>
-<aside class="setup-profile-panel" id="setup-profile-panel" aria-live="polite">
+<section class="setup-profile-panel" id="setup-profile-panel" aria-live="polite">
   <div class="setup-profile-head">
     <div><span class="setup-profile-kicker">ประกอบการตัดสินใจ · REALTIME</span><h2>โปรไฟล์ท่านี้</h2></div>
     <span class="setup-profile-status learning" id="setup-profile-status">รอจังหวะ</span>
@@ -389,6 +454,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div><span>ระยะก่อนชนแนว</span><b id="setup-live-room">—</b></div>
     <div><span>Volume ตอนนี้</span><b id="setup-live-volume">—</b></div>
   </div>
+  <div class="setup-profile-reasons">
   <section class="setup-profile-section support">
     <h4>เหตุผลที่หนุนจุดนี้</h4>
     <ul id="setup-support-list"><li>รอข้อมูลตลาดสด</li></ul>
@@ -397,8 +463,34 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <h4>สิ่งที่ต้องระวังตอนนี้</h4>
     <ul id="setup-warning-list"><li>รอข้อมูลตลาดสด</li></ul>
   </section>
+  </div>
+
   <div class="setup-profile-foot" id="setup-profile-foot">คำนวณจากไม้ที่จบผลแล้วของเวอร์ชันปัจจุบันในเบราว์เซอร์นี้ · ไม่เปลี่ยนสูตรหรือบล็อกสัญญาณจุดเข้า</div>
+</section>
+
+  <section class="signal-card signal-card-market">
+    <div class="signal-card-title"><span>ข้อมูลตลาดตอนนี้</span></div>
+    <div class="analysis-grid">
+      <div><span>สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
+      <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
+      <div><span>แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
+      <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
+      <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
+      <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
+      <div><span>ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
+      <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
+      <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
+      <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
+    </div>
+  </section>
+
+  <div class="last-entry" id="last-entry" hidden>
+    <div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div>
+    <div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div>
+    <small class="last-entry-meta" id="last-entry-meta">—</small>
+  </div>
 </aside>
+
 </div>
 <section class="prediction-log"><div class="prediction-log-head"><div><h2>ผลสัญญาณ +10 นาที</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">เวอร์ชัน <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">สรุปรีพอร์ตทั้งหมด</button><button id="export-training-csv">ข้อมูลเทรน CSV</button><button id="export-history">ข้อมูลเทรน JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เวลาเข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบ 10 นาที</th><th>ราคาตัดสิน</th><th>ผล / เหลือเวลา</th><th>โอกาสชนะตอนนี้</th><th>บทเรียน</th><th>เวอร์ชัน</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
 <dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">ทบทวนหลังจบไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
