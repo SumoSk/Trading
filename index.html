@@ -75,7 +75,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span><span id="zone-legend">1m แนวรับ / แนวต้าน · กำลังโหลด</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V7.0</span></div>
+  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V7.0.1</span></div>
   <div class="probability-block"><div class="probability-head"><span>อีก 10 นาที</span></div><div class="probability-values"><span class="prob-up">HIGH <strong id="prob-high">—</strong></span><span class="prob-down">LOW <strong id="prob-low">—</strong></span></div><div class="probability-track"><div id="prob-high-bar"></div></div></div>
   <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
   <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
@@ -103,23 +103,24 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </script>
 <script>
 
-/* Event Engine 7.0 — +10 minute horizon first, causal, 1m-first.
+/* Event Engine 7.0.1 — +10 minute horizon first, causal, 1m-first.
    Market Phase routes each setup: RANGE, TREND, IMPULSE, MATURE_IMPULSE, EXHAUSTION, REVERSAL.
    RSI/MACD are chart-only and never enter signal decisions. */
 (function(root){
 'use strict';
 const CFG=Object.freeze({
- version:'7.0.0',horizonMs:600000,settlementToleranceMs:5000,
+ version:'7.0.1',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,
  minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
  rangeEdge:.26,rangeEntryLimit:.40,rangeMinSamples:3,rangeMinWinRate:.58,rangeMinScore:5,breakoutMinScore:5,
  phaseTrendMin:.24,impulseBodyAtr:.55,impulseRangeAtr:.80,impulseRelVol:1.45,impulseVolume3:1.25,
  matureExtensionAtr:1.45,climaxExtensionAtr:2.25,climaxRelVol:2.40,exhaustionScoreMin:2,
+ rangeEdgeFollowPosition:.10,rangeEdgeBreakAtr:.10,rangeEdgeAcceptedCloseAtr:.04,
  episodeWindowMs:480000,episodeAtrDistance:3,maxSameDirectionPerEpisode:2,minSameDirectionGapMs:90000,
  maxHistory:1500,maxAudit:2500
 });
-const VERSION_PROFILE=Object.freeze({
+const V70_PROFILE=Object.freeze({
  name:'V7.0 Market Phase + Volume/Impulse',
  basis:'V6.6 out-of-sample T+10 dataset + observed impulse failure cluster',
  source:Object.freeze({version:'6.6.0',completedSignals:18,wins:11,winRate:.611111,pendingSignals:2}),
@@ -138,16 +139,38 @@ const VERSION_PROFILE=Object.freeze({
   'trend continuation ต้องกลับมาเป็นจุดเข้าจริงเมื่อ phase สนับสนุน'
  ])
 });
+const VERSION_PROFILE=Object.freeze({
+ name:'V7.0.1 Range Edge Confirmation',
+ basis:'V7.0.0 first live failure: mature impulse followed into a RANGE edge before the edge was actually accepted',
+ source:Object.freeze({version:'7.0.0',failureCase:Object.freeze({direction:'LOW',entryPrice:83811.60,exitPrice:83925.00,directionalMoveAtr:-2.06,rangePosition:0})}),
+ change:Object.freeze({
+  scope:'only trend/impulse follow while stable regime is RANGE and price is at the outer 10%',
+  rule:'wait until range edge is broken by 0.10 ATR, or a closed-bar acceptance >=0.04 ATR is supported by live flow + volume pace',
+  goal:'avoid following directly into an intact range edge without suppressing ordinary trend/impulse entries'
+ })
+});
 const V65_CONFIG=Object.freeze({
  horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
  rangeEdge:.26,rangeEntryLimit:.40,rangeMinSamples:3,rangeMinWinRate:.58,rangeMinScore:5,breakoutMinScore:5,maxHistory:1500,maxAudit:2500
 });
 const V66_CONFIG=Object.freeze({...V65_CONFIG,version:'6.6.0',statsTrendMin:.10,failedBreakTrendMin:.15});
+const V70_CONFIG=Object.freeze({
+ version:'7.0.0',horizonMs:600000,settlementToleranceMs:5000,
+ rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
+ maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,
+ minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
+ rangeEdge:.26,rangeEntryLimit:.40,rangeMinSamples:3,rangeMinWinRate:.58,rangeMinScore:5,breakoutMinScore:5,
+ phaseTrendMin:.24,impulseBodyAtr:.55,impulseRangeAtr:.80,impulseRelVol:1.45,impulseVolume3:1.25,
+ matureExtensionAtr:1.45,climaxExtensionAtr:2.25,climaxRelVol:2.40,exhaustionScoreMin:2,
+ episodeWindowMs:480000,episodeAtrDistance:3,maxSameDirectionPerEpisode:2,minSameDirectionGapMs:90000,
+ maxHistory:1500,maxAudit:2500
+});
 const VERSION_SETTINGS_SEED=Object.freeze({
  '6.5.0':Object.freeze({name:'V6.5 Inverse All',config:V65_CONFIG,strategy:Object.freeze({direction:'inverse_all_setup_directions',zones:'1m_support_resistance',trendlines:false})}),
  '6.6.0':Object.freeze({name:'V6.6 Statistical Entry',config:V66_CONFIG,strategy:Object.freeze({direction:'setup_specific_inverse_or_countertrend',basis:'V6.5 observed dataset',zones:'1m_support_resistance',trendlines:false})}),
- '7.0.0':Object.freeze({name:'V7.0 Market Phase + Volume/Impulse',config:Object.freeze({...CFG}),strategy:VERSION_PROFILE})
+ '7.0.0':Object.freeze({name:'V7.0 Market Phase + Volume/Impulse',config:V70_CONFIG,strategy:V70_PROFILE}),
+ '7.0.1':Object.freeze({name:'V7.0.1 Range Edge Confirmation',config:Object.freeze({...CFG}),strategy:VERSION_PROFILE})
 });
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
@@ -250,6 +273,23 @@ function selectOutputDecision(type,modelD,f,phase){
  if((type==='pullback'||type==='trend_continuation')&&Math.abs(f?.trend||0)>=CFG.phaseTrendMin&&Math.sign(f.trend)===setupDir)return follow();
  if(type==='range_reversal')return {direction:modelDirection,modelDirection,policy:'transition_edge_reversal',strength:Math.abs(f?.trend||0),reason:'TRANSITION · edge reversal ผ่านหลักฐาน'};
  return {direction:null,modelDirection,policy:'wait_transition',strength:Math.abs(f?.trend||0),reason:'TRANSITION · ยังไม่มี phase edge ชัด'};
+}
+function rangeEdgeFollowGate(f,x,regime,phase,outputDirection){
+ const d=outputDirection==='HIGH'?1:outputDirection==='LOW'?-1:0;
+ const followPhase=['TREND','IMPULSE','MATURE_IMPULSE'].includes(phase?.phase)&&phase?.dir===d;
+ if(!d||!followPhase||regime?.stableMode!=='RANGE')return {applies:false,blocked:false,accepted:true};
+ const atOuterEdge=d>0?f.rangePosition>=1-CFG.rangeEdgeFollowPosition:f.rangePosition<=CFG.rangeEdgeFollowPosition;
+ if(!atOuterEdge)return {applies:false,blocked:false,accepted:true};
+ const prior=f.b.slice(-(CFG.rangeBars+1),-1);
+ if(prior.length<Math.min(8,CFG.rangeBars))return {applies:true,blocked:false,accepted:true,reason:'prior_range_not_ready'};
+ const edge=d>0?Math.max(...prior.map(b=>b.high)):Math.min(...prior.map(b=>b.low)),atr=Math.max(f.atr,1e-9);
+ const beyondAtr=d>0?(x.price-edge)/atr:(edge-x.price)/atr,closed=f.b.at(-1);
+ const closedBeyondAtr=closed?(d>0?(closed.close-edge)/atr:(edge-closed.close)/atr):-Infinity;
+ const alignedFlow=d*(x.flow||0),livePace=phase?.liveVolumePace||0;
+ const hardBreak=beyondAtr>=CFG.rangeEdgeBreakAtr;
+ const acceptedClose=closedBeyondAtr>=CFG.rangeEdgeAcceptedCloseAtr&&alignedFlow>=CFG.minFlow&&livePace>=CFG.impulseRelVol;
+ const accepted=hardBreak||acceptedClose;
+ return {applies:true,blocked:!accepted,accepted,edge,beyondAtr,closedBeyondAtr,alignedFlow,livePace,hardBreak,acceptedClose};
 }
 function classifyRegime(f,p){
  let rangeScore=0,trendScore=0;
@@ -576,17 +616,21 @@ class Engine{
   }
   if(invalid){this.log('cancelled',x.ts,{id:e.id,reason:invalid,progress,drift});this.active=null;return this.lastView={...view,status:'expired',reason:invalid};}
 
-  let blocker='',episodeInfo=null;
+  let blocker='',episodeInfo=null,rangeEdgeGate=null;
   const outputDecision=selectOutputDecision(e.type,e.d,f,phase);
   if(!outputDecision.direction)blocker='V7 PHASE · '+outputDecision.reason;
+  if(outputDecision.direction){
+   rangeEdgeGate=rangeEdgeFollowGate(f,x,regime,phase,outputDecision.direction);
+   if(rangeEdgeGate.blocked)blocker=`RANGE EDGE · ${outputDecision.direction} กำลังตาม impulse เข้าขอบกรอบ · รอหลุดยืนยันอีก ${Math.max(0,CFG.rangeEdgeBreakAtr-(rangeEdgeGate.beyondAtr||0)).toFixed(2)} ATR`;
+  }
   if(outputDecision.direction){
    const anchor=[...this.signals].reverse().find(s=>s.version===CFG.version&&s.dataset&&x.ts-s.entryTime<=CFG.episodeWindowMs&&Math.abs(s.entryPrice-x.price)<=f.atr*CFG.episodeAtrDistance);
    const episodeId=anchor?.dataset?.episodeId||`EP:${this.session}:${Math.floor(x.ts/60000)}`,episodeSequence=anchor?.dataset?.episodeId===episodeId?(anchor.dataset.episodeSequence||1)+1:1;
    const same=this.signals.filter(s=>s.version===CFG.version&&s.dataset?.episodeId===episodeId&&s.direction===outputDecision.direction&&x.ts-s.entryTime<=CFG.episodeWindowMs);
    const lastSame=same.at(-1),gap=lastSame?x.ts-lastSame.entryTime:Infinity;
    episodeInfo={episodeId,episodeSequence,sameDirectionCount:same.length,lastSameGapMs:Number.isFinite(gap)?gap:null};
-   if(same.length>=CFG.maxSameDirectionPerEpisode)blocker=`EPISODE GUARD · ${outputDecision.direction} ครบ ${CFG.maxSameDirectionPerEpisode} ไม้ใน movement เดียวแล้ว`;
-   else if(gap<CFG.minSameDirectionGapMs)blocker=`EPISODE GUARD · รอ ${Math.ceil((CFG.minSameDirectionGapMs-gap)/1000)} วิ ก่อนยิง ${outputDecision.direction} ซ้ำ`;
+   if(!blocker&&same.length>=CFG.maxSameDirectionPerEpisode)blocker=`EPISODE GUARD · ${outputDecision.direction} ครบ ${CFG.maxSameDirectionPerEpisode} ไม้ใน movement เดียวแล้ว`;
+   else if(!blocker&&gap<CFG.minSameDirectionGapMs)blocker=`EPISODE GUARD · รอ ${Math.ceil((CFG.minSameDirectionGapMs-gap)/1000)} วิ ก่อนยิง ${outputDecision.direction} ซ้ำ`;
   }
   if(e.type==='breakout'){
    const ev=this.breakoutEvidence(f,e,x,progress,retreat,flow,book);
@@ -619,15 +663,15 @@ class Engine{
   const signal={id:e.id,version:CFG.version,type:e.type,direction:outputDirection,modelDirection,decisionPolicy,entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+CFG.horizonMs,
    result:'pending',lastObserved:x.ts,event:{...e},features:{atr:f.atr,trend:f.trend,flow:x.flow,book:x.book,room:Number.isFinite(room)?room:null,progress,drift,retreat,
     regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,phaseDir:phase.dir,phaseScore:phase.score,eff:f.eff,emaSepAtr:f.emaSepAtr,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,rangePosition:f.rangePosition,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,liveVolumePace:phase.liveVolumePace,extensionAtr:phase.extensionAtr,exhaustionScore:phase.exhaustionScore,h10:stat?{n:stat.n,winRate:stat.winRate,medianMove:stat.medianMove}:null},
-   dataset:{schema:DATASET_SCHEMA,episodeId,episodeSequence,path1m:[],context1m:[],entry:{capturedAt:x.ts,price:x.price,outputDirection,modelDirection,decisionPolicy,decisionReason:outputDecision.reason,decisionTrendStrength:outputDecision.strength,strategyVersion:CFG.version,marketPhase:phase.phase,phaseDir:phase.dir,phaseScore:phase.score,phasePriorDir:phase.priorDir,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,impulseSeq:f.impulseSeq,liveVolumePace:phase.liveVolumePace,liveBodyAtr:phase.liveBodyAtr,liveRangeAtr:phase.liveRangeAtr,phaseExtensionAtr:phase.extensionAtr,exhaustionScore:phase.exhaustionScore,episodeSameDirectionBefore:episodeInfo?.sameDirectionCount||0,setupType:e.type,setupReason,evidenceScore:Number.isFinite(e.evidenceScore)?e.evidenceScore:null,evidenceWhy:Array.isArray(e.evidenceWhy)?[...e.evidenceWhy]:[],fromRange:!!e.fromRange,fromFailedBreak:!!e.fromFailedBreak,level:e.level,entryLow:e.entryLow,entryHigh:e.entryHigh,atr:f.atr,trend:f.trend,momentum:f.mom,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,regime:regime.mode,stableMode:regime.stableMode,flow:x.flow,coverage:x.coverage||0,book:x.book,bookValid:!!x.bookValid,room:Number.isFinite(room)?room:null,progress,drift,retreat,outputExtensionAtr:(outputDirection==='HIGH'?1:-1)*(x.price-f.ema8)/f.atr,modelExtensionAtr:(modelDirection==='HIGH'?1:-1)*(x.price-f.ema8)/f.atr,h10History:stat?{n:stat.n,winRate:stat.winRate,medianMove:stat.medianMove}:null,zones:{nearestSupport:nearest('support'),nearestResistance:nearest('resistance')},liveBar:x.bars.at(-1)?{time:x.bars.at(-1).time,open:x.bars.at(-1).open,high:x.bars.at(-1).high,low:x.bars.at(-1).low,close:x.bars.at(-1).close,volume:x.bars.at(-1).volume,closed:!!x.bars.at(-1).closed}:null,prior1m:compactBars(x.bars,20)}},
-   reason:`V7.0 · ${phase.phase} · ${outputDecision.reason} · setup ${modelDirection} → ออก ${outputDirection} · ${setupReason}`};
+   dataset:{schema:DATASET_SCHEMA,episodeId,episodeSequence,path1m:[],context1m:[],entry:{capturedAt:x.ts,price:x.price,outputDirection,modelDirection,decisionPolicy,decisionReason:outputDecision.reason,decisionTrendStrength:outputDecision.strength,strategyVersion:CFG.version,marketPhase:phase.phase,phaseDir:phase.dir,phaseScore:phase.score,phasePriorDir:phase.priorDir,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,impulseSeq:f.impulseSeq,liveVolumePace:phase.liveVolumePace,liveBodyAtr:phase.liveBodyAtr,liveRangeAtr:phase.liveRangeAtr,phaseExtensionAtr:phase.extensionAtr,exhaustionScore:phase.exhaustionScore,episodeSameDirectionBefore:episodeInfo?.sameDirectionCount||0,rangeEdgeGate:rangeEdgeGate?{applies:!!rangeEdgeGate.applies,accepted:!!rangeEdgeGate.accepted,edge:Number.isFinite(rangeEdgeGate.edge)?rangeEdgeGate.edge:null,beyondAtr:Number.isFinite(rangeEdgeGate.beyondAtr)?rangeEdgeGate.beyondAtr:null,closedBeyondAtr:Number.isFinite(rangeEdgeGate.closedBeyondAtr)?rangeEdgeGate.closedBeyondAtr:null,hardBreak:!!rangeEdgeGate.hardBreak,acceptedClose:!!rangeEdgeGate.acceptedClose}:null,setupType:e.type,setupReason,evidenceScore:Number.isFinite(e.evidenceScore)?e.evidenceScore:null,evidenceWhy:Array.isArray(e.evidenceWhy)?[...e.evidenceWhy]:[],fromRange:!!e.fromRange,fromFailedBreak:!!e.fromFailedBreak,level:e.level,entryLow:e.entryLow,entryHigh:e.entryHigh,atr:f.atr,trend:f.trend,momentum:f.mom,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,regime:regime.mode,stableMode:regime.stableMode,flow:x.flow,coverage:x.coverage||0,book:x.book,bookValid:!!x.bookValid,room:Number.isFinite(room)?room:null,progress,drift,retreat,outputExtensionAtr:(outputDirection==='HIGH'?1:-1)*(x.price-f.ema8)/f.atr,modelExtensionAtr:(modelDirection==='HIGH'?1:-1)*(x.price-f.ema8)/f.atr,h10History:stat?{n:stat.n,winRate:stat.winRate,medianMove:stat.medianMove}:null,zones:{nearestSupport:nearest('support'),nearestResistance:nearest('resistance')},liveBar:x.bars.at(-1)?{time:x.bars.at(-1).time,open:x.bars.at(-1).open,high:x.bars.at(-1).high,low:x.bars.at(-1).low,close:x.bars.at(-1).close,volume:x.bars.at(-1).volume,closed:!!x.bars.at(-1).closed}:null,prior1m:compactBars(x.bars,20)}},
+   reason:`V7.0.1 · ${phase.phase} · ${outputDecision.reason} · setup ${modelDirection} → ออก ${outputDirection} · ${setupReason}`};
   this.signals.push(signal);
   if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(s=>s.result!=='pending');if(i>=0)this.signals.splice(i,1);}
   this.log('issued',x.ts,{id:e.id,type:e.type,direction:signal.direction,modelDirection:signal.modelDirection,price:x.price,episodeId:signal.dataset?.episodeId,episodeSequence:signal.dataset?.episodeSequence});
   return this.lastView={...view,status:'new',reason:signal.reason,signal};
  }
 }
-root.EventSignalV6={Engine,CFG,DATASET_SCHEMA,VERSION_PROFILE,VERSION_SETTINGS_SEED,selectOutputDecision,features,zones,classifyRegime,marketPhase};
+root.EventSignalV6={Engine,CFG,DATASET_SCHEMA,VERSION_PROFILE,VERSION_SETTINGS_SEED,selectOutputDecision,rangeEdgeFollowGate,features,zones,classifyRegime,marketPhase};
 if(typeof module!=='undefined')module.exports=root.EventSignalV6;
 })(typeof globalThis!=='undefined'?globalThis:window);
 
@@ -648,18 +692,18 @@ function applyPhaseBias(v,phase){
   const conf=Math.round(clip((p.phase==='MATURE_IMPULSE'?64:61)+(p.score||0)*2,60,78));
   const high=p.dir>0?conf:100-conf,low=100-high;
   return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,risk:p.phase==='MATURE_IMPULSE'?'กลาง':'ต่ำตามเกณฑ์',
-   reason:`V7.0 · ${p.phase} ${p.dir>0?'UP':'DOWN'} · แท่ง/Volume กำลังขยาย · ห้ามสวนจน phase เปลี่ยน`};
+   reason:`V7.0.1 · ${p.phase} ${p.dir>0?'UP':'DOWN'} · แท่ง/Volume กำลังขยาย · ห้ามสวนจน phase เปลี่ยน`};
  }
  if(p.phase==='TREND'&&p.dir){
   const raw=p.dir>0?v.high:v.low,conf=Math.round(clip(Math.max(56,raw),56,68)),high=p.dir>0?conf:100-conf,low=100-high;
-  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,reason:`V7.0 · TREND ${p.dir>0?'UP':'DOWN'} · follow bias รอ trigger`};
+  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,reason:`V7.0.1 · TREND ${p.dir>0?'UP':'DOWN'} · follow bias รอ trigger`};
  }
- if(p.phase==='EXHAUSTION')return {...v,high:50,low:50,direction:'BALANCED',phase:p.phase,risk:'สูง',reason:'V7.0 · EXHAUSTION · ปลายขา/Volume สูง แต่ยังไม่สวนจนมี reversal trigger'};
+ if(p.phase==='EXHAUSTION')return {...v,high:50,low:50,direction:'BALANCED',phase:p.phase,risk:'สูง',reason:'V7.0.1 · EXHAUSTION · ปลายขา/Volume สูง แต่ยังไม่สวนจนมี reversal trigger'};
  if(p.phase==='REVERSAL'&&p.dir){
   const conf=Math.round(clip(60+(p.exhaustionScore||0)*2,60,70)),high=p.dir>0?conf:100-conf,low=100-high;
-  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,risk:'กลาง',reason:`V7.0 · REVERSAL ${p.dir>0?'UP':'DOWN'} ยืนยัน · ตามทิศกลับตัว`};
+  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,risk:'กลาง',reason:`V7.0.1 · REVERSAL ${p.dir>0?'UP':'DOWN'} ยืนยัน · ตามทิศกลับตัว`};
  }
- return {...v,phase:p.phase,reason:`V7.0 · ${p.phase} · ${v.reason}`};
+ return {...v,phase:p.phase,reason:`V7.0.1 · ${p.phase} · ${v.reason}`};
 }
 function assess(x){
  const f=x.features;
@@ -922,7 +966,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const e=v.event,modelD=e?.d||0;const freshSignal=v.status==='new',preview=e?selectOutputDecision(e.type,modelD,v.f,v.phase):null;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:0;
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent='EVENT V7.0 · PHASE · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
+   $('signal-tag').textContent='EVENT V7.0.1 · PHASE · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels={invalidated:'เงื่อนไขเดิมเสีย',new:'เข้าได้ตอนนี้',issued:'จุดเข้าออกแล้ว',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดู · ยังไม่เข้า',confirming:'กำลังยืนยัน · ยังไม่เข้า',watch:'รอจุดเข้า'};
    $('signal-title').textContent=(freshSignal?(d>0?'HIGH':'LOW')+' · ':'')+(labels[v.status]||'ติดตาม');
    $('signal-description').textContent=v.reason;$('reference-price').textContent=money(state.quote?.price||0);$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
