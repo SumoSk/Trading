@@ -63,7 +63,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span><span id="zone-legend">1m แนวรับ / แนวต้าน · กำลังโหลด</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V6.4</span></div>
+  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V6.5</span></div>
   <div class="probability-block"><div class="probability-head"><span>อีก 10 นาที</span></div><div class="probability-values"><span class="prob-up">HIGH <strong id="prob-high">—</strong></span><span class="prob-down">LOW <strong id="prob-low">—</strong></span></div><div class="probability-track"><div id="prob-high-bar"></div></div></div>
   <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
   <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
@@ -95,7 +95,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 (function(root){
 'use strict';
 const CFG=Object.freeze({
- version:'6.4.0',horizonMs:600000,settlementToleranceMs:5000,
+ version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,
  minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
@@ -438,13 +438,13 @@ class Engine{
 
   e.issued=true;
   const stat=e.type==='range_reversal'?this.rangeStat(f,e.d):null;
-  const direction=e.d>0?'HIGH':'LOW';
+  const modelDirection=e.d>0?'HIGH':'LOW',outputDirection=e.d>0?'LOW':'HIGH';
   const setupReason=e.type==='range_reversal'?'SIDEWAY · หลักฐานรวมผ่านสำหรับจุดกลับ +10 นาที':e.type==='trend_continuation'?'TREND · continuation ผ่านสำหรับ +10 นาที':e.type==='breakout'&&e.fromRange?'BREAKOUT · หลักฐานรวมยืนยันการออกจากกรอบ':'ราคาอยู่ในเขตเข้าและแรงซื้อขายสดสนับสนุน';
-  const signal={id:e.id,version:CFG.version,type:e.type,direction,entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+CFG.horizonMs,
+  const signal={id:e.id,version:CFG.version,type:e.type,direction:outputDirection,modelDirection,entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+CFG.horizonMs,
    result:'pending',lastObserved:x.ts,event:{...e},features:{atr:f.atr,trend:f.trend,flow:x.flow,book:x.book,room:Number.isFinite(room)?room:null,progress,drift,retreat,
     regime:regime.mode,stableMode:regime.stableMode,eff:f.eff,emaSepAtr:f.emaSepAtr,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,
     rangePosition:f.rangePosition,h10:stat?{n:stat.n,winRate:stat.winRate,medianMove:stat.medianMove}:null},
-   reason:setupReason};
+   reason:`โหมดสวน · โมเดลเดิม ${modelDirection} → ${outputDirection} · ${setupReason}`};
   this.signals.push(signal);
   if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(s=>s.result!=='pending');if(i>=0)this.signals.splice(i,1);}
   this.log('issued',x.ts,{id:e.id,type:e.type,direction:signal.direction,price:x.price});
@@ -464,6 +464,13 @@ const WEIGHTS=Object.freeze({
  TREND:Object.freeze({trend:.24,momentum:.18,live:.17,flow:.26,book:.05,structure:.10}),
  TRANSITION:Object.freeze({trend:.10,momentum:.16,live:.22,flow:.34,book:.08,structure:.10})
 });
+function invertFinal(v){
+ if(!v||!v.available)return v;
+ const high=v.low,low=v.high;
+ const direction=high===low?'BALANCED':high>low?'HIGH':'LOW';
+ return {...v,high,low,direction,modelDirection:v.direction,
+  reason:`โหมดสวน · โมเดลเดิม ${v.direction} → ${direction} · ${v.reason}`};
+}
 function assess(x){
  const f=x.features;
  if(!x.fresh||!f||!(x.price>0)||!Number.isFinite(x.ts))return {available:false,reason:x.reason||'ข้อมูลสดไม่ครบ — พักการประเมิน'};
@@ -492,8 +499,8 @@ function assess(x){
   const ahead=dd?levels.filter(v=>dd*(v-p)>0).map(v=>dd*(v-p)/a):[],room=ahead.length?Math.min(...ahead):Infinity;
   if(pos>.30&&pos<.70)risk=Math.max(risk,3);
   const riskLabel=risk>=3?'สูง':risk>=2?'กลาง':'ต่ำตามเกณฑ์';
-  return {available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
-   reason,parts:{flow,rangePosition:pos},weights:null,regime:mode,coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension:0,retreat:0};
+  return invertFinal({available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
+   reason,parts:{flow,rangePosition:pos},weights:null,regime:mode,coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension:0,retreat:0});
  }
 
  const weights=WEIGHTS[mode]||WEIGHTS.TRANSITION;
@@ -524,9 +531,9 @@ function assess(x){
  if((x.coverage||0)<15){risk+=2;reasons.push('กำลังสะสมข้อมูลแรงซื้อขาย');}
  if(!x.bookValid)reasons.push('Order Book ยังไม่พร้อม');
  const riskLabel=risk>=4?'สูง':risk>=2?'กลาง':'ต่ำตามเกณฑ์';
- return {available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
+ return invertFinal({available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
   reason:reasons.length?reasons.slice(0,3).join(' · '):'ยังไม่พบแรงสวนเด่นตามเกณฑ์',parts,weights,regime:mode,
-  coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension,retreat};
+  coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension,retreat});
 }
 root.ContinuousDirection={assess,WEIGHTS};
 if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
@@ -651,8 +658,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function exportHistory(){const blob=new Blob([JSON.stringify({...engine.serialize(),config:CFG,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='BTC-signals-v6-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),5000);}
   function drawHistory(){
    const rows=engine.signals,current=rows.filter(s=>s.version===CFG.version),done=current.filter(s=>['correct','incorrect'].includes(s.result)),wins=done.filter(s=>s.result==='correct').length,oldCount=rows.length-current.length;
-   $('history-summary').textContent=`V6.4 ทั้งหมด ${current.length} · ถูก ${wins} / ผิด ${done.length-wins} · เสมอ ${current.filter(s=>s.result==='equal').length} · ข้อมูลขาด ${current.filter(s=>s.result==='missing').length} · รอผล ${current.filter(s=>s.result==='pending').length}${oldCount?' · เก็บผลเวอร์ชันเก่า '+oldCount:''}`;
-   $('observed-rate').textContent=done.length?`ผล V6.4 ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:'V6.4 ยังไม่มีผลจริงครบ 10 นาที';
+   $('history-summary').textContent=`V6.5 ทั้งหมด ${current.length} · ถูก ${wins} / ผิด ${done.length-wins} · เสมอ ${current.filter(s=>s.result==='equal').length} · ข้อมูลขาด ${current.filter(s=>s.result==='missing').length} · รอผล ${current.filter(s=>s.result==='pending').length}${oldCount?' · เก็บผลเวอร์ชันเก่า '+oldCount:''}`;
+   $('observed-rate').textContent=done.length?`ผล V6.5 ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:'V6.5 ยังไม่มีผลจริงครบ 10 นาที';
    const tb=$('history-body');tb.replaceChildren();
    for(const s of rows.slice(-60).reverse()){
     const tr=document.createElement('tr');const labels={correct:'ถูก',incorrect:'ผิด',equal:'เสมอ',missing:'ข้อมูลขาด',pending:'รอผล'};
@@ -668,16 +675,17 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    }
   }
   function renderEvent(v){
-   const e=v.event,d=e?.d||0;const freshSignal=v.status==='new';
+   const e=v.event,modelD=e?.d||0;const freshSignal=v.status==='new';
+   const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):(modelD?-modelD:0);
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent='EVENT V6.4 · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
+   $('signal-tag').textContent='EVENT V6.5 · สวน · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels={invalidated:'เงื่อนไขเดิมเสีย',new:'เข้าได้ตอนนี้',issued:'จุดเข้าออกแล้ว',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดู · ยังไม่เข้า',confirming:'กำลังยืนยัน · ยังไม่เข้า',watch:'รอจุดเข้า'};
    $('signal-title').textContent=(freshSignal?(d>0?'HIGH':'LOW')+' · ':'')+(labels[v.status]||'ติดตาม');
    $('signal-description').textContent=v.reason;$('reference-price').textContent=money(state.quote?.price||0);$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
    $('strong-banner').hidden=!freshSignal;const idle=v.regime?.mode==='RANGE'?'SIDEWAY · หาจุดกลับจากขอบ':v.regime?.mode==='TREND'?'TREND · มองย่อ/ไปต่อ':'BREAKOUT WATCH';$('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'HIGH':'LOW'}`:idle;
    $('signal-score').textContent=e?`${Math.max(0,Math.floor((CFG.maxAgeMs-((state.quote?.ts||0)*1000-e.startedAt))/1000))} วินาที`:'—';$('signal-score-bar').style.width='0%';
 
-   $('event-detail').textContent=e?`แนว ${money(e.level)} · เขตเข้า ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · หลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}`:'';
+   $('event-detail').textContent=e?`สวน ${modelD>0?'HIGH → LOW':'LOW → HIGH'} · แนว ${money(e.level)} · เขตเข้า ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · หลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}`:'';
    if(v.f){setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);const reg=$('analysis-regime'),mode=v.regime?.mode||'TRANSITION';reg.textContent=mode==='RANGE'?'SIDEWAY':mode==='TREND'?'TREND':'BREAKOUT WATCH';reg.className=mode==='TREND'?'up':mode==='RANGE'?'neutral':'neutral';const pos=$('analysis-position'),pct=Math.round((v.regime?.position??v.f.rangePosition)*100);pos.textContent=(pct>=70?'ขอบบน ':pct<=30?'ขอบล่าง ':'กลางกรอบ ')+pct+'%';pos.className=pct>=70?'down':pct<=30?'up':'neutral';}
    // Always display both kinds of 1m zone, prioritizing the nearest support below and resistance above.
    const price=state.quote?.price||0,all=v.z||[];
