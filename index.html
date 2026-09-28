@@ -52,75 +52,170 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .left-line-label.signal{font-size:11px;padding:4px 8px}
 @media(max-width:480px){.left-line-label{left:4px;font-size:9px;padding:3px 6px}.left-line-label.signal{font-size:10px;padding:4px 7px}}
 
-/* Compact chart-first layout: full-width chart, dense signal dashboard underneath. */
-.work-area{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
-.chart-card{border-radius:10px}
+/* Chart-first layout · compact cards under the chart */
+.work-area{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+.chart-card{border-radius:12px}
 .indicator-toggle{white-space:nowrap;font-size:12px;padding:7px 10px;min-height:34px}
-.signal-panel{display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr));align-items:stretch;gap:6px!important;padding:9px 10px!important;border-radius:10px!important;background:#111925!important}
-.signal-panel .panel-heading{grid-column:1/-1;min-height:22px;padding:0 2px}
-.signal-panel .small-tag{font-size:9px;padding:1px 6px}
-.signal-panel .probability-block{grid-column:span 3;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520}
-.signal-panel .probability-head{margin-bottom:2px}
-.signal-panel .probability-values{gap:8px}
-.signal-panel .probability-values strong{font-size:17px}
-.signal-panel .probability-track{height:4px;margin-top:5px}
-.signal-panel .direction-detail{grid-column:span 3;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520;gap:2px}
-.signal-panel .direction-detail strong{font-size:15px;line-height:1.2}
-.signal-panel .direction-detail b{font-size:11px}
-.signal-panel .direction-detail p{font-size:10px;line-height:1.3}
-.signal-panel .direction-detail small{font-size:9px;line-height:1.25}
-.signal-panel .signal-hero{grid-column:span 2;margin:0;padding:6px 8px!important;border:1px solid #202d3e;border-radius:7px;background:#0d1520;gap:7px}
-.signal-panel .direction-icon{width:34px;height:34px;border-radius:9px;font-size:20px}
-.signal-panel .signal-hero strong{font-size:16px!important;line-height:1.15}
-.signal-panel .strong-banner{grid-column:span 2;margin:0;padding:7px 8px;border-radius:7px}
-.signal-panel .strong-banner strong{font-size:14px}
-.signal-panel .strong-banner>span{font-size:8px}
-.signal-panel .live-reference{grid-column:span 2;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520}
-.signal-panel .reference>span{font-size:9px;margin-bottom:1px}
-.signal-panel .reference strong{font-size:17px}
-.signal-panel .reference small{font-size:9px}
-.signal-panel .confidence-block{grid-column:span 2;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520}
-.signal-panel .confidence-block span{font-size:9px}
-.signal-panel .confidence-block strong{font-size:18px}
-.signal-panel .confidence-block>small{font-size:9px;margin-top:3px;line-height:1.2}
-.signal-panel .confidence-track{height:4px!important;margin-top:4px}
-.signal-panel .signal-description{grid-column:1/span 6;margin:0;padding:3px 2px;font-size:10px;line-height:1.3}
-.signal-panel #event-detail{grid-column:7/-1!important;margin:0!important;padding:3px 2px!important;font-size:10px!important;line-height:1.3}
-.signal-panel .analysis-grid{grid-column:1/-1;grid-template-columns:repeat(10,minmax(0,1fr))!important;gap:4px!important;margin:0!important}
-.signal-panel .analysis-grid>div{padding:5px 6px!important;border-radius:6px}
-.signal-panel .analysis-grid span{font-size:8px!important;margin-bottom:2px}
-.signal-panel .analysis-grid b{font-size:10px!important;white-space:normal;line-height:1.15}
-.signal-panel .last-entry{grid-column:1/-1;margin:0!important;padding:6px 8px!important;display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:8px;border-radius:7px}
-.signal-panel .last-entry-head{margin:0;gap:6px;white-space:nowrap}
+
+/* Signal dashboard */
+.signal-panel{
+ display:grid!important;
+ grid-template-columns:repeat(12,minmax(0,1fr));
+ gap:8px!important;
+ padding:10px!important;
+ border:1px solid var(--border)!important;
+ border-radius:12px!important;
+ background:#101824!important;
+ --card-bg:#0d1520;
+ --card-border:#202d3e
+}
+.signal-panel.up{--active:var(--up)}
+.signal-panel.down{--active:var(--down)}
+.signal-panel.wait{--active:#a4b2c6}
+.signal-panel .panel-heading{
+ grid-column:1/-1;
+ display:flex;align-items:center;justify-content:space-between;
+ min-height:28px;padding:0 2px;color:#c8d3e3;font-size:12px
+}
+.signal-panel .small-tag{font-size:9px;padding:2px 6px}
+.signal-card{
+ min-width:0;
+ border:1px solid var(--card-border);
+ background:var(--card-bg);
+ border-radius:10px;
+ padding:10px;
+ overflow:hidden
+}
+.signal-card-title{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ margin-bottom:8px;color:#8fa3bd;font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase
+}
+.signal-card-direction{grid-column:span 5}
+.signal-card-entry{grid-column:span 7}
+.signal-card-market{grid-column:1/-1}
+
+/* direction card */
+.signal-card-direction .probability-block{padding:0 0 9px!important;margin:0!important;border-bottom:1px solid var(--card-border)!important}
+.signal-card-direction .probability-head{margin-bottom:5px!important}
+.signal-card-direction .probability-values{gap:10px}
+.signal-card-direction .probability-values strong{font-size:19px}
+.signal-card-direction .probability-track{height:5px!important;margin-top:6px!important}
+.signal-card-direction .direction-detail{
+ margin:8px 0 0!important;padding:0!important;border:0!important;
+ display:grid;grid-template-columns:auto auto;gap:3px 10px;align-items:start
+}
+.signal-card-direction .direction-detail strong{font-size:15px;line-height:1.2}
+.signal-card-direction .direction-detail b{font-size:11px;text-align:right}
+.signal-card-direction .direction-detail p,
+.signal-card-direction .direction-detail small{grid-column:1/-1;font-size:9px;line-height:1.35}
+.signal-card-direction .direction-detail p{color:#b1c0d3}
+.signal-card-direction .direction-detail small{color:#7589a5}
+
+/* entry card */
+.entry-top{
+ display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1fr);
+ gap:6px
+}
+.signal-card-entry .signal-hero,
+.signal-card-entry .live-reference,
+.signal-card-entry .confidence-block{
+ min-width:0;margin:0!important;padding:8px!important;
+ border:1px solid var(--card-border)!important;border-radius:8px!important;background:#111b29!important
+}
+.signal-card-entry .signal-hero{display:flex;align-items:center;gap:8px}
+.signal-card-entry .direction-icon{width:34px;height:34px;border-radius:9px;font-size:20px}
+.signal-card-entry .signal-hero strong{font-size:16px!important;line-height:1.15}
+.signal-card-entry .reference{border-bottom:0!important}
+.signal-card-entry .reference>span{font-size:9px;margin:0 0 2px}
+.signal-card-entry .reference strong{font-size:17px}
+.signal-card-entry .reference small{font-size:9px}
+.signal-card-entry .confidence-block{border-bottom:1px solid var(--card-border)!important}
+.signal-card-entry .confidence-block>div:first-child{gap:6px}
+.signal-card-entry .confidence-block span{font-size:9px}
+.signal-card-entry .confidence-block strong{font-size:18px}
+.signal-card-entry .confidence-track{height:4px!important;margin-top:5px!important}
+.signal-card-entry .strong-banner{margin:6px 0 0!important;padding:7px 8px!important;border-radius:8px!important}
+.signal-card-entry .strong-banner>span{font-size:8px}
+.signal-card-entry .strong-banner strong{font-size:14px}
+
+/* dedicated wait/entry detail — keep all original information visible */
+.entry-watch{
+ margin-top:6px;padding:8px 9px;
+ border:1px solid #2a3a50;border-radius:8px;background:#0b131e
+}
+.entry-watch-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px}
+.entry-watch-head strong{font-size:11px;color:#d3deed}
+.entry-watch-head small{font-size:9px;color:#7589a5;white-space:nowrap}
+.signal-card-entry .signal-description{
+ margin:0!important;padding:0!important;font-size:10px!important;line-height:1.4;color:#b9c7d9!important
+}
+.signal-card-entry #event-detail{
+ margin:4px 0 0!important;padding:0!important;font-size:9px!important;line-height:1.4;color:#8fa4bf!important
+}
+
+/* market card */
+.signal-card-market .analysis-grid{
+ display:grid!important;
+ grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ gap:5px!important;margin:0!important
+}
+.signal-card-market .analysis-grid>div{
+ min-width:0;padding:6px 7px!important;
+ border:1px solid var(--card-border)!important;border-radius:7px!important;background:#111b29!important
+}
+.signal-card-market .analysis-grid span{font-size:8px!important;letter-spacing:.1px;margin-bottom:2px}
+.signal-card-market .analysis-grid b{display:block;font-size:10px!important;line-height:1.15;white-space:normal;overflow-wrap:anywhere}
+
+/* last entry */
+.signal-panel .last-entry{
+ grid-column:1/-1!important;
+ margin:0!important;padding:7px 9px!important;
+ display:grid!important;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:8px;
+ border:1px solid #2a3a50!important;border-radius:9px!important;background:#0c1521!important
+}
+.signal-panel .last-entry-head{margin:0!important;gap:6px;white-space:nowrap}
 .signal-panel .last-entry-head span{font-size:8px}
 .signal-panel .last-entry-price{gap:6px;justify-content:flex-start}
 .signal-panel .last-entry-price strong{font-size:16px}
 .signal-panel .last-entry-price small{font-size:9px}
 .signal-panel .last-entry-meta{margin:0;font-size:9px;overflow-wrap:anywhere}
-@media(max-width:900px){
- .chart-wrap{height:540px}
- .signal-panel{grid-template-columns:repeat(6,minmax(0,1fr))}
- .signal-panel .probability-block,.signal-panel .direction-detail{grid-column:span 3}
- .signal-panel .signal-hero,.signal-panel .live-reference,.signal-panel .confidence-block,.signal-panel .strong-banner{grid-column:span 2}
- .signal-panel .signal-description{grid-column:1/span 3}
- .signal-panel #event-detail{grid-column:4/-1!important}
- .signal-panel .analysis-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+
+/* left-side chart badges only — no duplicate left price scale */
+.left-line-labels{display:block!important}
+.left-line-label{
+ left:5px!important;
+ padding:3px 6px!important;
+ background:rgba(11,16,25,.92)!important;
+ font-size:9px!important;
+ box-shadow:0 2px 10px rgba(0,0,0,.28)!important
 }
+.left-line-label.signal{font-size:10px!important;font-weight:600}
+
+/* tablet */
+@media(max-width:900px){
+ .chart-wrap{height:535px}
+ .signal-panel{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px!important}
+ .signal-card-direction,.signal-card-entry{grid-column:span 3}
+ .signal-card-market{grid-column:1/-1}
+ .entry-top{grid-template-columns:1fr 1fr}
+ .signal-card-entry .confidence-block{grid-column:1/-1}
+ .signal-card-market .analysis-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+}
+/* mobile */
 @media(max-width:560px){
  main{padding-left:8px!important;padding-right:8px!important}
- .chart-wrap{height:470px!important}
+ .chart-wrap{height:465px!important}
  .chart-toolbar{padding:7px 8px!important;gap:3px!important}
  .indicator-toggle{font-size:10px;padding:6px 7px;min-height:32px}
- .signal-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px!important;padding:6px!important}
- .signal-panel .panel-heading,.signal-panel .probability-block,.signal-panel .direction-detail,.signal-panel .strong-banner,.signal-panel .signal-description,.signal-panel #event-detail,.signal-panel .analysis-grid,.signal-panel .last-entry{grid-column:1/-1!important}
- .signal-panel .signal-hero,.signal-panel .live-reference,.signal-panel .confidence-block{grid-column:span 1}
- .signal-panel .direction-detail{display:grid;grid-template-columns:auto auto;align-items:center}
- .signal-panel .direction-detail p,.signal-panel .direction-detail small{grid-column:1/-1}
- .signal-panel .analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:3px!important}
- .signal-panel .analysis-grid>div{padding:4px 5px!important}
- .signal-panel .last-entry{grid-template-columns:1fr auto}
+ .signal-panel{grid-template-columns:1fr!important;gap:6px!important;padding:7px!important}
+ .signal-panel .panel-heading,.signal-card-direction,.signal-card-entry,.signal-card-market,.signal-panel .last-entry{grid-column:1/-1!important}
+ .signal-card{padding:8px}
+ .signal-card-title{margin-bottom:6px}
+ .entry-top{grid-template-columns:1fr 1fr!important;gap:5px}
+ .signal-card-entry .confidence-block{grid-column:1/-1}
+ .signal-card-market .analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important}
+ .signal-panel .last-entry{grid-template-columns:1fr auto!important}
  .signal-panel .last-entry-meta{grid-column:1/-1}
- .signal-panel .signal-description,.signal-panel #event-detail{padding:2px 1px!important}
  .chart-foot{padding:7px 9px!important;gap:6px!important;font-size:9px!important}
 }
 </style>
@@ -153,15 +248,53 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </section>
 <aside class="signal-panel wait" id="signal-panel">
   <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V7.1.0</span></div>
-  <div class="probability-block"><div class="probability-head"><span>อีก 10 นาที</span></div><div class="probability-values"><span class="prob-up">HIGH <strong id="prob-high">—</strong></span><span class="prob-down">LOW <strong id="prob-low">—</strong></span></div><div class="probability-track"><div id="prob-high-bar"></div></div></div>
-  <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
-  <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
-  <div class="strong-banner" id="strong-banner" hidden><span>NEW EVENT SIGNAL</span><strong>พบจุดเข้าใหม่</strong></div>
-  <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
-  <div class="reference live-reference"><span>ราคาอ้างอิงตอนนี้</span><strong id="reference-price">—</strong><small>USDT</small></div>
-<div class="confidence-block"><div><span>จุดเข้าเด่น</span><strong id="signal-score">—</strong></div><div class="confidence-track"><div id="signal-score-bar"></div></div><small id="entry-state">รอข้อมูลตลาด</small><small id="signal-updated">รอข้อมูลตลาด</small></div>
-  <p id="event-detail" style="font-size:12px;color:#b4c5dc;margin:12px 0"></p><div class="analysis-grid"><div><span>Market 1m</span><b id="analysis-regime">—</b></div><div><span>Range position</span><b id="analysis-position">—</b></div><div><span>Trend 1m</span><b id="analysis-trend">—</b></div><div><span>Momentum 1m</span><b id="analysis-momentum">—</b></div><div><span>Order Flow</span><b id="analysis-flow">—</b></div><div><span>Order Book</span><b id="analysis-book">—</b></div><div><span>ATR · 1m</span><b id="analysis-volatility">—</b></div><div><span>Room → 1m zone</span><b id="analysis-room">—</b></div><div><span>Market phase</span><b id="analysis-phase">—</b></div><div><span>Relative volume</span><b id="analysis-relvol">—</b></div></div>
-  <div class="last-entry" id="last-entry" hidden><div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div><div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div><small class="last-entry-meta" id="last-entry-meta">—</small></div>
+
+  <section class="signal-card signal-card-direction">
+    <div class="signal-card-title"><span>แนวโน้ม +10 นาที</span></div>
+    <div class="probability-block">
+      <div class="probability-head"><span>อีก 10 นาที</span></div>
+      <div class="probability-values"><span class="prob-up">HIGH <strong id="prob-high">—</strong></span><span class="prob-down">LOW <strong id="prob-low">—</strong></span></div>
+      <div class="probability-track"><div id="prob-high-bar"></div></div>
+    </div>
+    <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
+  </section>
+
+  <section class="signal-card signal-card-entry">
+    <div class="signal-card-title"><span>จุดเข้า</span></div>
+    <div class="entry-top">
+      <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
+      <div class="reference live-reference"><span>ราคาอ้างอิงตอนนี้</span><strong id="reference-price">—</strong><small>USDT</small></div>
+      <div class="confidence-block"><div><span>จุดเข้าเด่น</span><strong id="signal-score">—</strong></div><div class="confidence-track"><div id="signal-score-bar"></div></div></div>
+    </div>
+    <div class="strong-banner" id="strong-banner" hidden><span>NEW EVENT SIGNAL</span><strong>พบจุดเข้าใหม่</strong></div>
+    <div class="entry-watch">
+      <div class="entry-watch-head"><strong id="entry-state">รอข้อมูลตลาด</strong><small id="signal-updated">รอข้อมูลตลาด</small></div>
+      <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
+      <p id="event-detail"></p>
+    </div>
+  </section>
+
+  <section class="signal-card signal-card-market">
+    <div class="signal-card-title"><span>ข้อมูลตลาดตอนนี้</span></div>
+    <div class="analysis-grid">
+      <div><span>Market 1m</span><b id="analysis-regime">—</b></div>
+      <div><span>Range position</span><b id="analysis-position">—</b></div>
+      <div><span>Trend 1m</span><b id="analysis-trend">—</b></div>
+      <div><span>Momentum 1m</span><b id="analysis-momentum">—</b></div>
+      <div><span>Order Flow</span><b id="analysis-flow">—</b></div>
+      <div><span>Order Book</span><b id="analysis-book">—</b></div>
+      <div><span>ATR · 1m</span><b id="analysis-volatility">—</b></div>
+      <div><span>Room → 1m zone</span><b id="analysis-room">—</b></div>
+      <div><span>Market phase</span><b id="analysis-phase">—</b></div>
+      <div><span>Relative volume</span><b id="analysis-relvol">—</b></div>
+    </div>
+  </section>
+
+  <div class="last-entry" id="last-entry" hidden>
+    <div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div>
+    <div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div>
+    <small class="last-entry-meta" id="last-entry-meta">—</small>
+  </div>
 </aside>
 </div>
 <section class="prediction-log"><div class="prediction-log-head"><div><h2>ผลสัญญาณ +10 นาที</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">เวอร์ชัน <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">สรุปรีพอร์ตทั้งหมด</button><button id="export-training-csv">CSV สำหรับเทรน</button><button id="export-history">Dataset JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เวลาเข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบ 10 นาที</th><th>ราคาตัดสิน</th><th>ผล / เหลือเวลา</th><th>บทเรียน</th><th>เวอร์ชัน</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
@@ -1066,16 +1199,18 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function renderLeftLineLabels(){
    const host=$('left-line-labels');
-   if(host){host.replaceChildren();host.style.display='none';}
-   return;
-   /* legacy overlay disabled; native left price-scale labels are used */
-   if(!host||!state.chartReady||!state.candleSeries){if(host)host.replaceChildren();return;}
+   if(!host||!state.chartReady||!state.candleSeries)return;
+   host.style.display='block';
    host.replaceChildren();
-   const items=[...leftZoneLabels,...leftSignalLabels];
-   for(const item of items){
-    if(!Number.isFinite(item.price))continue;
-    const y=state.candleSeries.priceToCoordinate(item.price);
-    if(!Number.isFinite(y)||y<0||y>host.clientHeight)continue;
+   const mapped=[...leftZoneLabels,...leftSignalLabels].map(item=>({
+    ...item,y:state.candleSeries.priceToCoordinate(item.price)
+   })).filter(item=>Number.isFinite(item.y)&&item.y>=0&&item.y<=host.clientHeight).sort((a,b)=>a.y-b.y);
+   let lastY=-999;
+   for(const item of mapped){
+    let y=item.y;
+    if(y-lastY<20)y=lastY+20;
+    if(y>host.clientHeight-10)y=host.clientHeight-10;
+    lastY=y;
     const el=document.createElement('div');
     el.className='left-line-label'+(item.kind==='signal'?' signal':'');
     el.style.top=y+'px';
@@ -1086,15 +1221,16 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function syncSignalChart(rows){
    if(!state.chartReady)return;
-   for(const line of activeSignalLines){try{state.labelSeries.removePriceLine(line);}catch{}}
+   for(const line of activeSignalLines){try{state.candleSeries.removePriceLine(line);}catch{}}
    activeSignalLines=[];
    const now=Date.now();
    leftSignalLabels=[];
    for(const s of rows.filter(s=>s.result==='pending'&&Number.isFinite(s.entryPrice)&&Number.isFinite(s.expiresAt))){
     const isHigh=s.direction==='HIGH',remain=s.expiresAt-now,color=isHigh?'#44dfb5':'#ff708a';
-    activeSignalLines.push(state.labelSeries.createPriceLine({
-     price:s.entryPrice,color,lineWidth:2,lineStyle:2,axisLabelVisible:true,title:`${s.direction} · ${countdownLabel(remain)}`
+    activeSignalLines.push(state.candleSeries.createPriceLine({
+     price:s.entryPrice,color,lineWidth:2,lineStyle:2,axisLabelVisible:false,title:''
     }));
+    leftSignalLabels.push({kind:'signal',price:s.entryPrice,color,text:`${s.direction} · ${countdownLabel(remain)}`});
    }
    if(window.LightweightCharts.createSeriesMarkers){
     if(!markerApi)markerApi=LightweightCharts.createSeriesMarkers(state.candleSeries,[]);
@@ -1168,18 +1304,18 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const supports=choose('support',false),resistances=choose('resistance',true),zs=[...supports,...resistances];
    $('zone-legend').textContent=`1m รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
    leftZoneLabels=[
-    ...zs.map(z=>({kind:'zone',price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',text:`${z.kind==='resistance'?'1m ต้าน':'1m รับ'} · ${money(z.price)}`})),
-    ...(e?[[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:`${title} · ${money(p)}`})):[])
+    ...zs.map(z=>({kind:'zone',price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',text:z.kind==='resistance'?'1m ต้าน':'1m รับ'})),
+    ...(e?[[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:title})):[])
    ];
    const zkey=zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
    if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
-    for(const line of drawnZones)state.labelSeries.removePriceLine(line);drawnZones=[];
-    for(const z of zs)drawnZones.push(state.labelSeries.createPriceLine({
+    for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
+    for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
      price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:z.touches>=2?2:1,
-     lineStyle:2,axisLabelVisible:true,title:z.kind==='resistance'?'1m ต้าน':'1m รับ'
+     lineStyle:2,axisLabelVisible:false,title:''
     }));
     if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
-     if(Number.isFinite(p))drawnZones.push(state.labelSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title}));
+     if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
    }
    renderLeftLineLabels();
   }
@@ -1286,8 +1422,6 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const chart=L.createChart($('chart'),{autoSize:true,layout:{background:{type:L.ColorType.Solid,color:'#101824'},textColor:'#899bb4',fontFamily:'Segoe UI, Tahoma, sans-serif',fontSize:11,attributionLogo:true,panes:{separatorColor:'#243043',separatorHoverColor:'#3a4b63',enableResize:true}},grid:{vertLines:{color:'#1a2535'},horzLines:{color:'#1a2535'}},rightPriceScale:{borderColor:'#283449',scaleMargins:{top:.08,bottom:.06}},timeScale:{borderColor:'#283449',timeVisible:true,secondsVisible:false,rightOffset:5,barSpacing:9,tickMarkFormatter:t=>clockMs(t*1000).slice(0,5)},crosshair:{mode:L.CrosshairMode.Normal},localization:{locale:'en-US',timeFormatter:t=>new Date(t*1000).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}),priceFormatter:money}});
     state.chart=chart;
     state.candleSeries=chart.addSeries(L.CandlestickSeries,{upColor:'#44dfb5',downColor:'#ff708a',borderVisible:false,wickUpColor:'#44dfb5',wickDownColor:'#ff708a',priceFormat:{type:'price',precision:2,minMove:.01}});
-    state.labelSeries=chart.addSeries(L.CandlestickSeries,{priceScaleId:'left',upColor:'rgba(0,0,0,0)',downColor:'rgba(0,0,0,0)',borderVisible:false,wickUpColor:'rgba(0,0,0,0)',wickDownColor:'rgba(0,0,0,0)',lastValueVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:2,minMove:.01}});
-    state.labelSeries.priceScale().applyOptions({visible:true,borderColor:'#283449',scaleMargins:{top:.08,bottom:.06}});
     const opt={lineWidth:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false};
     state.emaFast=chart.addSeries(L.LineSeries,{...opt,color:'#a899ff'});
     state.emaSlow=chart.addSeries(L.LineSeries,{...opt,color:'#dfb875'});
@@ -1340,8 +1474,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const r=rsiPoints(arr),rv=r.at(-1);if(rv){state.rsiSeries.update(rv);state.rsiUpper.update({time:rv.time,value:70});state.rsiLower.update({time:rv.time,value:30});}
     const m=macdPoints(arr),mv=m.macd.at(-1),sv=m.signal.at(-1),hv=m.hist.at(-1);if(mv)state.macdSeries.update(mv);if(sv)state.macdSignalSeries.update(sv);if(hv)state.macdHistSeries.update(hv);
   }
-  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.labelSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
-  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.labelSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
+  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
+  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
   function rangeStats(){const arr=state.bars[state.selectedTf];if(!arr.length)return;$('high-price').textContent=money(Math.max(...arr.map(b=>b.high)));$('low-price').textContent=money(Math.min(...arr.map(b=>b.low)));}
 
   function setIndicatorsExpanded(expanded){
