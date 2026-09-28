@@ -279,6 +279,12 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 @media(max-width:850px){.work-area{grid-template-columns:1fr}.setup-profile-panel{grid-column:auto;padding:14px 16px}.setup-profile-section li{font-size:10px}}
 @media(max-width:480px){.setup-live-grid{grid-template-columns:1fr 1fr}.setup-profile-head h2{font-size:17px}.setup-rate-main strong{font-size:29px}}
 
+
+.engine-version-picker{display:flex;align-items:center;gap:6px;margin-left:2px;color:#8496ad;font-size:9px;white-space:nowrap}
+.engine-version-picker select{height:34px;min-height:34px;max-width:210px;padding:0 26px 0 9px;border:1px solid #2b3b50;border-radius:7px;background:#0d1622;color:#cbd8e9;font:500 11px 'IBM Plex Sans Thai','Segoe UI',sans-serif;outline:none}
+.engine-version-picker select:focus{border-color:#536b8c}
+@media(max-width:700px){.engine-version-picker{order:3;width:100%;margin-left:0}.engine-version-picker select{max-width:none;flex:1}}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -299,7 +305,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 <section class="chart-card">
   <div class="chart-toolbar">
     <div class="timeframes" aria-label="ช่วงแท่งเทียน"><button data-tf="1m" aria-pressed="true">1m</button><button data-tf="5m" aria-pressed="false">5m</button><button data-tf="15m" aria-pressed="false">15m</button></div>
-    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="true" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▾</button>
+    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="true" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▾</button><label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option></select></label>
     <div class="chart-actions"><button id="latest" class="quiet">กลับล่าสุด</button></div>
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
@@ -410,12 +416,18 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </script>
 <script>
 
-/* Event Engine 7.1.0 — +10 minute horizon first, causal, 1m-first.
+/* Event Engine 7.1.x — selectable V7.1.0 / V7.1.1, +10 minute horizon first, causal, 1m-first.
    Market Phase routes each setup: RANGE, TREND, IMPULSE, MATURE_IMPULSE, EXHAUSTION, REVERSAL.
    RSI/MACD are chart-only and never enter signal decisions. */
 (function(root){
 'use strict';
-const CFG=Object.freeze({
+const ACTIVE_VERSION_STORE='btc-active-engine-version';
+let SELECTED_ENGINE_VERSION='7.1.1';
+try{
+ const savedVersion=localStorage.getItem(ACTIVE_VERSION_STORE);
+ if(['7.1.0','7.1.1'].includes(savedVersion))SELECTED_ENGINE_VERSION=savedVersion;
+}catch{}
+const V710_CONFIG=Object.freeze({
  version:'7.1.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,
@@ -426,8 +438,16 @@ const CFG=Object.freeze({
  rangeEdgeFollowPosition:.10,rangeEdgeBreakAtr:.10,rangeEdgeAcceptedCloseAtr:.04,
  rangeCounterTrendMin:.10,
  episodeWindowMs:480000,episodeAtrDistance:3,maxSameDirectionPerEpisode:2,minSameDirectionGapMs:90000,
+ antiMountainGuard:false,antiMountainExtensionAtr:6.0,antiMountainRelVol:2.40,
  maxHistory:1500,maxAudit:2500
 });
+const V711_CONFIG=Object.freeze({...V710_CONFIG,
+ version:'7.1.1',
+ antiMountainGuard:true,
+ antiMountainExtensionAtr:6.0,
+ antiMountainRelVol:2.40
+});
+const CFG=SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:V711_CONFIG;
 const V70_PROFILE=Object.freeze({
  name:'V7.0 Market Phase + Volume/Impulse',
  basis:'V6.6 out-of-sample T+10 dataset + observed impulse failure cluster',
@@ -457,8 +477,8 @@ const V701_PROFILE=Object.freeze({
   goal:'avoid following directly into an intact range edge without suppressing ordinary trend/impulse entries'
  })
 });
-const VERSION_PROFILE=Object.freeze({
- name:'V7.1 Evidence-Gated Hybrid',
+const V710_PROFILE=Object.freeze({
+ name:'V7.1.0 · สูตรเดิม',
  basis:'V7.0.1 recorded-entry audit; exploratory in-sample analysis, not a replay or forward validation',
  source:Object.freeze({version:'7.0.1',completedSignals:35,wins:17,missingSignals:1,pendingSignals:1}),
  change:Object.freeze({
@@ -470,6 +490,18 @@ const VERSION_PROFILE=Object.freeze({
  validation:Object.freeze({kind:'recorded_entry_filter_only',retainedSignals:25,retainedWins:16,removedSignals:10,removedWins:1,
   warning:'These are selected historical entries, not V7.1 live results. Delayed/new entries and changed episode guards require forward data.'})
 });
+
+const V711_PROFILE=Object.freeze({
+ name:'V7.1.1 · กันไล่ปลายขา',
+ basis:'ต่อยอดจาก V7.1.0 โดยเพิ่มตัวกันเฉพาะจังหวะตามแรงที่วิ่งห่างฐานมากและเริ่มเสี่ยงเป็นปลายขา',
+ source:Object.freeze({version:'7.1.0',observation:'ไม้แพ้ล่าสุดมีรูปแบบตาม MATURE_IMPULSE ช่วงราคายืดไกลและโดนสวนเร็วซ้ำ'}),
+ change:Object.freeze({
+  scope:'เฉพาะการตามทิศตลาดใน MATURE_IMPULSE ที่ยืดจากฐานอย่างน้อย 6 ATR',
+  rule:'ถ้าราคายืดมากและมี Volume ร้อนหรือเป็นไม้ซ้ำในคลื่นเดียวกัน ให้รอย่อหรือยืนยันใหม่ แทนการไล่เข้าทันที',
+  goal:'ลดไม้ภูเขาโดยไม่ลดความถี่ของจังหวะปกติ'
+ })
+});
+const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:V711_PROFILE;
 const V65_CONFIG=Object.freeze({
  horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
@@ -493,7 +525,8 @@ const VERSION_SETTINGS_SEED=Object.freeze({
  '6.6.0':Object.freeze({name:'V6.6 Statistical Entry',config:V66_CONFIG,strategy:Object.freeze({direction:'setup_specific_inverse_or_countertrend',basis:'V6.5 observed dataset',zones:'1m_support_resistance',trendlines:false})}),
  '7.0.0':Object.freeze({name:'V7.0 Market Phase + Volume/Impulse',config:V70_CONFIG,strategy:V70_PROFILE}),
  '7.0.1':Object.freeze({name:'V7.0.1 Range Edge Confirmation',config:V701_CONFIG,strategy:V701_PROFILE}),
- '7.1.0':Object.freeze({name:VERSION_PROFILE.name,config:CFG,strategy:VERSION_PROFILE})
+ '7.1.0':Object.freeze({name:V710_PROFILE.name,config:V710_CONFIG,strategy:V710_PROFILE}),
+ '7.1.1':Object.freeze({name:V711_PROFILE.name,config:V711_CONFIG,strategy:V711_PROFILE})
 });
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
@@ -963,6 +996,16 @@ class Engine{
    if(!blocker&&same.length>=CFG.maxSameDirectionPerEpisode)blocker=`EPISODE GUARD · ${outputDecision.direction} ครบ ${CFG.maxSameDirectionPerEpisode} ไม้ใน movement เดียวแล้ว`;
    else if(!blocker&&gap<CFG.minSameDirectionGapMs)blocker=`EPISODE GUARD · รอ ${Math.ceil((CFG.minSameDirectionGapMs-gap)/1000)} วิ ก่อนยิง ${outputDecision.direction} ซ้ำ`;
   }
+  if(!blocker&&CFG.antiMountainGuard&&outputDecision.direction&&outputDecision.policy==='follow_market_phase'&&phase.phase==='MATURE_IMPULSE'){
+   const extension=Number.isFinite(phase.extensionAtr)?phase.extensionAtr:0;
+   const hotVolume=Math.max(f.relVolume||0,f.volume3Ratio||0,phase.liveVolumePace||0);
+   const repeated=(episodeInfo?.sameDirectionCount||0)>=1;
+   const overheated=hotVolume>=CFG.antiMountainRelVol;
+   if(extension>=CFG.antiMountainExtensionAtr&&(repeated||overheated)){
+    const why=[`วิ่งจากฐาน ${extension.toFixed(2)} ATR`,repeated?'เป็นไม้ซ้ำในคลื่นเดียวกัน':'',overheated?`Volume ${hotVolume.toFixed(2)}x`:''].filter(Boolean).join(' · ');
+    blocker=`กันไล่ปลายขา · ${why} · รอย่อหรือยืนยันใหม่ก่อน`;
+   }
+  }
   if(e.type==='breakout'){
    const ev=this.breakoutEvidence(f,e,x,progress,retreat,flow,book);
    e.evidenceScore=ev.score;e.evidenceWhy=ev.why;e.accepted=ev.accepted;e.acceptedClosed=ev.acceptedClosed;e.requiresClosedAcceptance=ev.requiresClosedAcceptance;
@@ -987,7 +1030,8 @@ class Engine{
   const evidenceKey=[phase.phase,phase.dir,outputDecision.policy,outputDecision.direction].join(':');
   if(e.evidenceKey!==evidenceKey){e.evidenceSince=0;e.ticks=0;e.evidenceKey=evidenceKey;}
   if(blocker){
-   const gateCode=!outputDecision.direction&&['wait_range_trend','block_range_trend_conflict'].includes(outputDecision.policy)?outputDecision.policy:
+   const gateCode=blocker.startsWith('กันไล่ปลายขา')?'anti_mountain_guard':
+    !outputDecision.direction&&['wait_range_trend','block_range_trend_conflict'].includes(outputDecision.policy)?outputDecision.policy:
     e.type==='breakout'&&e.requiresClosedAcceptance&&!e.acceptedClosed?'transition_closed_acceptance':null;
    if(gateCode&&e.lastGateCode!==gateCode){this.log('entry_gate_blocked',x.ts,{id:e.id,gate:gateCode,reason:blocker,input:candidateFeatures(f,x,e.type,e.d,e.level)});e.lastGateCode=gateCode;}
    e.evidenceSince=0;e.ticks=0;return this.lastView={...view,status:'tracking',reason:blocker};
@@ -2028,6 +2072,16 @@ function openReport(){
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedTf=btn.dataset.tf;document.querySelectorAll('[data-tf]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('tf-label').textContent=state.selectedTf.replace('m',' นาที');renderChart(true);drawHistory();}));
   $('ema-toggle').addEventListener('click',()=>{state.emaVisible=!state.emaVisible;state.emaFast.applyOptions({visible:state.emaVisible});state.emaSlow.applyOptions({visible:state.emaVisible});$('ema-toggle').setAttribute('aria-pressed',String(state.emaVisible));});
   $('indicator-toggle').addEventListener('click',()=>setIndicatorsExpanded(!state.indicatorsExpanded));
+  const engineVersionSelect=$('engine-version-select');
+  if(engineVersionSelect){
+   engineVersionSelect.value=CFG.version;
+   engineVersionSelect.addEventListener('change',()=>{
+    const next=engineVersionSelect.value;
+    if(!['7.1.0','7.1.1'].includes(next)||next===CFG.version)return;
+    try{localStorage.setItem('btc-active-engine-version',next);}catch{}
+    location.reload();
+   });
+  }
   $('latest').addEventListener('click',()=>state.chart&&state.chart.timeScale().scrollToRealTime());
   $('reconnect').addEventListener('click',()=>{state.reconnectCount=0;connect();});
   window.addEventListener('online',()=>connect());window.addEventListener('offline',()=>statusView('offline','อินเทอร์เน็ตขาดการเชื่อมต่อ'));
