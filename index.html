@@ -254,7 +254,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบวิเคราะห์สัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V7.1.0</span></div>
+  <div class="panel-heading"><span>ระบบวิเคราะห์สัญญาณ</span><span class="small-tag" id="signal-tag">สัญญาณ V7.1.0</span></div>
 
   <section class="signal-card signal-card-direction">
     <div class="signal-card-title"><span>แนวโน้ม +10 นาที</span></div>
@@ -1164,16 +1164,20 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
  ['RANGE EDGE','ขอบกรอบราคา'],['EPISODE GUARD','ป้องกันการออกสัญญาณซ้ำ'],['SIDEWAY','ราคาแกว่งในกรอบ'],
  ['EXHAUSTION','ราคาเริ่มหมดแรง'],['REVERSAL','กำลังกลับตัว'],['TRANSITION','ช่วงตลาดเปลี่ยนแนวโน้ม'],
  ['IMPULSE','ราคาวิ่งแรง'],['BREAKOUT','ทะลุกรอบ'],['RANGE','แกว่งในกรอบ'],['TREND','มีแนวโน้ม'],
- ['follow-through','การวิ่งต่อ'],['follow','ตามทิศทาง'],['counter-trend','สวนแนวโน้ม'],['room','พื้นที่ให้ราคาเดินต่อ'],['volume','ปริมาณซื้อขาย'],['reversal trigger','เงื่อนไขยืนยันการกลับตัว'],['follow trigger','เงื่อนไขยืนยันการไปต่อ'],
- ['trigger','จุดยืนยัน'],['setup','เงื่อนไขเข้า'],['phase','ช่วงการเคลื่อนที่ของราคา'],
- ['acceptance','การปิดยืนยัน'],['displacement','ราคาทะลุออกไป'],['Relative volume','ปริมาณซื้อขายเทียบปกติ'],
- ['flow','แรงซื้อขาย'],['Order Book','คำสั่งซื้อขายที่รออยู่'],['book','คำสั่งซื้อขาย'],
- ['rejection','การเด้งกลับ'],['reject','การปฏิเสธระดับราคา'],['retreat','การย่อตัวกลับ'],['fair value','ราคากลางของกรอบ'],
- ['movement','รอบการเคลื่อนที่ของราคา'],['edge','หลักฐานที่ขอบกรอบ'],['UP','ขึ้น'],['DOWN','ลง'],
- ['HIGH','ขึ้น'],['LOW','ลง'],['1m','1 นาที'],['+10m','อีก 10 นาที'],['T+10','ครบ 10 นาที']
+ ['follow-through','การวิ่งต่อ'],['follow trigger','เงื่อนไขยืนยันการไปต่อ'],['reversal trigger','เงื่อนไขยืนยันการกลับตัว'],
+ ['counter-trend','สวนแนวโน้ม'],['follow','ตามทิศทาง'],['trigger','จุดยืนยัน'],['setup','เงื่อนไขเข้า'],
+ ['phase','ช่วงการเคลื่อนที่ของราคา'],['acceptance','การปิดยืนยัน'],['displacement','ราคาทะลุออกไป'],
+ ['Relative volume','ปริมาณซื้อขายเทียบปกติ'],['volume','ปริมาณซื้อขาย'],['flow','แรงซื้อขาย'],
+ ['Order Book','คำสั่งซื้อขายที่รออยู่'],['book','คำสั่งซื้อขาย'],['rejection','การเด้งกลับ'],
+ ['reject','การปฏิเสธระดับราคา'],['retreat','การย่อตัวกลับ'],['fair value','ราคากลางของกรอบ'],
+ ['movement','รอบการเคลื่อนที่ของราคา'],['edge','หลักฐานที่ขอบกรอบ'],['room','พื้นที่ให้ราคาเดินต่อ'],
+ ['UP','ขึ้น'],['DOWN','ลง'],['HIGH','ขึ้น'],['LOW','ลง'],['1m','1 นาที'],['+10m','อีก 10 นาที'],['T+10','ครบ 10 นาที']
  ];
  let out=String(v??'');
- for(const [k,th]of entries)out=out.replace(new RegExp('(^|[^A-Za-z_])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\function persist(force=false)')+'(?=$|[^A-Za-z_])','gi'),(m,p)=>p+th);
+ for(const [k,th] of entries){
+  const escaped=k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  out=out.replace(new RegExp('(^|[^A-Za-z_])'+escaped+'(?=$|[^A-Za-z_])','gi'),(m,p)=>p+th);
+ }
  return out.replace(/\s*·\s*/g,' · ').trim();
 }
    function reviewTagLabel(t){return REVIEW_TEXT[t]?.[0]||uiReason(String(t||'').replaceAll('_',' '));}
