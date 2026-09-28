@@ -226,6 +226,59 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
  .chart-foot{padding:7px 9px!important;gap:6px!important;font-size:9px!important}
 }
 .review-note{color:var(--muted);font-size:12px;line-height:1.65;margin:8px 0 12px}.review-list li small{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* REALTIME setup profile — advisory only, never changes entry logic */
+.setup-profile-panel{
+ min-width:0;align-self:start;
+ border:1px solid #2b3b52;border-radius:12px;
+ background:linear-gradient(165deg,#111a28 0%,#0d1520 72%);
+ padding:16px;overflow:hidden;
+ box-shadow:0 16px 40px #00000018
+}
+.setup-profile-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #223047}
+.setup-profile-head h2{font-size:18px;font-weight:600;margin-top:2px}
+.setup-profile-kicker{display:block;font:600 9px 'Segoe UI',sans-serif;letter-spacing:1.35px;color:#8da0ba;margin-bottom:3px}
+.setup-profile-status{flex:none;border:1px solid #3b4a60;background:#172130;color:#a9b8cb;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:600;white-space:nowrap}
+.setup-profile-status.good{border-color:#2f6d5d;background:#123027;color:#7ce8c7}
+.setup-profile-status.bad{border-color:#75404d;background:#321b23;color:#ff9aae}
+.setup-profile-status.learning{border-color:#6b5933;background:#2d2619;color:#e9c47e}
+.setup-profile-hero{padding:13px 0 10px}
+.setup-profile-hero>span{font-size:9px;color:#8093ad}
+.setup-profile-hero h3{font-size:16px;line-height:1.35;font-weight:600;margin:4px 0 5px;color:#e3edf9}
+.setup-profile-hero p{font-size:10px;line-height:1.55;color:#91a3bb}
+.setup-profile-rate{padding:12px;border:1px solid #2a3c55;border-radius:10px;background:#0a131f}
+.setup-rate-main{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.setup-rate-main span{display:block;font-size:9px;color:#8194ad;margin-bottom:2px}
+.setup-rate-main strong{font:700 31px/1 'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;color:#dce9f8}
+.setup-rate-main b{font-size:10px;font-weight:600;text-align:right;color:#aebed1}
+.setup-profile-rate.good .setup-rate-main strong,.setup-profile-rate.good .setup-rate-main b{color:#69e9c5}
+.setup-profile-rate.bad .setup-rate-main strong,.setup-profile-rate.bad .setup-rate-main b{color:#ff8da1}
+.setup-rate-track{height:6px;background:#273348;border-radius:8px;overflow:hidden;margin-top:10px}
+.setup-rate-track>div{height:100%;width:0;background:linear-gradient(90deg,#788ba5,#9db0c8);transition:width .25s ease}
+.setup-profile-rate.good .setup-rate-track>div{background:linear-gradient(90deg,#2f9a7e,#69e9c5)}
+.setup-profile-rate.bad .setup-rate-track>div{background:linear-gradient(90deg,#bd5368,#ff8da1)}
+.setup-rate-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:9px;color:#8497b0}
+.setup-rate-meta span:last-child{text-align:right}
+.setup-exact-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:10px 2px;border-bottom:1px solid #202d40}
+.setup-exact-row span{font-size:10px;color:#9bacc1}.setup-exact-row b{font:600 14px 'Segoe UI',sans-serif}.setup-exact-row small{grid-column:1/-1;font-size:9px;color:#70849f}
+.setup-live-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.setup-live-grid>div{padding:8px 9px;border:1px solid #202f43;border-radius:8px;background:#0c1521;min-width:0}
+.setup-live-grid span{display:block;font-size:8px;color:#778ba6;margin-bottom:3px}
+.setup-live-grid b{display:block;font:600 11px 'Segoe UI',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setup-profile-section{padding-top:10px}
+.setup-profile-section+ .setup-profile-section{margin-top:3px;border-top:1px solid #1e2b3d}
+.setup-profile-section h4{font-size:11px;font-weight:600;margin:0 0 6px;color:#bed0e4}
+.setup-profile-section.support h4{color:#76ddbe}.setup-profile-section.warning h4{color:#f0bc7a}
+.setup-profile-section ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.setup-profile-section li{position:relative;padding-left:14px;font-size:9.5px;line-height:1.45;color:#9fb0c5}
+.setup-profile-section.support li:before,.setup-profile-section.warning li:before{content:'';position:absolute;left:1px;top:.52em;width:5px;height:5px;border-radius:50%}
+.setup-profile-section.support li:before{background:#58c9aa}.setup-profile-section.warning li:before{background:#d8a45f}
+.setup-profile-foot{margin-top:11px;padding-top:9px;border-top:1px solid #223047;font-size:8.5px;line-height:1.45;color:#6f829c}
+@media(min-width:1301px){.work-area{grid-template-columns:minmax(0,1fr) 300px 330px}}
+@media(max-width:1300px) and (min-width:851px){.work-area{grid-template-columns:minmax(0,1fr) 300px}.setup-profile-panel{grid-column:2}}
+@media(max-width:850px){.work-area{grid-template-columns:1fr}.setup-profile-panel{grid-column:auto;padding:14px 16px}.setup-profile-section li{font-size:10px}}
+@media(max-width:480px){.setup-live-grid{grid-template-columns:1fr 1fr}.setup-profile-head h2{font-size:17px}.setup-rate-main strong{font-size:29px}}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -301,6 +354,44 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div>
     <small class="last-entry-meta" id="last-entry-meta">—</small>
   </div>
+</aside>
+<aside class="setup-profile-panel" id="setup-profile-panel" aria-live="polite">
+  <div class="setup-profile-head">
+    <div><span class="setup-profile-kicker">ประกอบการตัดสินใจ · REALTIME</span><h2>โปรไฟล์ท่านี้</h2></div>
+    <span class="setup-profile-status learning" id="setup-profile-status">รอจังหวะ</span>
+  </div>
+  <section class="setup-profile-hero">
+    <span>ท่าที่ระบบกำลังเห็น</span>
+    <h3 id="setup-profile-name">กำลังรอจุดเข้า</h3>
+    <p id="setup-profile-desc">จุดเข้าเดิมยังทำงานตามปกติ ช่องนี้ใช้ดูสถิติและบริบทประกอบเท่านั้น</p>
+  </section>
+  <section class="setup-profile-rate" id="setup-profile-rate">
+    <div class="setup-rate-main">
+      <div><span>ถ้าเข้าจากตำแหน่งคล้ายตอนนี้</span><strong id="setup-similar-rate">—</strong></div>
+      <b id="setup-history-lean">รอข้อมูล</b>
+    </div>
+    <div class="setup-rate-track"><div id="setup-rate-bar"></div></div>
+    <div class="setup-rate-meta"><span id="setup-similar-record">—</span><span id="setup-sample-quality">—</span></div>
+  </section>
+  <div class="setup-exact-row">
+    <span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-exact-rate">—</b>
+    <small id="setup-exact-record">ยังไม่มีข้อมูล</small>
+  </div>
+  <div class="setup-live-grid">
+    <div><span>น้ำหนัก +10 นาที</span><b id="setup-live-direction">—</b></div>
+    <div><span>วิ่งจากฐาน</span><b id="setup-live-extension">—</b></div>
+    <div><span>ระยะก่อนชนแนว</span><b id="setup-live-room">—</b></div>
+    <div><span>Volume ตอนนี้</span><b id="setup-live-volume">—</b></div>
+  </div>
+  <section class="setup-profile-section support">
+    <h4>เหตุผลที่หนุนจุดนี้</h4>
+    <ul id="setup-support-list"><li>รอข้อมูลตลาดสด</li></ul>
+  </section>
+  <section class="setup-profile-section warning">
+    <h4>สิ่งที่ต้องระวังตอนนี้</h4>
+    <ul id="setup-warning-list"><li>รอข้อมูลตลาดสด</li></ul>
+  </section>
+  <div class="setup-profile-foot" id="setup-profile-foot">คำนวณจากไม้ที่จบผลแล้วของเวอร์ชันปัจจุบันในเบราว์เซอร์นี้ · ไม่เปลี่ยนสูตรหรือบล็อกสัญญาณจุดเข้า</div>
 </aside>
 </div>
 <section class="prediction-log"><div class="prediction-log-head"><div><h2>ผลสัญญาณ +10 นาที</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">เวอร์ชัน <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">สรุปรีพอร์ตทั้งหมด</button><button id="export-training-csv">ข้อมูลเทรน CSV</button><button id="export-history">ข้อมูลเทรน JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เวลาเข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบ 10 นาที</th><th>ราคาตัดสิน</th><th>ผล / เหลือเวลา</th><th>โอกาสชนะตอนนี้</th><th>บทเรียน</th><th>เวอร์ชัน</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
@@ -1209,6 +1300,181 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   for(const [re,to] of rules)s=s.replace(re,to);
   return s.replace(/\s+/g,' ').trim();
 }
+
+  function setupClamp(v,a,b){return Math.max(a,Math.min(b,v));}
+  function setupDoneSignals(){
+   return engine.signals.filter(s=>s.version===CFG.version&&['correct','incorrect'].includes(s.result)&&s.dataset?.entry);
+  }
+  function setupStats(rows){
+   const n=rows.length,wins=rows.filter(s=>s.result==='correct').length;
+   return {n,wins,losses:n-wins,rate:n?wins/n:null};
+  }
+  function setupLiveSnapshot(v,directionView,micro={}){
+   const nowMs=(state.quote?.ts||Date.now()/1000)*1000;
+   const recentSignal=[...engine.signals].reverse().find(s=>s.version===CFG.version&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=180000);
+   const e=v?.event||null,modelD=e?.d||0;
+   const preview=e&&v?.f&&v?.phase?selectOutputDecision(e.type,modelD,v.f,v.phase):null;
+   let direction=v?.signal?.direction||preview?.direction||recentSignal?.direction||null;
+   if(!direction&&directionView?.available&&directionView.direction!=='BALANCED')direction=directionView.direction;
+   const type=e?.type||recentSignal?.type||null;
+   if(!type||!['HIGH','LOW'].includes(direction))return null;
+   const stored=v?.signal?.dataset?.entry||recentSignal?.dataset?.entry||{};
+   const phase=v?.phase?.phase||stored.marketPhase||null,regime=v?.regime?.mode||stored.regime||null;
+   const relVol=Math.max(Number(v?.f?.relVolume)||0,Number(v?.phase?.liveVolumePace)||0,Number(stored.relativeVolume)||0,Number(stored.liveVolumePace)||0);
+   const extension=Number.isFinite(v?.phase?.extensionAtr)?v.phase.extensionAtr:(Number.isFinite(stored.phaseExtensionAtr)?stored.phaseExtensionAtr:null);
+   const room=Number.isFinite(directionView?.room)?directionView.room:(Number.isFinite(stored.room)?stored.room:null);
+   const risk=directionView?.available?directionView.risk:(stored.microstructure?.continuousRisk||null);
+   const probability=directionView?.available?(direction==='HIGH'?directionView.high:directionView.low):(direction==='HIGH'?stored.microstructure?.continuousHigh:stored.microstructure?.continuousLow);
+   const trend=Number.isFinite(v?.f?.trend)?v.f.trend:stored.trend,momentum=Number.isFinite(v?.f?.mom)?v.f.mom:stored.momentum;
+   const rangePosition=Number.isFinite(v?.f?.rangePosition)?v.f.rangePosition:stored.rangePosition;
+   return {
+    type,direction,phase,regime,relVol,extension,room,risk,probability,
+    trend:Number.isFinite(trend)?trend:null,momentum:Number.isFinite(momentum)?momentum:null,
+    rangePosition:Number.isFinite(rangePosition)?rangePosition:null,
+    flow:Number.isFinite(micro.flow)?micro.flow:(Number.isFinite(stored.flow)?stored.flow:null),
+    book:Number.isFinite(micro.book)?micro.book:(Number.isFinite(stored.book)?stored.book:null),
+    bookValid:micro.bookValid!==undefined?!!micro.bookValid:!!stored.bookValid,
+    evidenceScore:Number.isFinite(e?.evidenceScore)?e.evidenceScore:(Number.isFinite(stored.evidenceScore)?stored.evidenceScore:null),
+    episodeSequence:v?.signal?.dataset?.episodeSequence||recentSignal?.dataset?.episodeSequence||1,
+    isLiveEvent:!!e,isRecentSignal:!e&&!!recentSignal,
+    reason:directionView?.reason||stored.microstructure?.continuousReason||''
+   };
+  }
+  function setupSimilarityScore(snap,s){
+   const e=s.dataset?.entry||{};let score=0,weight=0;
+   const cat=(same,w)=>{weight+=w;if(same)score+=w;};
+   const num=(a,b,scale,w)=>{if(!Number.isFinite(a)||!Number.isFinite(b))return;weight+=w;score+=w*setupClamp(1-Math.abs(a-b)/scale,0,1);};
+   cat(s.type===snap.type,4);cat(s.direction===snap.direction,3);
+   if(snap.phase&&e.marketPhase)cat(e.marketPhase===snap.phase,3);
+   if(snap.regime&&e.regime)cat(e.regime===snap.regime,1.4);
+   const histRisk=e.microstructure?.continuousRisk||null;if(snap.risk&&histRisk)cat(histRisk===snap.risk,1.2);
+   num(snap.extension,e.phaseExtensionAtr,3.5,2.1);
+   num(snap.relVol,e.relativeVolume,2.5,1.1);
+   num(snap.room,e.room,1.5,1.2);
+   num(snap.rangePosition,e.rangePosition,.55,1.0);
+   num(snap.trend,e.trend,1.2,1.0);
+   num(snap.momentum,e.momentum,2.0,.8);
+   const histProb=snap.direction==='HIGH'?e.microstructure?.continuousHigh:e.microstructure?.continuousLow;
+   num(snap.probability,histProb,35,1.2);
+   return weight?score/weight:0;
+  }
+  function setupComparison(snap){
+   const done=setupDoneSignals();
+   const exact=done.filter(s=>s.type===snap.type&&s.direction===snap.direction&&s.dataset?.entry?.marketPhase===snap.phase);
+   let pool=done.filter(s=>s.type===snap.type),basis='ท่าเดียวกัน';
+   if(pool.length<3){pool=done.filter(s=>s.direction===snap.direction&&s.dataset?.entry?.marketPhase===snap.phase);basis='ช่วงตลาดและฝั่งเดียวกัน';}
+   if(pool.length<3){pool=done.filter(s=>s.direction===snap.direction);basis='ฝั่งเดียวกัน';}
+   const ranked=pool.map(s=>({s,score:setupSimilarityScore(snap,s)})).sort((a,b)=>b.score-a.score);
+   let similar=ranked.filter(x=>x.score>=.54).slice(0,8);
+   const wanted=Math.min(3,ranked.length);
+   if(similar.length<wanted)similar=ranked.slice(0,Math.min(5,ranked.length));
+   return {exact:setupStats(exact),similar:setupStats(similar.map(x=>x.s)),basis,meanSimilarity:similar.length?similar.reduce((a,x)=>a+x.score,0)/similar.length:null};
+  }
+  function setupName(snap){
+   const base={
+    breakout:'ทะลุกรอบตามแรง',
+    pullback:'ย่อแล้วไปต่อ',
+    trend_continuation:'ตามเทรนด์ไปต่อ',
+    failed_break:'ทะลุไม่ผ่านแล้วกลับฝั่ง',
+    range_reversal:'เด้งกลับจากขอบกรอบ',
+    exhaustion_reversal:'จับกลับตัวหลังแรงเริ่มหมด'
+   }[snap.type]||typeName[snap.type]||snap.type;
+   return `${base} · ${directionThai(snap.direction)} · ${phaseThai(snap.phase)}`;
+  }
+  function setupList(id,items,fallback){
+   const ul=$(id);if(!ul)return;ul.replaceChildren();
+   for(const item of (items.length?items:[fallback])){const li=document.createElement('li');li.textContent=item;ul.append(li);}
+  }
+  function setupSampleLabel(n,meanSimilarity){
+   const sim=Number.isFinite(meanSimilarity)?` · ความคล้าย ${Math.round(meanSimilarity*100)}%`:'';
+   return n>=8?'ตัวอย่างค่อนข้างพอ'+sim:n>=5?'ตัวอย่างปานกลาง'+sim:n>=3?'ตัวอย่างยังน้อย'+sim:'ข้อมูลยังน้อยมาก'+sim;
+  }
+  function renderSetupProfile(v,directionView,micro={}){
+   const snap=setupLiveSnapshot(v,directionView,micro),status=$('setup-profile-status'),rateBox=$('setup-profile-rate');
+   if(!snap){
+    status.className='setup-profile-status learning';status.textContent='รอจังหวะ';
+    $('setup-profile-name').textContent='กำลังรอจุดเข้า';
+    $('setup-profile-desc').textContent='เมื่อมีจังหวะหรือเพิ่งมีสัญญาณ ช่องนี้จะเทียบกับไม้ย้อนหลังและอัปเดตจากราคาตอนนี้แบบเรียลไทม์';
+    $('setup-similar-rate').textContent='—';$('setup-history-lean').textContent='รอข้อมูล';$('setup-rate-bar').style.width='0%';
+    $('setup-similar-record').textContent='—';$('setup-sample-quality').textContent='—';$('setup-exact-rate').textContent='—';$('setup-exact-record').textContent='ยังไม่มีท่าปัจจุบัน';
+    for(const id of ['setup-live-direction','setup-live-extension','setup-live-room','setup-live-volume'])$(id).textContent='—';
+    rateBox.className='setup-profile-rate';setupList('setup-support-list',[],'รอจังหวะจากระบบ');setupList('setup-warning-list',[],'ยังไม่มีจุดที่ต้องประเมิน');
+    return;
+   }
+   const cmp=setupComparison(snap),sim=cmp.similar,exact=cmp.exact,d=snap.direction==='HIGH'?1:-1;
+   $('setup-profile-name').textContent=setupName(snap);
+   $('setup-profile-desc').textContent=(snap.isRecentSignal?'สัญญาณเพิ่งออกแล้ว · กำลังประเมินว่าถ้าเข้าที่ราคาตอนนี้ยังเหมือนไม้ชนะย้อนหลังหรือไม่':'ประเมินจากราคาตอนนี้ก่อน/ระหว่างจุดเข้า')+` · ใช้เฉพาะผล V${CFG.version} ที่จบครบ 10 นาที`;
+   const pct=Number.isFinite(sim.rate)?Math.round(sim.rate*100):null;
+   $('setup-similar-rate').textContent=pct===null?'—':pct+'%';
+   $('setup-rate-bar').style.width=pct===null?'0%':pct+'%';
+   const lean=sim.n<3?'ข้อมูลยังน้อย':sim.rate>.5?'ส่วนมากชนะ':sim.rate<.5?'ส่วนมากแพ้':'ชนะ/แพ้พอ ๆ กัน';
+   $('setup-history-lean').textContent=lean;
+   $('setup-similar-record').textContent=sim.n?`${sim.wins} ชนะ / ${sim.losses} แพ้ · ${cmp.basis}`:'ยังไม่มีไม้ย้อนหลังที่ใกล้พอ';
+   $('setup-sample-quality').textContent=setupSampleLabel(sim.n,cmp.meanSimilarity);
+   rateBox.className='setup-profile-rate '+(sim.n>=3&&sim.rate>=.6?'good':sim.n>=3&&sim.rate<=.4?'bad':'');
+   $('setup-exact-rate').textContent=Number.isFinite(exact.rate)?Math.round(exact.rate*100)+'%':'—';
+   $('setup-exact-record').textContent=exact.n?`${exact.wins} ชนะ / ${exact.losses} แพ้ จาก ${exact.n} ไม้ตรงท่า`:'ยังไม่มีไม้ที่ตรงทั้งท่า ฝั่ง และช่วงตลาด';
+
+   const exactForStatus=exact.n>=3?exact:sim;
+   if(exactForStatus.n>=5&&exactForStatus.rate>=.65){status.className='setup-profile-status good';status.textContent='ท่าถนัด';}
+   else if(exactForStatus.n>=5&&exactForStatus.rate<=.4){status.className='setup-profile-status bad';status.textContent='ท่าเสียเปรียบ';}
+   else{status.className='setup-profile-status learning';status.textContent=exactForStatus.n>=3?'ผลยังสูสี':'กำลังเรียนรู้';}
+
+   $('setup-live-direction').textContent=Number.isFinite(snap.probability)?`${directionThai(snap.direction)} ${Math.round(snap.probability)}%`:directionThai(snap.direction);
+   $('setup-live-extension').textContent=Number.isFinite(snap.extension)?Math.abs(snap.extension).toFixed(2)+' ATR':'—';
+   $('setup-live-room').textContent=Number.isFinite(snap.room)?snap.room.toFixed(2)+' ATR':'—';
+   $('setup-live-volume').textContent=Number.isFinite(snap.relVol)&&snap.relVol>0?snap.relVol.toFixed(2)+'x':'—';
+
+   const support=[],warning=[];
+   if(sim.n>=3&&sim.rate>=.6)support.push(`ไม้ที่ตำแหน่งใกล้กันชนะ ${sim.wins}/${sim.n} ไม้ (${Math.round(sim.rate*100)}%)`);
+   if(sim.n>=3&&sim.rate<=.4)warning.push(`ไม้ที่ตำแหน่งใกล้กันแพ้ ${sim.losses}/${sim.n} ไม้`);
+   if(Number.isFinite(snap.probability)&&snap.probability>=62)support.push(`น้ำหนัก +10 นาทีหนุนฝั่ง${directionThai(snap.direction)} ${Math.round(snap.probability)}%`);
+   else if(Number.isFinite(snap.probability)&&snap.probability<=55)warning.push(`น้ำหนัก +10 นาทีของฝั่งนี้มีเพียง ${Math.round(snap.probability)}% ยังไม่ได้เปรียบชัด`);
+   if(snap.risk==='ต่ำตามเกณฑ์')support.push('ตัวประเมินความเสี่ยงเรียลไทม์อยู่ระดับต่ำตามเกณฑ์');
+   if(snap.risk==='สูง')warning.push('ตัวประเมินความเสี่ยงเรียลไทม์ขึ้นระดับสูง'+(snap.reason?' · '+humanText(snap.reason):''));
+   else if(snap.risk==='กลาง')warning.push('ความเสี่ยงจุดเข้าอยู่ระดับกลาง');
+
+   if(Number.isFinite(snap.trend)){
+    const aligned=d*snap.trend;
+    if(aligned>=.24)support.push(`แนวโน้ม 1 นาทีไปทางเดียวกับจุดเข้า (${Math.abs(snap.trend).toFixed(2)})`);
+    else if(aligned<=-.18)warning.push('จุดเข้ากำลังสวนแนวโน้ม 1 นาที');
+   }
+   if(Number.isFinite(snap.momentum)){
+    const aligned=d*snap.momentum;
+    if(aligned>=.30)support.push('แรงส่งราคายังไปทางเดียวกับฝั่งที่เลือก');
+    else if(aligned<=-.25)warning.push('แรงส่งราคากำลังสวนฝั่งที่เลือก');
+   }
+   if(Number.isFinite(snap.flow)){
+    const aligned=d*snap.flow;
+    if(aligned>=.08)support.push('แรงซื้อขายสดสนับสนุนฝั่งที่เลือก');
+    else if(aligned<=-.08)warning.push('แรงซื้อขายสดกำลังสวนฝั่งที่เลือก');
+   }
+   if(snap.bookValid&&Number.isFinite(snap.book)){
+    const aligned=d*snap.book;
+    if(aligned>=.14)support.push('สมุดคำสั่งซื้อขายเอียงมาทางฝั่งที่เลือก');
+    else if(aligned<=-.14)warning.push('สมุดคำสั่งซื้อขายเอียงสวนฝั่งที่เลือก');
+   }
+   if(Number.isFinite(snap.room)){
+    if(snap.room>=.6)support.push(`มีระยะก่อนชนแนวฝั่งตรงข้าม ${snap.room.toFixed(2)} ATR`);
+    else if(snap.room<.30)warning.push(`ใกล้แนวฝั่งตรงข้ามมาก เหลือระยะเพียง ${snap.room.toFixed(2)} ATR`);
+   }
+   if(Number.isFinite(snap.evidenceScore)&&snap.evidenceScore>=5)support.push(`หลักฐานของจุดเข้าผ่านระดับ ${snap.evidenceScore} คะแนน`);
+   if(Number.isFinite(snap.extension)){
+    const ext=Math.abs(snap.extension);
+    if(ext>=CFG.climaxExtensionAtr)warning.push(`ราคาวิ่งห่างฐานมาแล้ว ${ext.toFixed(2)} ATR · เสี่ยงเข้าใกล้ยอด/ก้นของรอบ`);
+    else if(ext>=CFG.matureExtensionAtr)warning.push(`ราคาวิ่งจากฐานมาไกล ${ext.toFixed(2)} ATR · ระวังจังหวะย่อสวน`);
+   }
+   if(Number.isFinite(snap.relVol)&&snap.relVol>=CFG.climaxRelVol&&Number.isFinite(snap.extension)&&Math.abs(snap.extension)>=CFG.matureExtensionAtr)warning.push(`Volume สูง ${snap.relVol.toFixed(2)}x พร้อมราคาที่ยืดไกล · ระวังปลายขา`);
+   else if(Number.isFinite(snap.relVol)&&snap.relVol>=CFG.impulseRelVol)support.push(`Volume มากกว่าปกติ ${snap.relVol.toFixed(2)}x มีแรงเข้าตลาดจริง`);
+   if((snap.episodeSequence||1)>1)warning.push(`เป็นสัญญาณลำดับที่ ${snap.episodeSequence} ในคลื่นเดียวกัน ไม่ใช่ไม้แรกของรอบ`);
+   if(snap.phase==='EXHAUSTION'&&snap.type!=='exhaustion_reversal')warning.push('ตลาดอยู่ช่วงแรงเริ่มหมด แต่จุดเข้ายังตามทิศเดิม');
+   if(snap.phase==='MATURE_IMPULSE'&&Number.isFinite(snap.extension)&&Math.abs(snap.extension)>=CFG.climaxExtensionAtr)warning.push('เป็นช่วงวิ่งแรงมาไกลแล้ว จังหวะนี้ต้องระวังรูปแบบ “ภูเขา” เป็นพิเศษ');
+
+   setupList('setup-support-list',support.slice(0,6),'ยังไม่มีเหตุผลหนุนที่เด่นพอในขณะนี้');
+   setupList('setup-warning-list',warning.slice(0,6),'ยังไม่พบสัญญาณเตือนเด่นจากข้อมูลเรียลไทม์');
+   $('setup-profile-foot').textContent=`อัปเดต ${clockMs((state.quote?.ts||0)*1000)} · สถิติ V${CFG.version} เฉพาะไม้ที่จบผลแล้ว · เปรียบเทียบจากท่า ฝั่ง ช่วงตลาด ระยะจากฐาน แนวสำคัญ Volume และแรงตลาด · ไม่เปลี่ยนสูตรจุดเข้า`;
+  }
+
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
   function purgeOldVersions(){
    const old=engine.signals.filter(s=>s.version!==CFG.version);
@@ -1585,7 +1851,7 @@ function openReport(){
    if(v.f)engine.observeContext({ts:q.ts*1000,price:q.price,flow,coverage,book,bookValid:valid,regime:v.regime?.mode||null,phase:v.phase?.phase||null,trend:v.f.trend,momentum:v.f.mom,rangePosition:v.f.rangePosition,room:directionView.room});
    if(v.signal?.dataset?.entry){const liq=liquidationSnapshot(q.ts);v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};}
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
-   renderEvent(v);if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
+   renderEvent(v);renderSetupProfile(v,directionView,{flow,book,bookValid:valid});if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
   }
 
   function normalizeKline(row){return {time:Math.floor(Number(row[0])/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4],volume:+row[5],closed:Number(row[6])<Date.now()};}
@@ -1771,6 +2037,7 @@ function openReport(){
   setInterval(()=>analyseNow(true),1500);
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,ingest,analyseNow};
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
+  renderSetupProfile(null,null,{});
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
   setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();},1000);
   window.addEventListener('pagehide',()=>persist(true));
