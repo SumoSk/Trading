@@ -195,7 +195,7 @@ class Engine{
     if(this.regimeCandidateCount>=needed){this.regimeMode=r.raw;this.regimeCandidate=null;this.regimeCandidateCount=0;}
    }else {this.regimeCandidate=null;this.regimeCandidateCount=0;}
   }
-  return {...r,mode:r.breakoutCandidate?'TRANSITION':this.regimeMode};
+  return {...r,stableMode:this.regimeMode,mode:r.breakoutCandidate?'TRANSITION':this.regimeMode};
  }
  start(type,d,level,x,f,key){
   if(this.consumed.has(key))return;
@@ -217,8 +217,8 @@ class Engine{
   if(!this.active){
    const crossedUp=prev.price<=f.high+f.atr*CFG.breakBuffer&&x.price>f.high+f.atr*CFG.breakBuffer;
    const crossedDown=prev.price>=f.low-f.atr*CFG.breakBuffer&&x.price<f.low-f.atr*CFG.breakBuffer;
-   if(crossedUp)this.start('breakout',1,f.high,x,f,`B+:${f.high.toFixed(2)}`);
-   else if(crossedDown)this.start('breakout',-1,f.low,x,f,`B-:${f.low.toFixed(2)}`);
+   if(crossedUp){this.start('breakout',1,f.high,x,f,`B+:${f.high.toFixed(2)}`);if(this.active)this.active.fromRange=regime.stableMode==='RANGE';}
+   else if(crossedDown){this.start('breakout',-1,f.low,x,f,`B-:${f.low.toFixed(2)}`);if(this.active)this.active.fromRange=regime.stableMode==='RANGE';}
    else if(regime.mode==='RANGE'){
     const last=f.b.at(-1),d=regime.position<=.22?1:regime.position>=.78?-1:0;
     if(d){
@@ -256,9 +256,20 @@ class Engine{
   else if(progress>CFG.maxBreakEntry||drift>CFG.maxDrift)invalid='ราคาวิ่งพ้นเขตเข้าแล้ว';
   else if(progress<-.18)invalid='เสียโครงสร้างจังหวะ';
   if(invalid){this.log('cancelled',x.ts,{id:e.id,reason:invalid,progress,drift});this.active=null;return this.lastView={...view,status:'expired',reason:invalid};}
-  // Event-based evidence, not alignment votes from higher timeframes.
+  // Event-based evidence. A breakout born inside a stable range needs price acceptance,
+  // otherwise a one-tick poke is treated only as BREAKOUT WATCH.
   let blocker='';
-  if(x.coverage<CFG.flowWarmupSec)blocker='กำลังสะสมแรงซื้อขายสด 15 วินาที';
+  if(e.type==='breakout'&&e.fromRange){
+   const live=x.bars.at(-1),closed=f.b.at(-1),displacement=e.d*(x.price-e.level)/e.atr;
+   const body=live?Math.abs(x.price-live.open)/e.atr:0;
+   const acceptedClosed=closed&&(e.d>0
+     ? closed.close>e.level+e.atr*.06&&closed.low>e.level-e.atr*.10
+     : closed.close<e.level-e.atr*.06&&closed.high<e.level+e.atr*.10);
+   const strongBreak=displacement>=.22&&body>=.45&&flow>=.12&&retreat<=.22&&x.coverage>=CFG.flowWarmupSec;
+   e.accepted=!!acceptedClosed||strongBreak;e.strongBreak=strongBreak;
+   if(!e.accepted)blocker='ไซด์เวย์ · กำลังตรวจการยอมรับราคานอกกรอบ';
+  }
+  if(!blocker&&x.coverage<CFG.flowWarmupSec)blocker='กำลังสะสมแรงซื้อขายสด 15 วินาที';
   else if(flow<CFG.minFlow)blocker='แรงซื้อขายยังไม่สนับสนุนจังหวะ';
   else if(progress<.03)blocker='ยังยืนพ้นแนวอ้างอิงไม่ได้';
   else if(retreat>CFG.maxRetreat)blocker='ราคาถอยจากปลายขามากเกินเกณฑ์';
@@ -305,6 +316,13 @@ function assess(x){
  let raw=Object.keys(weights).reduce((s,k)=>s+parts[k]*weights[k],0);
  // In the middle of a range there is little 10-minute directional edge.
  if(mode==='RANGE'&&Math.abs(edge)<.45)raw*=.45;
+ if(mode==='TRANSITION'&&regime.stableMode==='RANGE'&&regime.breakoutCandidate){
+  const liveBar=x.current&&x.current.time>=last.time?x.current:last;
+  const d0=regime.breakoutDir||0,level=d0>0?f.high:f.low;
+  const displacement=d0?d0*(p-level)/a:0,body=liveBar?Math.abs(p-liveBar.open)/a:0,flowDir=d0*flow;
+  const strong=displacement>=.22&&body>=.45&&flowDir>=.12;
+  if(!strong)raw*=.55;
+ }
  const high=Math.round(50+40*clip(raw,-1,1)),low=100-high;
  const direction=high===low?'BALANCED':high>low?'HIGH':'LOW',d=direction==='LOW'?-1:direction==='HIGH'?1:0;
  const reasons=[];let risk=0;
