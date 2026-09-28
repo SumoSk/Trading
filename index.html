@@ -178,6 +178,17 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
  box-shadow:0 2px 10px rgba(0,0,0,.28)!important
 }
 .left-line-label.signal{font-size:10px!important;font-weight:600}
+.right-order-labels{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+.right-order-label{
+ position:absolute;right:64px;transform:translateY(-50%);
+ display:flex;align-items:center;gap:6px;
+ max-width:calc(100% - 90px);padding:4px 8px;
+ border:1px solid currentColor;border-radius:5px;
+ background:rgba(11,16,25,.92);box-shadow:0 2px 10px rgba(0,0,0,.28);
+ font:600 10px/1.2 'Segoe UI',Tahoma,sans-serif;
+ white-space:nowrap;font-variant-numeric:tabular-nums
+}
+@media(max-width:480px){.right-order-label{right:56px;font-size:10px;padding:4px 7px}}
 
 /* tablet */
 @media(max-width:900px){
@@ -227,7 +238,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
-  <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
+  <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span><span id="zone-legend">1m แนวรับ / แนวต้าน · กำลังโหลด</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
@@ -1184,7 +1195,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(!host||!state.chartReady||!state.candleSeries)return;
    host.style.display='block';
    host.replaceChildren();
-   const mapped=[...leftZoneLabels,...leftSignalLabels].map(item=>({
+   const mapped=[...leftZoneLabels].map(item=>({
     ...item,y:state.candleSeries.priceToCoordinate(item.price)
    })).filter(item=>Number.isFinite(item.y)&&item.y>=0&&item.y<=host.clientHeight).sort((a,b)=>a.y-b.y);
    let lastY=-999;
@@ -1195,6 +1206,27 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     lastY=y;
     const el=document.createElement('div');
     el.className='left-line-label'+(item.kind==='signal'?' signal':'');
+    el.style.top=y+'px';
+    el.style.color=item.color||'#bdcbe0';
+    el.textContent=item.text;
+    host.append(el);
+   }
+  }
+  function renderRightOrderLabels(){
+   const host=$('right-order-labels');
+   if(!host||!state.chartReady||!state.candleSeries)return;
+   host.replaceChildren();
+   const mapped=[...leftSignalLabels].map(item=>({
+    ...item,y:state.candleSeries.priceToCoordinate(item.price)
+   })).filter(item=>Number.isFinite(item.y)&&item.y>=0&&item.y<=host.clientHeight).sort((a,b)=>a.y-b.y);
+   let lastY=-999;
+   for(const item of mapped){
+    let y=item.y;
+    if(y-lastY<22)y=lastY+22;
+    if(y>host.clientHeight-10)y=host.clientHeight-10;
+    lastY=y;
+    const el=document.createElement('div');
+    el.className='right-order-label';
     el.style.top=y+'px';
     el.style.color=item.color||'#bdcbe0';
     el.textContent=item.text;
@@ -1242,6 +1274,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     markerApi.setMarkers(markers.filter(x=>x.time>=first).sort((a,b)=>a.time-b.time));
    }
    renderLeftLineLabels();
+   renderRightOrderLabels();
   }
   function drawHistory(){
    refreshVersionFilter();
@@ -1300,6 +1333,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
      if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
    }
    renderLeftLineLabels();
+   renderRightOrderLabels();
   }
 
   function renderDirection(x){
