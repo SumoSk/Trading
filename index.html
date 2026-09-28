@@ -60,10 +60,10 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
   <div class="chart-wrap"><div id="chart"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
-  <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span></div>
+  <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span><span id="zone-legend">1m แนวรับ / แนวต้าน · กำลังโหลด</span><span id="trend-legend">1m Trendline · กำลังโหลด</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V6.1</span></div>
+  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V6.3</span></div>
   <div class="probability-block"><div class="probability-head"><span>อีก 10 นาที</span></div><div class="probability-values"><span class="prob-up">HIGH <strong id="prob-high">—</strong></span><span class="prob-down">LOW <strong id="prob-low">—</strong></span></div><div class="probability-track"><div id="prob-high-bar"></div></div></div>
   <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
   <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
@@ -71,7 +71,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
   <div class="reference live-reference"><span>ราคาอ้างอิงตอนนี้</span><strong id="reference-price">—</strong><small>USDT</small></div>
 <div class="confidence-block"><div><span>จุดเข้าเด่น</span><strong id="signal-score">—</strong></div><div class="confidence-track"><div id="signal-score-bar"></div></div><small id="entry-state">รอข้อมูลตลาด</small><small id="signal-updated">รอข้อมูลตลาด</small></div>
-  <p id="event-detail" style="font-size:12px;color:#b4c5dc;margin:12px 0"></p><div class="analysis-grid"><div><span>Market 1m</span><b id="analysis-regime">—</b></div><div><span>Range position</span><b id="analysis-position">—</b></div><div><span>Trend 1m</span><b id="analysis-trend">—</b></div><div><span>Momentum 1m</span><b id="analysis-momentum">—</b></div><div><span>Order Flow</span><b id="analysis-flow">—</b></div><div><span>Order Book</span><b id="analysis-book">—</b></div><div><span>ATR · 1m</span><b id="analysis-volatility">—</b></div><div><span>Room → 5m zone</span><b id="analysis-room">—</b></div></div>
+  <p id="event-detail" style="font-size:12px;color:#b4c5dc;margin:12px 0"></p><div class="analysis-grid"><div><span>Market 1m</span><b id="analysis-regime">—</b></div><div><span>Range position</span><b id="analysis-position">—</b></div><div><span>Trend 1m</span><b id="analysis-trend">—</b></div><div><span>Momentum 1m</span><b id="analysis-momentum">—</b></div><div><span>Order Flow</span><b id="analysis-flow">—</b></div><div><span>Order Book</span><b id="analysis-book">—</b></div><div><span>ATR · 1m</span><b id="analysis-volatility">—</b></div><div><span>Room → 1m zone</span><b id="analysis-room">—</b></div></div>
   <div class="last-entry" id="last-entry" hidden><div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div><div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div><small class="last-entry-meta" id="last-entry-meta">—</small></div>
 </aside>
 </div>
@@ -95,7 +95,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 (function(root){
 'use strict';
 const CFG=Object.freeze({
- version:'6.2.0',horizonMs:600000,settlementToleranceMs:5000,
+ version:'6.3.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,
  minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
@@ -187,17 +187,62 @@ function classifyRegime(f,p){
   position:f.rangePosition,eff:f.eff,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,sideCrosses:f.sideCrosses,
   falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects};
 }
-function zones(bars,atr){
- const b=bars.filter(x=>x.closed).slice(-100),out=[];
+// 1m swing points only: two closed candles on either side are required.
+function confirmedSwings(bars,atr,limit=150){
+ const b=bars.filter(x=>x.closed).slice(-limit),highs=[],lows=[];
  for(let i=2;i<b.length-2;i++){
-  const w=b.slice(i-2,i+3);
-  if(w.every(x=>x.high<=b[i].high))out.push({price:b[i].high,confirmedAt:b[i+2].time,kind:'resistance',touches:1});
-  if(w.every(x=>x.low>=b[i].low))out.push({price:b[i].low,confirmedAt:b[i+2].time,kind:'support',touches:1});
+  const p=b[i],left=b.slice(i-2,i),right=b.slice(i+1,i+3);
+  const highPivot=left.every(x=>p.high>x.high)&&right.every(x=>p.high>=x.high);
+  const lowPivot=left.every(x=>p.low<x.low)&&right.every(x=>p.low<=x.low);
+  const highProminence=p.high-Math.max(Math.min(...left.map(x=>x.low)),Math.min(...right.map(x=>x.low)));
+  const lowProminence=Math.min(Math.max(...left.map(x=>x.high)),Math.max(...right.map(x=>x.high)))-p.low;
+  if(highPivot&&highProminence>=atr*.45)highs.push({time:p.time,price:p.high,confirmedAt:b[i+2].time,prominence:highProminence});
+  if(lowPivot&&lowProminence>=atr*.45)lows.push({time:p.time,price:p.low,confirmedAt:b[i+2].time,prominence:lowProminence});
  }
- const merged=[];
- for(const z of out){const hit=merged.find(x=>x.kind===z.kind&&Math.abs(x.price-z.price)<=atr*.18);
-  if(hit){hit.price=(hit.price*hit.touches+z.price)/(hit.touches+1);hit.touches++;hit.confirmedAt=Math.max(hit.confirmedAt,z.confirmedAt);}else merged.push({...z});}
+ return {highs,lows,lastClosed:b.at(-1)?.time||0};
+}
+// Horizontal 1m support/resistance zones; merge repeated tests to avoid clutter.
+function zones(bars,atr){
+ const b=bars.filter(x=>x.closed).slice(-100);if(!b.length)return [];
+ const swings=confirmedSwings(b,atr,100),out=[
+  ...swings.highs.map(p=>({...p,kind:'resistance',touches:1})),
+  ...swings.lows.map(p=>({...p,kind:'support',touches:1}))
+ ].sort((a,b)=>a.time-b.time),merged=[];
+ for(const z of out){
+  const hit=merged.find(x=>x.kind===z.kind&&Math.abs(x.price-z.price)<=atr*.28);
+  if(hit){hit.price=(hit.price*hit.touches+z.price)/(hit.touches+1);hit.touches++;
+   hit.confirmedAt=Math.max(hit.confirmedAt,z.confirmedAt);
+   hit.prominence=Math.max(hit.prominence,z.prominence);}
+  else merged.push({...z});
+ }
+ // In a one-way move no confirmed pivot may exist; show the last 30 closed-bar extreme as a range boundary.
+ const recent=b.slice(-30);
+ if(!merged.some(x=>x.kind==='support'))merged.push({price:Math.min(...recent.map(x=>x.low)),confirmedAt:b.at(-1).time,kind:'support',touches:0,source:'range'});
+ if(!merged.some(x=>x.kind==='resistance'))merged.push({price:Math.max(...recent.map(x=>x.high)),confirmedAt:b.at(-1).time,kind:'resistance',touches:0,source:'range'});
  return merged;
+}
+// Trendlines connect two confirmed 1m swing highs / lows, then extend 10 minutes.
+// The unfinished current candle is excluded to avoid repainting anchors.
+function swingTrendlines(bars,atr){
+ const s=confirmedSwings(bars,atr,150),result={resistance:null,support:null};
+ for(const [kind,points]of [['resistance',s.highs],['support',s.lows]]){
+  for(let j=points.length-1;j>=1;j--){
+   const to=points[j];if(s.lastClosed-to.confirmedAt>60*60)break;
+   let from=null;
+   for(let i=j-1;i>=0;i--){
+    const p=points[i],span=to.time-p.time;
+    if(span>100*60)break;
+    if(span>=5*60){from=p;break;}
+   }
+   if(!from)continue;
+   const slope=(to.price-from.price)/(to.time-from.time);
+   const futureTime=Math.max(s.lastClosed+10*60,to.time+10*60);
+   result[kind]={from,to,future:{time:futureTime,price:to.price+slope*(futureTime-to.time)},
+    slopePerMinute:slope*60};
+   break;
+  }
+ }
+ return result;
 }
 class Engine{
  constructor(saved={}){
@@ -290,7 +335,7 @@ class Engine{
  }
  step(x){
   const f=features(x.bars,x.price);if(!f)return {status:'warmup',reason:'รอแท่ง 1 นาทีที่สมบูรณ์',signal:null};
-  const z=zones(x.five||[],f.atr),regime=this.trackRegime(f,x.price),base={f,z,regime,signal:null,event:null,continuation:0,reversal:0};
+  const z=zones(x.bars||[],f.atr),regime=this.trackRegime(f,x.price),base={f,z,regime,signal:null,event:null,continuation:0,reversal:0};
   if(!x.fresh){this.reset('ข้อมูลไม่พร้อม',x.ts);return {...base,status:'offline',reason:'พักสัญญาณจนข้อมูลสดและต่อเนื่อง'};}
   if(x.id===this.lastId)return {...(this.lastView||base),status:this.lastView?.status==='new'?'issued':this.lastView?.status,signal:null};
   this.lastId=x.id;
@@ -429,7 +474,7 @@ class Engine{
   return this.lastView={...view,status:'new',reason:signal.reason,signal};
  }
 }
-root.EventSignalV6={Engine,CFG,features,zones,classifyRegime};
+root.EventSignalV6={Engine,CFG,features,zones,swingTrendlines,classifyRegime};
 if(typeof module!=='undefined')module.exports=root.EventSignalV6;
 })(typeof globalThis!=='undefined'?globalThis:window);
 
@@ -563,6 +608,11 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     macdHistSeries: null,
     emaFast: null,
     emaSlow: null,
+    resistanceSwing: null,
+    resistanceProjection: null,
+    supportSwing: null,
+    supportProjection: null,
+    trendLineClosedTime: 0,
     emaVisible: true,
     chartReady: false,
     booted: false,
@@ -627,7 +677,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
 
   function setComponent(id,v){const el=$(id);el.textContent=!Number.isFinite(v)?'—':v>.14?'↑ '+(v>.42?'แรง':'สนับสนุน'):v<-.14?'↓ '+(v<-.42?'แรง':'สนับสนุน'):'กลาง';el.className=!Number.isFinite(v)?'neutral':v>.14?'up':v<-.14?'down':'neutral';}
-  const {Engine,CFG}=EventSignalV6;
+  const {Engine,CFG,swingTrendlines}=EventSignalV6;
   const STORE='btc-event-v5-history';let storageOK=true;
   let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;}
   const engine=new Engine(saved);let lastPersist=0,drawnZones=[],markerApi=null,lastView=null;
@@ -636,8 +686,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function exportHistory(){const blob=new Blob([JSON.stringify({...engine.serialize(),config:CFG,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='BTC-signals-v6-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),5000);}
   function drawHistory(){
    const rows=engine.signals,current=rows.filter(s=>s.version===CFG.version),done=current.filter(s=>['correct','incorrect'].includes(s.result)),wins=done.filter(s=>s.result==='correct').length,oldCount=rows.length-current.length;
-   $('history-summary').textContent=`V6.2 ทั้งหมด ${current.length} · ถูก ${wins} / ผิด ${done.length-wins} · เสมอ ${current.filter(s=>s.result==='equal').length} · ข้อมูลขาด ${current.filter(s=>s.result==='missing').length} · รอผล ${current.filter(s=>s.result==='pending').length}${oldCount?' · เก็บผลเวอร์ชันเก่า '+oldCount:''}`;
-   $('observed-rate').textContent=done.length?`ผล V6.2 ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:'V6.2 ยังไม่มีผลจริงครบ 10 นาที';
+   $('history-summary').textContent=`V6.3 ทั้งหมด ${current.length} · ถูก ${wins} / ผิด ${done.length-wins} · เสมอ ${current.filter(s=>s.result==='equal').length} · ข้อมูลขาด ${current.filter(s=>s.result==='missing').length} · รอผล ${current.filter(s=>s.result==='pending').length}${oldCount?' · เก็บผลเวอร์ชันเก่า '+oldCount:''}`;
+   $('observed-rate').textContent=done.length?`ผล V6.3 ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:'V6.3 ยังไม่มีผลจริงครบ 10 นาที';
    const tb=$('history-body');tb.replaceChildren();
    for(const s of rows.slice(-60).reverse()){
     const tr=document.createElement('tr');const labels={correct:'ถูก',incorrect:'ผิด',equal:'เสมอ',missing:'ข้อมูลขาด',pending:'รอผล'};
@@ -656,7 +706,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const e=v.event,modelD=e?.d||0;const freshSignal=v.status==='new';
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):(modelD?-modelD:0);
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent='EVENT V6.2 · สวน · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
+   $('signal-tag').textContent='EVENT V6.3 · สวน · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels={invalidated:'เงื่อนไขเดิมเสีย',new:'เข้าได้ตอนนี้',issued:'จุดเข้าออกแล้ว',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดู · ยังไม่เข้า',confirming:'กำลังยืนยัน · ยังไม่เข้า',watch:'รอจุดเข้า'};
    $('signal-title').textContent=(freshSignal?(d>0?'HIGH':'LOW')+' · ':'')+(labels[v.status]||'ติดตาม');
    $('signal-description').textContent=v.reason;$('reference-price').textContent=money(state.quote?.price||0);$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
@@ -665,11 +715,28 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 
    $('event-detail').textContent=e?`สวน ${modelD>0?'HIGH → LOW':'LOW → HIGH'} · แนว ${money(e.level)} · เขตเข้า ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · หลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}`:'';
    if(v.f){setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);const reg=$('analysis-regime'),mode=v.regime?.mode||'TRANSITION';reg.textContent=mode==='RANGE'?'SIDEWAY':mode==='TREND'?'TREND':'BREAKOUT WATCH';reg.className=mode==='TREND'?'up':mode==='RANGE'?'neutral':'neutral';const pos=$('analysis-position'),pct=Math.round((v.regime?.position??v.f.rangePosition)*100);pos.textContent=(pct>=70?'ขอบบน ':pct<=30?'ขอบล่าง ':'กลางกรอบ ')+pct+'%';pos.className=pct>=70?'down':pct<=30?'up':'neutral';}
-   const zkey=(v.z||[]).map(z=>z.price.toFixed(2)).join(',')+(e?.id||'');
-   if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
-    const zs=(v.z||[]).slice().sort((a,b)=>Math.abs(a.price-state.quote.price)-Math.abs(b.price-state.quote.price)).slice(0,4);
-    for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({price:z.price,color:z.kind==='resistance'?'#a67d87':'#658d82',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'5m zone'}));
-    if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title}));
+   // Always display both kinds of 1m zone, prioritizing the nearest support below and resistance above.
+   const price=state.quote?.price||0,all=v.z||[];
+   const choose=(kind,preferAbove)=>{
+    const entries=all.filter(z=>z.kind===kind).sort((a,b)=>{
+     const aSide=preferAbove?a.price>=price:a.price<=price,bSide=preferAbove?b.price>=price:b.price<=price;
+     return (aSide===bSide?0:aSide?-1:1)||Math.abs(a.price-price)-Math.abs(b.price-price);
+    });
+    const chosen=[];
+    for(const z of entries){if(chosen.every(y=>Math.abs(y.price-z.price)>(v.f?.atr||1)*.3))chosen.push(z);if(chosen.length===2)break;}
+    return chosen;
+   };
+   const supports=choose('support',false),resistances=choose('resistance',true),zs=[...supports,...resistances];
+   $('zone-legend').textContent=`1m รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
+   const zkey=zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
+   if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
+    for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
+    for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
+     price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:z.touches>=2?2:1,
+     lineStyle:2,axisLabelVisible:true,title:z.kind==='resistance'?'1m ต้าน':'1m รับ'
+    }));
+    if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
+     drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title}));
    }
   }
 
@@ -730,7 +797,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function upsertBar(interval,k){
     const arr=state.bars[interval];const b={time:Math.floor(Number(k.t)/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v,closed:!!k.x};
     const last=arr.at(-1);if(!last||b.time>last.time)arr.push(b);else if(b.time===last.time)arr[arr.length-1]=b;else {const i=arr.findIndex(x=>x.time===b.time);if(i>=0)arr[i]=b;}
-    if(arr.length>1000)arr.splice(0,arr.length-1000);if(interval===state.selectedTf&&b.time===arr.at(-1).time)updateChartBar(b);
+    if(arr.length>1000)arr.splice(0,arr.length-1000);if(interval===state.selectedTf&&b.time===arr.at(-1).time)updateChartBar(b);if(interval==='1m'&&b.closed)updateTrendlines();
   }
   function ingest(data){
     const e=data.e,nowSec=Date.now()/1000;
@@ -776,6 +843,10 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const opt={lineWidth:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false};
     state.emaFast=chart.addSeries(L.LineSeries,{...opt,color:'#a899ff'});
     state.emaSlow=chart.addSeries(L.LineSeries,{...opt,color:'#dfb875'});
+    state.resistanceSwing=chart.addSeries(L.LineSeries,{...opt,color:'#e48fa1',lineWidth:2});
+    state.resistanceProjection=chart.addSeries(L.LineSeries,{...opt,color:'#e48fa1',lineWidth:1,lineStyle:L.LineStyle.Dashed});
+    state.supportSwing=chart.addSeries(L.LineSeries,{...opt,color:'#67d6ad',lineWidth:2});
+    state.supportProjection=chart.addSeries(L.LineSeries,{...opt,color:'#67d6ad',lineWidth:1,lineStyle:L.LineStyle.Dashed});
     state.volumeSeries=chart.addSeries(L.HistogramSeries,{priceScaleId:'volume',priceFormat:{type:'volume'},lastValueVisible:false,priceLineVisible:false},1);
     state.volumeSeries.priceScale().applyOptions({scaleMargins:{top:.08,bottom:.04},visible:false});
     state.rsiSeries=chart.addSeries(L.LineSeries,{...opt,color:'#a899ff',priceFormat:{type:'price',precision:1,minMove:.1}},2);
@@ -824,7 +895,29 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const r=rsiPoints(arr),rv=r.at(-1);if(rv){state.rsiSeries.update(rv);state.rsiUpper.update({time:rv.time,value:70});state.rsiLower.update({time:rv.time,value:30});}
     const m=macdPoints(arr),mv=m.macd.at(-1),sv=m.signal.at(-1),hv=m.hist.at(-1);if(mv)state.macdSeries.update(mv);if(sv)state.macdSignalSeries.update(sv);if(hv)state.macdHistSeries.update(hv);
   }
-  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
+  function updateTrendlines(force=false){
+    if(!state.chartReady)return;
+    const b=state.bars['1m'].filter(x=>x.closed),latest=b.at(-1)?.time||0;
+    if(!latest||(!force&&latest===state.trendLineClosedTime))return;
+    state.trendLineClosedTime=latest;
+    const atr=Math.max(atrOf1m(b.slice(-20)),b.at(-1).close*.00008,1e-9);
+    const t=swingTrendlines(b,atr);
+    for(const [kind,segment,projection]of [
+      ['resistance',state.resistanceSwing,state.resistanceProjection],
+      ['support',state.supportSwing,state.supportProjection]
+    ]){
+      const line=t[kind];
+      segment.setData(line?[{time:line.from.time,value:line.from.price},{time:line.to.time,value:line.to.price}]:[]);
+      projection.setData(line?[{time:line.to.time,value:line.to.price},{time:line.future.time,value:line.future.price}]:[]);
+    }
+    $('trend-legend').textContent='1m เส้นเฉียง · '+(t.resistance?'High→High':'รอยอดคู่')+' / '+(t.support?'Low→Low':'รอฐานคู่');
+  }
+  function atrOf1m(b){
+    if(b.length<2)return 0;
+    const values=b.slice(1).map((x,i)=>Math.max(x.high-x.low,Math.abs(x.high-b[i].close),Math.abs(x.low-b[i].close)));
+    return values.slice(-14).reduce((s,n)=>s+n,0)/Math.max(1,Math.min(14,values.length));
+  }
+  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();updateTrendlines(true);const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit){state.chart.timeScale().fitContent();state.chart.timeScale().applyOptions({rightOffset:state.selectedTf==='1m'?12:5});}}
   function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
   function rangeStats(){const arr=state.bars[state.selectedTf];if(!arr.length)return;$('high-price').textContent=money(Math.max(...arr.map(b=>b.high)));$('low-price').textContent=money(Math.min(...arr.map(b=>b.low)));}
 
