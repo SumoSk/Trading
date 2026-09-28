@@ -1026,17 +1026,28 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(window.LightweightCharts.createSeriesMarkers){
     if(!markerApi)markerApi=LightweightCharts.createSeriesMarkers(state.candleSeries,[]);
     const interval=parseInt(state.selectedTf)*60,first=state.bars[state.selectedTf][0]?.time||0;
-    const settled=rows.filter(s=>['correct','incorrect','equal'].includes(s.result)).slice(-100);
-    markerApi.setMarkers(settled.map(s=>{
-     const win=s.result==='correct',loss=s.result==='incorrect';
-     return {
-      time:Math.floor(s.entryTime/1000/interval)*interval,
-      position:s.direction==='HIGH'?'belowBar':'aboveBar',
-      color:win?'#44dfb5':loss?'#ff708a':'#93a4bb',
-      shape:'circle',
-      text:win?'W':loss?'L':'D'
-     };
-    }).filter(x=>x.time>=first).sort((a,b)=>a.time-b.time));
+    const recent=rows.filter(s=>Number.isFinite(s.entryTime)&&['HIGH','LOW'].includes(s.direction)).slice(-100),markers=[];
+    for(const s of recent){
+     const time=Math.floor(s.entryTime/1000/interval)*interval,isHigh=s.direction==='HIGH';
+     markers.push({
+      time,
+      position:isHigh?'belowBar':'aboveBar',
+      color:isHigh?'#44dfb5':'#ff708a',
+      shape:isHigh?'arrowUp':'arrowDown',
+      text:s.direction
+     });
+     if(['correct','incorrect','equal'].includes(s.result)){
+      const win=s.result==='correct',loss=s.result==='incorrect';
+      markers.push({
+       time,
+       position:isHigh?'aboveBar':'belowBar',
+       color:win?'#44dfb5':loss?'#ff708a':'#93a4bb',
+       shape:'circle',
+       text:win?'W':loss?'L':'D'
+      });
+     }
+    }
+    markerApi.setMarkers(markers.filter(x=>x.time>=first).sort((a,b)=>a.time-b.time));
    }
    renderLeftLineLabels();
   }
