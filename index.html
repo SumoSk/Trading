@@ -993,6 +993,9 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function renderLeftLineLabels(){
    const host=$('left-line-labels');
+   if(host){host.replaceChildren();host.style.display='none';}
+   return;
+   /* legacy overlay disabled; native left price-scale labels are used */
    if(!host||!state.chartReady||!state.candleSeries){if(host)host.replaceChildren();return;}
    host.replaceChildren();
    const items=[...leftZoneLabels,...leftSignalLabels];
@@ -1010,16 +1013,15 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function syncSignalChart(rows){
    if(!state.chartReady)return;
-   for(const line of activeSignalLines){try{state.candleSeries.removePriceLine(line);}catch{}}
+   for(const line of activeSignalLines){try{state.labelSeries.removePriceLine(line);}catch{}}
    activeSignalLines=[];
    const now=Date.now();
    leftSignalLabels=[];
    for(const s of rows.filter(s=>s.result==='pending'&&Number.isFinite(s.entryPrice)&&Number.isFinite(s.expiresAt))){
     const isHigh=s.direction==='HIGH',remain=s.expiresAt-now,color=isHigh?'#44dfb5':'#ff708a';
-    activeSignalLines.push(state.candleSeries.createPriceLine({
-     price:s.entryPrice,color,lineWidth:2,lineStyle:2,axisLabelVisible:false,title:''
+    activeSignalLines.push(state.labelSeries.createPriceLine({
+     price:s.entryPrice,color,lineWidth:2,lineStyle:2,axisLabelVisible:true,title:`${s.direction} · ${countdownLabel(remain)}`
     }));
-    leftSignalLabels.push({kind:'signal',price:s.entryPrice,color,text:`${s.direction} · ${money(s.entryPrice)} · ${countdownLabel(remain)}`});
    }
    if(window.LightweightCharts.createSeriesMarkers){
     if(!markerApi)markerApi=LightweightCharts.createSeriesMarkers(state.candleSeries,[]);
@@ -1087,13 +1089,13 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    ];
    const zkey=zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
    if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
-    for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
-    for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
+    for(const line of drawnZones)state.labelSeries.removePriceLine(line);drawnZones=[];
+    for(const z of zs)drawnZones.push(state.labelSeries.createPriceLine({
      price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:z.touches>=2?2:1,
-     lineStyle:2,axisLabelVisible:false,title:''
+     lineStyle:2,axisLabelVisible:true,title:z.kind==='resistance'?'1m ต้าน':'1m รับ'
     }));
     if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
-     if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
+     if(Number.isFinite(p))drawnZones.push(state.labelSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title}));
    }
    renderLeftLineLabels();
   }
@@ -1200,6 +1202,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const chart=L.createChart($('chart'),{autoSize:true,layout:{background:{type:L.ColorType.Solid,color:'#101824'},textColor:'#899bb4',fontFamily:'Segoe UI, Tahoma, sans-serif',fontSize:11,attributionLogo:true,panes:{separatorColor:'#243043',separatorHoverColor:'#3a4b63',enableResize:true}},grid:{vertLines:{color:'#1a2535'},horzLines:{color:'#1a2535'}},rightPriceScale:{borderColor:'#283449',scaleMargins:{top:.08,bottom:.06}},timeScale:{borderColor:'#283449',timeVisible:true,secondsVisible:false,rightOffset:5,barSpacing:9,tickMarkFormatter:t=>clockMs(t*1000).slice(0,5)},crosshair:{mode:L.CrosshairMode.Normal},localization:{locale:'en-US',timeFormatter:t=>new Date(t*1000).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}),priceFormatter:money}});
     state.chart=chart;
     state.candleSeries=chart.addSeries(L.CandlestickSeries,{upColor:'#44dfb5',downColor:'#ff708a',borderVisible:false,wickUpColor:'#44dfb5',wickDownColor:'#ff708a',priceFormat:{type:'price',precision:2,minMove:.01}});
+    state.labelSeries=chart.addSeries(L.CandlestickSeries,{priceScaleId:'left',upColor:'rgba(0,0,0,0)',downColor:'rgba(0,0,0,0)',borderVisible:false,wickUpColor:'rgba(0,0,0,0)',wickDownColor:'rgba(0,0,0,0)',lastValueVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:2,minMove:.01}});
+    state.labelSeries.priceScale().applyOptions({visible:true,borderColor:'#283449',scaleMargins:{top:.08,bottom:.06}});
     const opt={lineWidth:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false};
     state.emaFast=chart.addSeries(L.LineSeries,{...opt,color:'#a899ff'});
     state.emaSlow=chart.addSeries(L.LineSeries,{...opt,color:'#dfb875'});
@@ -1251,8 +1255,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const r=rsiPoints(arr),rv=r.at(-1);if(rv){state.rsiSeries.update(rv);state.rsiUpper.update({time:rv.time,value:70});state.rsiLower.update({time:rv.time,value:30});}
     const m=macdPoints(arr),mv=m.macd.at(-1),sv=m.signal.at(-1),hv=m.hist.at(-1);if(mv)state.macdSeries.update(mv);if(sv)state.macdSignalSeries.update(sv);if(hv)state.macdHistSeries.update(hv);
   }
-  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
-  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
+  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.labelSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
+  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.labelSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
   function rangeStats(){const arr=state.bars[state.selectedTf];if(!arr.length)return;$('high-price').textContent=money(Math.max(...arr.map(b=>b.high)));$('low-price').textContent=money(Math.min(...arr.map(b=>b.low)));}
 
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedTf=btn.dataset.tf;document.querySelectorAll('[data-tf]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('tf-label').textContent=state.selectedTf.replace('m',' นาที');renderChart(true);drawHistory();}));
