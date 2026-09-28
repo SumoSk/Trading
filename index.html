@@ -1344,14 +1344,14 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const supports=choose('support',false),resistances=choose('resistance',true),zs=[...supports,...resistances];
    $('zone-legend').textContent=`1m รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
    leftZoneLabels=[
-    ...zs.map(z=>({kind:'zone',price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',text:z.kind==='resistance'?'1m ต้าน':'1m รับ'})),
+    ...zs.map(z=>({kind:'zone',price:z.price,color:'#f2c94c',text:z.kind==='resistance'?'1m ต้าน':'1m รับ'})),
     ...(e?[[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:title})):[])
    ];
    const zkey=zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
    if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
     for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
     for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
-     price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:1,
+     price:z.price,color:'#f2c94c',lineWidth:1,
      lineStyle:2,axisLabelVisible:false,title:''
     }));
     if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
