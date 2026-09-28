@@ -63,7 +63,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V5.3</span></div>
+  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V5.4</span></div>
   <div class="probability-block"><div class="probability-head"><span>อีก 10 นาที</span></div><div class="probability-values"><span class="prob-up">HIGH <strong id="prob-high">—</strong></span><span class="prob-down">LOW <strong id="prob-low">—</strong></span></div><div class="probability-track"><div id="prob-high-bar"></div></div></div>
   <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
   <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
@@ -94,7 +94,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
    Configuration is an initial testable hypothesis, not a fitted or validated strategy. */
 (function(root){
 'use strict';
-const CFG=Object.freeze({version:'5.3.0',horizonMs:600000,settlementToleranceMs:5000,
+const CFG=Object.freeze({version:'5.4.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,
  maxDrift:.38,maxAgeMs:45000,minEvidenceMs:700,minEvidenceTicks:3,
  minFlow:.06,flowWarmupSec:15,roomAtr:.30,maxRetreat:.32,pullbackMin:.28,pullbackMax:1.15,
@@ -219,13 +219,7 @@ class Engine{
    const crossedDown=prev.price>=f.low-f.atr*CFG.breakBuffer&&x.price<f.low-f.atr*CFG.breakBuffer;
    if(crossedUp){this.start('breakout',1,f.high,x,f,`B+:${f.high.toFixed(2)}`);if(this.active)this.active.fromRange=regime.stableMode==='RANGE';}
    else if(crossedDown){this.start('breakout',-1,f.low,x,f,`B-:${f.low.toFixed(2)}`);if(this.active)this.active.fromRange=regime.stableMode==='RANGE';}
-   else if(regime.mode==='RANGE'){
-    const last=f.b.at(-1),d=regime.position<=.22?1:regime.position>=.78?-1:0;
-    if(d){
-     const level=d>0?f.low:f.high,nearEdge=Math.abs(x.price-level)<=f.atr*.45,inward=d*(x.price-prev.price)>0;
-     if(nearEdge&&inward)this.start('range_reversal',d,level,x,f,`R${d}:${last.time}`);
-    }
-   }else if(regime.mode==='TREND'){
+   else if(regime.mode==='TREND'){
     const b=f.b,last=b.at(-1),before=b.slice(-7,-1),d=f.trend>.12?1:f.trend<-.12?-1:0;
     if(d){const peak=d>0?Math.max(...before.map(y=>y.high)):Math.min(...before.map(y=>y.low));
      const trough=d>0?last.low:last.high,depth=d*(peak-trough)/f.atr;
@@ -236,11 +230,19 @@ class Engine{
     }
    }
   }
-  let e=this.active;if(!e){const reason=regime.mode==='RANGE'?'ไซด์เวย์ · รอราคาที่ขอบกรอบหรือเบรกออกจริง':regime.mode==='TREND'?'เทรนด์ · รอย่อไปต่อหรือเบรกกรอบ':'ช่วงเปลี่ยนโหมด · ตรวจว่าเบรกจริงหรือกลับเข้ากรอบ';return this.lastView={...base,status:'watch',reason};}
+  let e=this.active;if(!e){const reason=regime.mode==='RANGE'?'SIDEWAY · งดสัญญาณจนเบรกยืนยัน':regime.mode==='TREND'?'เทรนด์ · รอย่อไปต่อหรือเบรกกรอบ':'ช่วงเปลี่ยนโหมด · ตรวจว่าเบรกจริงหรือกลับเข้ากรอบ';return this.lastView={...base,status:'watch',reason};}
+  if(!e.issued&&regime.stableMode==='RANGE'&&e.type!=='breakout'){
+   this.log('cancelled',x.ts,{id:e.id,reason:'เข้าสู่ sideway'});this.active=null;
+   return this.lastView={...base,status:'watch',reason:'SIDEWAY · งดสัญญาณจนเบรกยืนยัน'};
+  }
   // A failed break may be a NEW opposite event; an already-issued prediction remains immutable.
   if(e.type==='breakout'&&e.d*(x.price-e.level)<-.08*e.atr){
-   this.log('failed_break',x.ts,{id:e.id,issued:e.issued});if(e.issued){const prior=this.signals.find(s=>s.id===e.id);if(prior){prior.setupStatus='invalidated';prior.invalidatedAt=x.ts;}}const old=e;
-   this.active=null;this.start('failed_break',-old.d,old.level,x,f,`F:${old.id}`);e=this.active;
+   this.log('failed_break',x.ts,{id:e.id,issued:e.issued});if(e.issued){const prior=this.signals.find(s=>s.id===e.id);if(prior){prior.setupStatus='invalidated';prior.invalidatedAt=x.ts;}}
+   const old=e;this.active=null;
+   if(old.fromRange||regime.stableMode==='RANGE'){
+    return this.lastView={...base,status:'watch',reason:'SIDEWAY · เบรกไม่ผ่าน กลับเข้ากรอบ'};
+   }
+   this.start('failed_break',-old.d,old.level,x,f,`F:${old.id}`);e=this.active;
   }
   if(!e)return {...base,status:'watch',reason:'รอเหตุการณ์ใหม่'};
   e.extreme=e.d>0?Math.max(e.extreme,x.price):Math.min(e.extreme,x.price);
@@ -297,7 +299,7 @@ root.EventSignalV5={Engine,CFG,features,zones,classifyRegime};if(typeof module!=
 const clip=(v,a,b)=>Math.max(a,Math.min(b,v));
 const WEIGHTS=Object.freeze({
  TREND:Object.freeze({trend:.24,momentum:.18,live:.17,flow:.26,book:.05,structure:.10}),
- RANGE:Object.freeze({trend:.04,momentum:.08,live:.12,flow:.26,book:.05,structure:.45}),
+ RANGE:Object.freeze({trend:.10,momentum:.10,live:.12,flow:.18,book:.05,structure:.00}),
  TRANSITION:Object.freeze({trend:.10,momentum:.16,live:.22,flow:.34,book:.08,structure:.10})
 });
 function assess(x){
@@ -311,7 +313,7 @@ function assess(x){
  const flow=clip(x.flow||0,-1,1)*clip((x.coverage||0)/15,0,1);
  const book=x.bookValid?clip(x.book||0,-1,1):0;
  const middle=(f.high+f.low)/2,edge=Math.tanh((p-middle)/Math.max((f.high-f.low)/2,a));
- const structure=mode==='RANGE'?-edge:edge;
+ const structure=mode==='RANGE'?0:edge;
  const parts={trend,momentum,live,flow,book,structure};
  let raw=Object.keys(weights).reduce((s,k)=>s+parts[k]*weights[k],0);
  // In the middle of a range there is little 10-minute directional edge.
@@ -323,13 +325,14 @@ function assess(x){
   const strong=displacement>=.22&&body>=.45&&flowDir>=.12;
   if(!strong)raw*=.55;
  }
- const high=Math.round(50+40*clip(raw,-1,1)),low=100-high;
+ const scale=mode==='RANGE'?15:40;const high=Math.round(50+scale*clip(raw,-1,1)),low=100-high;
  const direction=high===low?'BALANCED':high>low?'HIGH':'LOW',d=direction==='LOW'?-1:direction==='HIGH'?1:0;
  const reasons=[];let risk=0;
  if(Math.max(high,low)<56){risk+=2;reasons.push('น้ำหนักสองฝั่งใกล้กัน');}
  if(mode==='RANGE'){
-  if(Math.abs(edge)<.45){risk+=2;reasons.push('อยู่กลางกรอบไซด์เวย์');}
-  else reasons.push(edge>0?'อยู่ใกล้ขอบบนของกรอบ':'อยู่ใกล้ขอบล่างของกรอบ');
+  risk+=3;
+  if(Math.abs(edge)<.45)reasons.push('SIDEWAY · อยู่กลางกรอบ');
+  else reasons.push(edge>0?'SIDEWAY · ใกล้ขอบบน':'SIDEWAY · ใกล้ขอบล่าง');
  }else if(mode==='TRANSITION'){risk++;reasons.push(regime.breakoutCandidate?'กำลังทดสอบการเบรกกรอบ':'ตลาดอยู่ช่วงเปลี่ยนโหมด');}
  const extension=d?d*(p-f.ema8)/a:0;
  if(mode==='TREND'&&extension>1.6){risk+=2;reasons.push('ราคาห่างฐาน EMA8 มาก เสี่ยงย่อสวน');}
@@ -475,8 +478,8 @@ root.ContinuousDirection={assess,WEIGHTS};if(typeof module!=='undefined')module.
   function exportHistory(){const blob=new Blob([JSON.stringify({...engine.serialize(),config:CFG,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='BTC-signals-v5-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),5000);}
   function drawHistory(){
    const rows=engine.signals,current=rows.filter(s=>s.version===CFG.version),done=current.filter(s=>['correct','incorrect'].includes(s.result)),wins=done.filter(s=>s.result==='correct').length,oldCount=rows.length-current.length;
-   $('history-summary').textContent=`V5.3 ทั้งหมด ${current.length} · ถูก ${wins} / ผิด ${done.length-wins} · เสมอ ${current.filter(s=>s.result==='equal').length} · ข้อมูลขาด ${current.filter(s=>s.result==='missing').length} · รอผล ${current.filter(s=>s.result==='pending').length}${oldCount?' · เก็บผลเวอร์ชันเก่า '+oldCount:''}`;
-   $('observed-rate').textContent=done.length?`ผล V5.3 ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:'V5.3 ยังไม่มีผลจริงครบ 10 นาที';
+   $('history-summary').textContent=`V5.4 ทั้งหมด ${current.length} · ถูก ${wins} / ผิด ${done.length-wins} · เสมอ ${current.filter(s=>s.result==='equal').length} · ข้อมูลขาด ${current.filter(s=>s.result==='missing').length} · รอผล ${current.filter(s=>s.result==='pending').length}${oldCount?' · เก็บผลเวอร์ชันเก่า '+oldCount:''}`;
+   $('observed-rate').textContent=done.length?`ผล V5.4 ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:'V5.4 ยังไม่มีผลจริงครบ 10 นาที';
    const tb=$('history-body');tb.replaceChildren();
    for(const s of rows.slice(-60).reverse()){
     const tr=document.createElement('tr');const labels={correct:'ถูก',incorrect:'ผิด',equal:'เสมอ',missing:'ข้อมูลขาด',pending:'รอผล'};
@@ -494,11 +497,11 @@ root.ContinuousDirection={assess,WEIGHTS};if(typeof module!=='undefined')module.
   function renderEvent(v){
    const e=v.event,d=e?.d||0;const freshSignal=v.status==='new';
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent='EVENT V5.3 · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
+   $('signal-tag').textContent='EVENT V5.4 · 1m';$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels={invalidated:'เงื่อนไขเดิมเสีย',new:'แจ้งเข้าใหม่',issued:'ติดตามสัญญาณเดิม',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'ติดตามจังหวะ',confirming:'กำลังยืนยัน',watch:'รอเหตุการณ์ใหม่'};
    $('signal-title').textContent=(freshSignal?(d>0?'HIGH':'LOW')+' · ':'')+(labels[v.status]||'ติดตาม');
    $('signal-description').textContent=v.reason;$('reference-price').textContent=money(state.quote?.price||0);$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
-   $('strong-banner').hidden=!freshSignal;const idle=v.regime?.mode==='RANGE'?'SIDEWAY · มองขอบกรอบ':v.regime?.mode==='TREND'?'TREND · มองย่อ/ไปต่อ':'BREAKOUT WATCH';$('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'HIGH':'LOW'}`:idle;
+   $('strong-banner').hidden=!freshSignal;const idle=v.regime?.mode==='RANGE'?'SIDEWAY · งดเข้า':v.regime?.mode==='TREND'?'TREND · มองย่อ/ไปต่อ':'BREAKOUT WATCH';$('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'HIGH':'LOW'}`:idle;
    $('signal-score').textContent=e?`${Math.max(0,Math.floor((CFG.maxAgeMs-((state.quote?.ts||0)*1000-e.startedAt))/1000))} วินาที`:'—';$('signal-score-bar').style.width='0%';
 
    $('event-detail').textContent=e?`แนว ${money(e.level)} · เขตเข้า ${money(e.entryLow)}–${money(e.entryHigh)}`:'';
