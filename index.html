@@ -112,28 +112,16 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .signal-card-direction .direction-detail small{color:#7589a5}
 
 /* entry card */
-.entry-top{
- display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1fr);
- gap:6px
+.entry-top{display:block}
+.signal-card-entry .signal-hero{
+ min-width:0;margin:0!important;padding:9px 10px!important;
+ border:1px solid color-mix(in srgb,var(--active) 24%,var(--card-border))!important;
+ border-radius:9px!important;
+ background:linear-gradient(135deg,color-mix(in srgb,var(--active) 8%,#111b29),#111b29 58%)!important;
+ display:flex;align-items:center;gap:9px
 }
-.signal-card-entry .signal-hero,
-.signal-card-entry .live-reference,
-.signal-card-entry .confidence-block{
- min-width:0;margin:0!important;padding:8px!important;
- border:1px solid var(--card-border)!important;border-radius:8px!important;background:#111b29!important
-}
-.signal-card-entry .signal-hero{display:flex;align-items:center;gap:8px}
-.signal-card-entry .direction-icon{width:34px;height:34px;border-radius:9px;font-size:20px}
-.signal-card-entry .signal-hero strong{font-size:16px!important;line-height:1.15}
-.signal-card-entry .reference{border-bottom:0!important}
-.signal-card-entry .reference>span{font-size:9px;margin:0 0 2px}
-.signal-card-entry .reference strong{font-size:17px}
-.signal-card-entry .reference small{font-size:9px}
-.signal-card-entry .confidence-block{border-bottom:1px solid var(--card-border)!important}
-.signal-card-entry .confidence-block>div:first-child{gap:6px}
-.signal-card-entry .confidence-block span{font-size:9px}
-.signal-card-entry .confidence-block strong{font-size:18px}
-.signal-card-entry .confidence-track{height:4px!important;margin-top:5px!important}
+.signal-card-entry .direction-icon{width:36px;height:36px;border-radius:10px;font-size:21px}
+.signal-card-entry .signal-hero strong{font-size:17px!important;line-height:1.15;color:var(--active)}
 .signal-card-entry .strong-banner{margin:6px 0 0!important;padding:7px 8px!important;border-radius:8px!important}
 .signal-card-entry .strong-banner>span{font-size:8px}
 .signal-card-entry .strong-banner strong{font-size:14px}
@@ -197,8 +185,6 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
  .signal-panel{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px!important}
  .signal-card-direction,.signal-card-entry{grid-column:span 3}
  .signal-card-market{grid-column:1/-1}
- .entry-top{grid-template-columns:1fr 1fr}
- .signal-card-entry .confidence-block{grid-column:1/-1}
  .signal-card-market .analysis-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 }
 /* mobile */
@@ -211,8 +197,6 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
  .signal-panel .panel-heading,.signal-card-direction,.signal-card-entry,.signal-card-market,.signal-panel .last-entry{grid-column:1/-1!important}
  .signal-card{padding:8px}
  .signal-card-title{margin-bottom:6px}
- .entry-top{grid-template-columns:1fr 1fr!important;gap:5px}
- .signal-card-entry .confidence-block{grid-column:1/-1}
  .signal-card-market .analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important}
  .signal-panel .last-entry{grid-template-columns:1fr auto!important}
  .signal-panel .last-entry-meta{grid-column:1/-1}
@@ -263,8 +247,6 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div class="signal-card-title"><span>จุดเข้า</span></div>
     <div class="entry-top">
       <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
-      <div class="reference live-reference"><span>ราคาอ้างอิงตอนนี้</span><strong id="reference-price">—</strong><small>USDT</small></div>
-      <div class="confidence-block"><div><span>จุดเข้าเด่น</span><strong id="signal-score">—</strong></div><div class="confidence-track"><div id="signal-score-bar"></div></div></div>
     </div>
     <div class="strong-banner" id="strong-banner" hidden><span>NEW EVENT SIGNAL</span><strong>พบจุดเข้าใหม่</strong></div>
     <div class="entry-watch">
@@ -1228,7 +1210,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    for(const s of rows.filter(s=>s.result==='pending'&&Number.isFinite(s.entryPrice)&&Number.isFinite(s.expiresAt))){
     const isHigh=s.direction==='HIGH',remain=s.expiresAt-now,color=isHigh?'#44dfb5':'#ff708a';
     activeSignalLines.push(state.candleSeries.createPriceLine({
-     price:s.entryPrice,color,lineWidth:2,lineStyle:2,axisLabelVisible:false,title:''
+     price:s.entryPrice,color,lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''
     }));
     leftSignalLabels.push({kind:'signal',price:s.entryPrice,color,text:`${s.direction} · ${countdownLabel(remain)}`});
    }
@@ -1238,21 +1220,22 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     const recent=rows.filter(s=>Number.isFinite(s.entryTime)&&['HIGH','LOW'].includes(s.direction)).slice(-100),markers=[];
     for(const s of recent){
      const time=Math.floor(s.entryTime/1000/interval)*interval,isHigh=s.direction==='HIGH';
-     markers.push({
-      time,
-      position:isHigh?'belowBar':'aboveBar',
-      color:isHigh?'#44dfb5':'#ff708a',
-      shape:isHigh?'arrowUp':'arrowDown',
-      text:s.direction
-     });
-     if(['correct','incorrect','equal'].includes(s.result)){
-      const win=s.result==='correct',loss=s.result==='incorrect';
+     if(s.result==='pending'){
       markers.push({
        time,
-       position:isHigh?'aboveBar':'belowBar',
-       color:win?'#44dfb5':loss?'#ff708a':'#93a4bb',
+       position:isHigh?'belowBar':'aboveBar',
+       color:isHigh?'#44dfb5':'#ff708a',
+       shape:isHigh?'arrowUp':'arrowDown',
+       text:s.direction
+      });
+     }else if(s.result==='correct'||s.result==='incorrect'){
+      const win=s.result==='correct';
+      markers.push({
+       time,
+       position:win?'belowBar':'aboveBar',
+       color:win?'#44dfb5':'#ff708a',
        shape:'circle',
-       text:win?'W':loss?'L':'D'
+       text:win?'W':'L'
       });
      }
     }
@@ -1284,9 +1267,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('signal-tag').textContent=`EVENT V${CFG.version} · PHASE · 1m`;$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels={invalidated:'เงื่อนไขเดิมเสีย',new:'เข้าได้ตอนนี้',issued:'จุดเข้าออกแล้ว',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดู · ยังไม่เข้า',confirming:'กำลังยืนยัน · ยังไม่เข้า',watch:'รอจุดเข้า'};
    $('signal-title').textContent=(freshSignal?(d>0?'HIGH':'LOW')+' · ':'')+(labels[v.status]||'ติดตาม');
-   $('signal-description').textContent=v.reason;$('reference-price').textContent=money(state.quote?.price||0);$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
+   $('signal-description').textContent=v.reason;$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
    $('strong-banner').hidden=!freshSignal;const idle=v.phase?.phase==='RANGE'?'RANGE · หาจุดกลับจากขอบ':v.phase?.phase==='IMPULSE'?'IMPULSE · รอ follow':v.phase?.phase==='MATURE_IMPULSE'?'MATURE IMPULSE · รอ trigger':v.phase?.phase==='EXHAUSTION'?'EXHAUSTION · รอยืนยันกลับตัว':v.phase?.phase==='REVERSAL'?'REVERSAL · รอ follow':v.regime?.mode==='TREND'?'TREND · มองย่อ/ไปต่อ':'TRANSITION';$('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'HIGH':d<0?'LOW':'รอยืนยัน'}`:idle;
-   $('signal-score').textContent=e?`${Math.max(0,Math.floor((CFG.maxAgeMs-((state.quote?.ts||0)*1000-e.startedAt))/1000))} วินาที`:'—';$('signal-score-bar').style.width='0%';
 
    $('event-detail').textContent=e?`${v.phase?.phase||'TRANSITION'} · ${preview?.reason||'กำลังประเมิน phase'} · setup ${modelD>0?'HIGH':'LOW'}${preview?.direction?' → '+preview.direction:''} · แนว ${money(e.level)} · เขตเข้า ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · หลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}`:'';
    if(v.f){setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);const ph=$('analysis-phase');ph.textContent=(v.phase?.phase||'—').replaceAll('_',' ')+(v.phase?.dir?' '+(v.phase.dir>0?'↑':'↓'):'');ph.className=['IMPULSE','MATURE_IMPULSE','REVERSAL'].includes(v.phase?.phase)?'up':v.phase?.phase==='EXHAUSTION'?'down':'neutral';const rv=$('analysis-relvol'),rel=Math.max(v.f.relVolume||0,v.phase?.liveVolumePace||0);rv.textContent=Number.isFinite(rel)?rel.toFixed(2)+'x':'—';rv.className=rel>=1.45?'up':'neutral';const reg=$('analysis-regime'),mode=v.regime?.mode||'TRANSITION';reg.textContent=mode==='RANGE'?'SIDEWAY':mode==='TREND'?'TREND':'BREAKOUT WATCH';reg.className=mode==='TREND'?'up':mode==='RANGE'?'neutral':'neutral';const pos=$('analysis-position'),pct=Math.round((v.regime?.position??v.f.rangePosition)*100);pos.textContent=(pct>=70?'ขอบบน ':pct<=30?'ขอบล่าง ':'กลางกรอบ ')+pct+'%';pos.className=pct>=70?'down':pct<=30?'up':'neutral';}
@@ -1311,7 +1293,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
     for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
     for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
-     price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:z.touches>=2?2:1,
+     price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:1,
      lineStyle:2,axisLabelVisible:false,title:''
     }));
     if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
