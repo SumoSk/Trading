@@ -251,7 +251,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
   <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
-  <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span><span id="zone-legend">1m แนวรับ / แนวต้าน · กำลังโหลด</span></div>
+  <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
   <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">EVENT V7.1.0</span></div>
@@ -1517,6 +1517,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     return {macd,signal,hist};
   }
   function setIndicatorData(arr){
+    if(!state.volumeSeries||!state.rsiSeries||!state.rsiUpper||!state.rsiLower||!state.macdSeries||!state.macdSignalSeries||!state.macdHistSeries)return;
+    state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));
     const r=rsiPoints(arr),m=macdPoints(arr);
     state.rsiSeries.setData(r);
     state.rsiUpper.setData(r.map(x=>({time:x.time,value:70})));
@@ -1524,30 +1526,53 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     state.macdSeries.setData(m.macd);state.macdSignalSeries.setData(m.signal);state.macdHistSeries.setData(m.hist);
   }
   function updateIndicators(arr){
+    if(!state.volumeSeries||!state.rsiSeries||!state.rsiUpper||!state.rsiLower||!state.macdSeries||!state.macdSignalSeries||!state.macdHistSeries)return;
+    const b=arr.at(-1);if(b)state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});
     const r=rsiPoints(arr),rv=r.at(-1);if(rv){state.rsiSeries.update(rv);state.rsiUpper.update({time:rv.time,value:70});state.rsiLower.update({time:rv.time,value:30});}
     const m=macdPoints(arr),mv=m.macd.at(-1),sv=m.signal.at(-1),hv=m.hist.at(-1);if(mv)state.macdSeries.update(mv);if(sv)state.macdSignalSeries.update(sv);if(hv)state.macdHistSeries.update(hv);
   }
-  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.volumeSeries.setData(arr.map(b=>({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
-  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
+  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
+  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
   function rangeStats(){const arr=state.bars[state.selectedTf];if(!arr.length)return;$('high-price').textContent=money(Math.max(...arr.map(b=>b.high)));$('low-price').textContent=money(Math.min(...arr.map(b=>b.low)));}
 
+  function createIndicatorPanes(){
+   if(!state.chart||state.volumeSeries)return;
+   const L=window.LightweightCharts,opt={lineWidth:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false};
+   state.volumeSeries=state.chart.addSeries(L.HistogramSeries,{priceScaleId:'volume',priceFormat:{type:'volume'},lastValueVisible:false,priceLineVisible:false},1);
+   state.volumeSeries.priceScale().applyOptions({scaleMargins:{top:.08,bottom:.04},visible:false});
+   state.rsiSeries=state.chart.addSeries(L.LineSeries,{...opt,color:'#a899ff',priceFormat:{type:'price',precision:1,minMove:.1}},2);
+   state.rsiUpper=state.chart.addSeries(L.LineSeries,{...opt,color:'#5f6c80',lineStyle:L.LineStyle.Dashed},2);
+   state.rsiLower=state.chart.addSeries(L.LineSeries,{...opt,color:'#5f6c80',lineStyle:L.LineStyle.Dashed},2);
+   state.rsiSeries.priceScale().applyOptions({scaleMargins:{top:.12,bottom:.12}});
+   state.macdHistSeries=state.chart.addSeries(L.HistogramSeries,{lastValueVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:2,minMove:.01}},3);
+   state.macdSeries=state.chart.addSeries(L.LineSeries,{...opt,color:'#72b7ff',priceFormat:{type:'price',precision:2,minMove:.01}},3);
+   state.macdSignalSeries=state.chart.addSeries(L.LineSeries,{...opt,color:'#dfb875',priceFormat:{type:'price',precision:2,minMove:.01}},3);
+   state.macdHistSeries.createPriceLine({price:0,color:'#536176',lineWidth:1,lineStyle:L.LineStyle.Dashed,axisLabelVisible:false,title:''});
+   state.macdHistSeries.priceScale().applyOptions({scaleMargins:{top:.15,bottom:.15}});
+   const panes=state.chart.panes();
+   if(panes[0])panes[0].setStretchFactor(5);
+   if(panes[1])panes[1].setStretchFactor(1);
+   if(panes[2])panes[2].setStretchFactor(1.25);
+   if(panes[3])panes[3].setStretchFactor(1.5);
+   const arr=state.bars[state.selectedTf];if(arr?.length)setIndicatorData(arr);
+  }
+  function removeIndicatorPanes(){
+   if(!state.chart)return;
+   for(const key of ['macdSignalSeries','macdSeries','macdHistSeries','rsiLower','rsiUpper','rsiSeries','volumeSeries']){
+    const s=state[key];if(s){try{state.chart.removeSeries(s);}catch{}state[key]=null;}
+   }
+   while(state.chart.panes().length>1){
+    try{state.chart.removePane(state.chart.panes().length-1);}catch{break;}
+   }
+   const main=state.chart.panes()[0];if(main)main.setStretchFactor(12);
+  }
   function setIndicatorsExpanded(expanded){
    state.indicatorsExpanded=!!expanded;
    const btn=$('indicator-toggle');
    if(btn){btn.setAttribute('aria-pressed',String(state.indicatorsExpanded));btn.textContent=state.indicatorsExpanded?'อินดิเคเตอร์ ▾':'อินดิเคเตอร์ ▸';}
    if(!state.chartReady)return;
-   const visible=state.indicatorsExpanded;
-   for(const s of [state.volumeSeries,state.rsiSeries,state.rsiUpper,state.rsiLower,state.macdSeries,state.macdSignalSeries,state.macdHistSeries])if(s)s.applyOptions({visible});
-   const panes=state.chart.panes();
-   if(visible){
-    if(panes[0])panes[0].setStretchFactor(5);
-    if(panes[1])panes[1].setStretchFactor(1);
-    if(panes[2])panes[2].setStretchFactor(1.25);
-    if(panes[3])panes[3].setStretchFactor(1.5);
-   }else{
-    for(let i=1;i<panes.length;i++)panes[i].setHeight(30);
-    if(panes[0])panes[0].setStretchFactor(12);
-   }
+   if(state.indicatorsExpanded)createIndicatorPanes();
+   else removeIndicatorPanes();
   }
 
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedTf=btn.dataset.tf;document.querySelectorAll('[data-tf]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('tf-label').textContent=state.selectedTf.replace('m',' นาที');renderChart(true);drawHistory();}));
