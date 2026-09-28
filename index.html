@@ -51,6 +51,78 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .left-line-label{position:absolute;left:6px;transform:translateY(-50%);display:flex;align-items:center;gap:6px;max-width:calc(100% - 18px);padding:3px 7px;border:1px solid currentColor;border-radius:5px;background:rgba(11,16,25,.88);box-shadow:0 2px 10px rgba(0,0,0,.22);font:600 10px/1.2 'Segoe UI',Tahoma,sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
 .left-line-label.signal{font-size:11px;padding:4px 8px}
 @media(max-width:480px){.left-line-label{left:4px;font-size:9px;padding:3px 6px}.left-line-label.signal{font-size:10px;padding:4px 7px}}
+
+/* Compact chart-first layout: full-width chart, dense signal dashboard underneath. */
+.work-area{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+.chart-card{border-radius:10px}
+.indicator-toggle{white-space:nowrap;font-size:12px;padding:7px 10px;min-height:34px}
+.signal-panel{display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr));align-items:stretch;gap:6px!important;padding:9px 10px!important;border-radius:10px!important;background:#111925!important}
+.signal-panel .panel-heading{grid-column:1/-1;min-height:22px;padding:0 2px}
+.signal-panel .small-tag{font-size:9px;padding:1px 6px}
+.signal-panel .probability-block{grid-column:span 3;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520}
+.signal-panel .probability-head{margin-bottom:2px}
+.signal-panel .probability-values{gap:8px}
+.signal-panel .probability-values strong{font-size:17px}
+.signal-panel .probability-track{height:4px;margin-top:5px}
+.signal-panel .direction-detail{grid-column:span 3;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520;gap:2px}
+.signal-panel .direction-detail strong{font-size:15px;line-height:1.2}
+.signal-panel .direction-detail b{font-size:11px}
+.signal-panel .direction-detail p{font-size:10px;line-height:1.3}
+.signal-panel .direction-detail small{font-size:9px;line-height:1.25}
+.signal-panel .signal-hero{grid-column:span 2;margin:0;padding:6px 8px!important;border:1px solid #202d3e;border-radius:7px;background:#0d1520;gap:7px}
+.signal-panel .direction-icon{width:34px;height:34px;border-radius:9px;font-size:20px}
+.signal-panel .signal-hero strong{font-size:16px!important;line-height:1.15}
+.signal-panel .strong-banner{grid-column:span 2;margin:0;padding:7px 8px;border-radius:7px}
+.signal-panel .strong-banner strong{font-size:14px}
+.signal-panel .strong-banner>span{font-size:8px}
+.signal-panel .live-reference{grid-column:span 2;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520}
+.signal-panel .reference>span{font-size:9px;margin-bottom:1px}
+.signal-panel .reference strong{font-size:17px}
+.signal-panel .reference small{font-size:9px}
+.signal-panel .confidence-block{grid-column:span 2;margin:0;padding:7px 8px;border:1px solid #202d3e;border-radius:7px;background:#0d1520}
+.signal-panel .confidence-block span{font-size:9px}
+.signal-panel .confidence-block strong{font-size:18px}
+.signal-panel .confidence-block>small{font-size:9px;margin-top:3px;line-height:1.2}
+.signal-panel .confidence-track{height:4px!important;margin-top:4px}
+.signal-panel .signal-description{grid-column:1/span 6;margin:0;padding:3px 2px;font-size:10px;line-height:1.3}
+.signal-panel #event-detail{grid-column:7/-1!important;margin:0!important;padding:3px 2px!important;font-size:10px!important;line-height:1.3}
+.signal-panel .analysis-grid{grid-column:1/-1;grid-template-columns:repeat(10,minmax(0,1fr))!important;gap:4px!important;margin:0!important}
+.signal-panel .analysis-grid>div{padding:5px 6px!important;border-radius:6px}
+.signal-panel .analysis-grid span{font-size:8px!important;margin-bottom:2px}
+.signal-panel .analysis-grid b{font-size:10px!important;white-space:normal;line-height:1.15}
+.signal-panel .last-entry{grid-column:1/-1;margin:0!important;padding:6px 8px!important;display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:8px;border-radius:7px}
+.signal-panel .last-entry-head{margin:0;gap:6px;white-space:nowrap}
+.signal-panel .last-entry-head span{font-size:8px}
+.signal-panel .last-entry-price{gap:6px;justify-content:flex-start}
+.signal-panel .last-entry-price strong{font-size:16px}
+.signal-panel .last-entry-price small{font-size:9px}
+.signal-panel .last-entry-meta{margin:0;font-size:9px;overflow-wrap:anywhere}
+@media(max-width:900px){
+ .chart-wrap{height:540px}
+ .signal-panel{grid-template-columns:repeat(6,minmax(0,1fr))}
+ .signal-panel .probability-block,.signal-panel .direction-detail{grid-column:span 3}
+ .signal-panel .signal-hero,.signal-panel .live-reference,.signal-panel .confidence-block,.signal-panel .strong-banner{grid-column:span 2}
+ .signal-panel .signal-description{grid-column:1/span 3}
+ .signal-panel #event-detail{grid-column:4/-1!important}
+ .signal-panel .analysis-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+}
+@media(max-width:560px){
+ main{padding-left:8px!important;padding-right:8px!important}
+ .chart-wrap{height:470px!important}
+ .chart-toolbar{padding:7px 8px!important;gap:3px!important}
+ .indicator-toggle{font-size:10px;padding:6px 7px;min-height:32px}
+ .signal-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px!important;padding:6px!important}
+ .signal-panel .panel-heading,.signal-panel .probability-block,.signal-panel .direction-detail,.signal-panel .strong-banner,.signal-panel .signal-description,.signal-panel #event-detail,.signal-panel .analysis-grid,.signal-panel .last-entry{grid-column:1/-1!important}
+ .signal-panel .signal-hero,.signal-panel .live-reference,.signal-panel .confidence-block{grid-column:span 1}
+ .signal-panel .direction-detail{display:grid;grid-template-columns:auto auto;align-items:center}
+ .signal-panel .direction-detail p,.signal-panel .direction-detail small{grid-column:1/-1}
+ .signal-panel .analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:3px!important}
+ .signal-panel .analysis-grid>div{padding:4px 5px!important}
+ .signal-panel .last-entry{grid-template-columns:1fr auto}
+ .signal-panel .last-entry-meta{grid-column:1/-1}
+ .signal-panel .signal-description,.signal-panel #event-detail{padding:2px 1px!important}
+ .chart-foot{padding:7px 9px!important;gap:6px!important;font-size:9px!important}
+}
 </style>
 </head>
 <body data-feed="syncing">
@@ -71,7 +143,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 <section class="chart-card">
   <div class="chart-toolbar">
     <div class="timeframes" aria-label="ช่วงแท่งเทียน"><button data-tf="1m" aria-pressed="true">1m</button><button data-tf="5m" aria-pressed="false">5m</button><button data-tf="15m" aria-pressed="false">15m</button></div>
-    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
+    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="true" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▾</button>
     <div class="chart-actions"><button id="latest" class="quiet">กลับล่าสุด</button></div>
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
@@ -866,6 +938,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     emaFast: null,
     emaSlow: null,
     emaVisible: true,
+    indicatorsExpanded: true,
     chartReady: false,
     booted: false,
   };
@@ -1236,6 +1309,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     if(panes[3])panes[3].setStretchFactor(1.5);
     chart.subscribeCrosshairMove(p=>{const b=p.seriesData.get(state.candleSeries);if(b&&b.open!==undefined)$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;});
     state.chartReady=true;
+    setIndicatorsExpanded(state.indicatorsExpanded);
   }
   function emaPoints(arr,period){const values=ema(arr.map(b=>b.close),period);return arr.map((b,i)=>({time:b.time,value:values[i]}));}
   function rsiPoints(arr,period=14){
@@ -1270,8 +1344,28 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.labelSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});state.volumeSeries.update({time:b.time,value:b.volume,color:b.close>=b.open?'#22524a':'#543143'});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
   function rangeStats(){const arr=state.bars[state.selectedTf];if(!arr.length)return;$('high-price').textContent=money(Math.max(...arr.map(b=>b.high)));$('low-price').textContent=money(Math.min(...arr.map(b=>b.low)));}
 
+  function setIndicatorsExpanded(expanded){
+   state.indicatorsExpanded=!!expanded;
+   const btn=$('indicator-toggle');
+   if(btn){btn.setAttribute('aria-pressed',String(state.indicatorsExpanded));btn.textContent=state.indicatorsExpanded?'อินดิเคเตอร์ ▾':'อินดิเคเตอร์ ▸';}
+   if(!state.chartReady)return;
+   const visible=state.indicatorsExpanded;
+   for(const s of [state.volumeSeries,state.rsiSeries,state.rsiUpper,state.rsiLower,state.macdSeries,state.macdSignalSeries,state.macdHistSeries])if(s)s.applyOptions({visible});
+   const panes=state.chart.panes();
+   if(visible){
+    if(panes[0])panes[0].setStretchFactor(5);
+    if(panes[1])panes[1].setStretchFactor(1);
+    if(panes[2])panes[2].setStretchFactor(1.25);
+    if(panes[3])panes[3].setStretchFactor(1.5);
+   }else{
+    for(let i=1;i<panes.length;i++)panes[i].setHeight(30);
+    if(panes[0])panes[0].setStretchFactor(12);
+   }
+  }
+
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',()=>{state.selectedTf=btn.dataset.tf;document.querySelectorAll('[data-tf]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('tf-label').textContent=state.selectedTf.replace('m',' นาที');renderChart(true);drawHistory();}));
   $('ema-toggle').addEventListener('click',()=>{state.emaVisible=!state.emaVisible;state.emaFast.applyOptions({visible:state.emaVisible});state.emaSlow.applyOptions({visible:state.emaVisible});$('ema-toggle').setAttribute('aria-pressed',String(state.emaVisible));});
+  $('indicator-toggle').addEventListener('click',()=>setIndicatorsExpanded(!state.indicatorsExpanded));
   $('latest').addEventListener('click',()=>state.chart&&state.chart.timeScale().scrollToRealTime());
   $('reconnect').addEventListener('click',()=>{state.reconnectCount=0;connect();});
   window.addEventListener('online',()=>connect());window.addEventListener('offline',()=>statusView('offline','อินเทอร์เน็ตขาดการเชื่อมต่อ'));
