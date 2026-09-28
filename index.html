@@ -46,6 +46,11 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .version-filter-label select{min-height:38px;padding:0 30px 0 10px;border:1px solid var(--border);border-radius:7px;background:#0c1420;color:var(--text);font:12px 'Segoe UI',sans-serif;outline:none}
 .version-filter-label select:focus{border-color:#53657f}.version-cell{font-size:11px;color:#9fb2ca;white-space:nowrap}
 @media(max-width:850px){.version-filter-label{width:100%}.version-filter-label select{flex:1}}
+
+.left-line-labels{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+.left-line-label{position:absolute;left:6px;transform:translateY(-50%);display:flex;align-items:center;gap:6px;max-width:calc(100% - 18px);padding:3px 7px;border:1px solid currentColor;border-radius:5px;background:rgba(11,16,25,.88);box-shadow:0 2px 10px rgba(0,0,0,.22);font:600 10px/1.2 'Segoe UI',Tahoma,sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
+.left-line-label.signal{font-size:11px;padding:4px 8px}
+@media(max-width:480px){.left-line-label{left:4px;font-size:9px;padding:3px 6px}.left-line-label.signal{font-size:10px;padding:4px 7px}}
 </style>
 </head>
 <body data-feed="syncing">
@@ -71,7 +76,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
-  <div class="chart-wrap"><div id="chart"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
+  <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <div class="chart-foot"><span><i class="ema-fast"></i>EMA 8 <i class="ema-slow"></i>EMA 21</span><span>Volume</span><span>RSI 14</span><span>MACD 12·26·9</span><span id="zone-legend">1m แนวรับ / แนวต้าน · กำลังโหลด</span></div>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
@@ -936,7 +941,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   let versionSettings=rememberVersionSettings();
   let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;}
-  const engine=new Engine(saved);let lastPersist=0,drawnZones=[],activeSignalLines=[],markerApi=null,lastView=null;
+  const engine=new Engine(saved);let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null;
   const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว'};
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
   function purgeOldVersions(){
@@ -986,17 +991,35 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const sec=Math.max(0,Math.ceil(ms/1000));
    return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
   }
+  function renderLeftLineLabels(){
+   const host=$('left-line-labels');
+   if(!host||!state.chartReady||!state.candleSeries){if(host)host.replaceChildren();return;}
+   host.replaceChildren();
+   const items=[...leftZoneLabels,...leftSignalLabels];
+   for(const item of items){
+    if(!Number.isFinite(item.price))continue;
+    const y=state.candleSeries.priceToCoordinate(item.price);
+    if(!Number.isFinite(y)||y<0||y>host.clientHeight)continue;
+    const el=document.createElement('div');
+    el.className='left-line-label'+(item.kind==='signal'?' signal':'');
+    el.style.top=y+'px';
+    el.style.color=item.color||'#bdcbe0';
+    el.textContent=item.text;
+    host.append(el);
+   }
+  }
   function syncSignalChart(rows){
    if(!state.chartReady)return;
    for(const line of activeSignalLines){try{state.candleSeries.removePriceLine(line);}catch{}}
    activeSignalLines=[];
    const now=Date.now();
+   leftSignalLabels=[];
    for(const s of rows.filter(s=>s.result==='pending'&&Number.isFinite(s.entryPrice)&&Number.isFinite(s.expiresAt))){
-    const isHigh=s.direction==='HIGH',remain=s.expiresAt-now;
+    const isHigh=s.direction==='HIGH',remain=s.expiresAt-now,color=isHigh?'#44dfb5':'#ff708a';
     activeSignalLines.push(state.candleSeries.createPriceLine({
-     price:s.entryPrice,color:isHigh?'#44dfb5':'#ff708a',lineWidth:2,lineStyle:2,axisLabelVisible:true,
-     title:`${s.direction} · ${countdownLabel(remain)}`
+     price:s.entryPrice,color,lineWidth:2,lineStyle:2,axisLabelVisible:false,title:''
     }));
+    leftSignalLabels.push({kind:'signal',price:s.entryPrice,color,text:`${s.direction} · ${money(s.entryPrice)} · ${countdownLabel(remain)}`});
    }
    if(window.LightweightCharts.createSeriesMarkers){
     if(!markerApi)markerApi=LightweightCharts.createSeriesMarkers(state.candleSeries,[]);
@@ -1013,6 +1036,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
      };
     }).filter(x=>x.time>=first).sort((a,b)=>a.time-b.time));
    }
+   renderLeftLineLabels();
   }
   function drawHistory(){
    refreshVersionFilter();
@@ -1057,16 +1081,21 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    };
    const supports=choose('support',false),resistances=choose('resistance',true),zs=[...supports,...resistances];
    $('zone-legend').textContent=`1m รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
+   leftZoneLabels=[
+    ...zs.map(z=>({kind:'zone',price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',text:`${z.kind==='resistance'?'1m ต้าน':'1m รับ'} · ${money(z.price)}`})),
+    ...(e?[[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:`${title} · ${money(p)}`})):[])
+   ];
    const zkey=zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
    if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
     for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
     for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
      price:z.price,color:z.kind==='resistance'?'#e48fa1':'#67d6ad',lineWidth:z.touches>=2?2:1,
-     lineStyle:2,axisLabelVisible:true,title:z.kind==='resistance'?'1m ต้าน':'1m รับ'
+     lineStyle:2,axisLabelVisible:false,title:''
     }));
     if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
-     drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title}));
+     if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
    }
+   renderLeftLineLabels();
   }
 
   function renderDirection(x){
