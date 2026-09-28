@@ -641,19 +641,30 @@ const WEIGHTS=Object.freeze({
  TREND:Object.freeze({trend:.24,momentum:.18,live:.17,flow:.26,book:.05,structure:.10}),
  TRANSITION:Object.freeze({trend:.10,momentum:.16,live:.22,flow:.34,book:.08,structure:.10})
 });
-function applyStatisticalBias(v,trend){
+function applyPhaseBias(v,phase){
  if(!v||!v.available)return v;
- const strength=Math.abs(trend||0);
- if(strength<CFG.statsTrendMin)return {...v,reason:`V6.6 · Trend 1m ยังอ่อน (${strength.toFixed(2)}) · ${v.reason}`};
- const desired=trend>0?'LOW':'HIGH',confidence=Math.max(56,v.high,v.low);
- const high=desired==='HIGH'?confidence:100-confidence,low=100-high;
- return {...v,high,low,direction:desired,modelDirection:v.direction,
-  reason:`V6.6 · สถิติหลักสวน Trend 1m → ${desired} · ${v.reason}`};
+ const p=phase||{phase:'TRANSITION',dir:0};
+ if(['IMPULSE','MATURE_IMPULSE'].includes(p.phase)&&p.dir){
+  const conf=Math.round(clip((p.phase==='MATURE_IMPULSE'?64:61)+(p.score||0)*2,60,78));
+  const high=p.dir>0?conf:100-conf,low=100-high;
+  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,risk:p.phase==='MATURE_IMPULSE'?'กลาง':'ต่ำตามเกณฑ์',
+   reason:`V7.0 · ${p.phase} ${p.dir>0?'UP':'DOWN'} · แท่ง/Volume กำลังขยาย · ห้ามสวนจน phase เปลี่ยน`};
+ }
+ if(p.phase==='TREND'&&p.dir){
+  const raw=p.dir>0?v.high:v.low,conf=Math.round(clip(Math.max(56,raw),56,68)),high=p.dir>0?conf:100-conf,low=100-high;
+  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,reason:`V7.0 · TREND ${p.dir>0?'UP':'DOWN'} · follow bias รอ trigger`};
+ }
+ if(p.phase==='EXHAUSTION')return {...v,high:50,low:50,direction:'BALANCED',phase:p.phase,risk:'สูง',reason:'V7.0 · EXHAUSTION · ปลายขา/Volume สูง แต่ยังไม่สวนจนมี reversal trigger'};
+ if(p.phase==='REVERSAL'&&p.dir){
+  const conf=Math.round(clip(60+(p.exhaustionScore||0)*2,60,70)),high=p.dir>0?conf:100-conf,low=100-high;
+  return {...v,high,low,direction:p.dir>0?'HIGH':'LOW',phase:p.phase,risk:'กลาง',reason:`V7.0 · REVERSAL ${p.dir>0?'UP':'DOWN'} ยืนยัน · ตามทิศกลับตัว`};
+ }
+ return {...v,phase:p.phase,reason:`V7.0 · ${p.phase} · ${v.reason}`};
 }
 function assess(x){
  const f=x.features;
  if(!x.fresh||!f||!(x.price>0)||!Number.isFinite(x.ts))return {available:false,reason:x.reason||'ข้อมูลสดไม่ครบ — พักการประเมิน'};
- const p=x.price,a=f.atr,b=f.b,last=b.at(-1),regime=x.regime||{mode:'TRANSITION'},mode=regime.mode||'TRANSITION';
+ const p=x.price,a=f.atr,b=f.b,last=b.at(-1),regime=x.regime||{mode:'TRANSITION'},mode=regime.mode||'TRANSITION',phase=x.phase||{phase:mode,dir:Math.sign(f.trend||0)};
  const flow=clip(x.flow||0,-1,1)*clip((x.coverage||0)/15,0,1),book=x.bookValid?clip(x.book||0,-1,1):0;
  const levels=[...(x.zones||[]).map(z=>z.price),f.high,f.low];
 
@@ -678,8 +689,8 @@ function assess(x){
   const ahead=dd?levels.filter(v=>dd*(v-p)>0).map(v=>dd*(v-p)/a):[],room=ahead.length?Math.min(...ahead):Infinity;
   if(pos>.30&&pos<.70)risk=Math.max(risk,3);
   const riskLabel=risk>=3?'สูง':risk>=2?'กลาง':'ต่ำตามเกณฑ์';
-  return applyStatisticalBias({available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
-   reason,parts:{flow,rangePosition:pos},weights:null,regime:mode,coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension:0,retreat:0},f.trend);
+  return applyPhaseBias({available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
+   reason,parts:{flow,rangePosition:pos},weights:null,regime:mode,coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension:0,retreat:0},phase);
  }
 
  const weights=WEIGHTS[mode]||WEIGHTS.TRANSITION;
@@ -710,9 +721,9 @@ function assess(x){
  if((x.coverage||0)<15){risk+=2;reasons.push('กำลังสะสมข้อมูลแรงซื้อขาย');}
  if(!x.bookValid)reasons.push('Order Book ยังไม่พร้อม');
  const riskLabel=risk>=4?'สูง':risk>=2?'กลาง':'ต่ำตามเกณฑ์';
- return applyStatisticalBias({available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
+ return applyPhaseBias({available:true,high,low,direction,risk:riskLabel,riskScore:risk,referencePrice:p,referenceTime:x.ts,targetTime:x.ts+600000,
   reason:reasons.length?reasons.slice(0,3).join(' · '):'ยังไม่พบแรงสวนเด่นตามเกณฑ์',parts,weights,regime:mode,
-  coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension,retreat},f.trend);
+  coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension,retreat},phase);
 }
 root.ContinuousDirection={assess,WEIGHTS};
 if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
