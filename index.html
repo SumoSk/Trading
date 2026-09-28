@@ -286,90 +286,44 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 @media(max-width:700px){.engine-version-picker{order:3;width:100%;margin-left:0}.engine-version-picker select{max-width:none;flex:1}}
 
 
-/* Inline realtime setup profile: top row = direction | entry | setup */
+/* Compact setup summary beside entry; full realtime profile remains below */
 .signal-panel>.signal-card-direction{grid-column:span 4!important}
 .signal-panel>.signal-card-entry{grid-column:span 4!important}
-.signal-panel>.setup-profile-panel{
+.signal-panel>.setup-profile-compact{
  grid-column:span 4!important;
  min-width:0;align-self:stretch;
- margin:0!important;padding:10px!important;
- border:1px solid var(--card-border)!important;
- border-radius:10px!important;
- background:var(--card-bg)!important;
- box-shadow:none!important;
+ padding:10px;
+ border:1px solid var(--card-border);
+ border-radius:10px;
+ background:var(--card-bg);
  overflow:hidden
 }
-.signal-panel>.setup-profile-panel .setup-profile-head{
- padding:0 0 7px!important;margin:0 0 6px!important;
- border-bottom:1px solid var(--card-border)!important;
- gap:7px!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-head h2{
- font-size:13px!important;line-height:1.15;margin:1px 0 0!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-kicker{
- font-size:7.5px!important;letter-spacing:.75px!important;margin:0 0 2px!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-status{
- padding:3px 6px!important;font-size:8px!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-hero{padding:2px 0 6px!important}
-.signal-panel>.setup-profile-panel .setup-profile-hero>span{font-size:8px!important}
-.signal-panel>.setup-profile-panel .setup-profile-hero h3{
- font-size:12px!important;line-height:1.25!important;margin:2px 0 3px!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-hero p{
- font-size:8px!important;line-height:1.35!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
-}
-.signal-panel>.setup-profile-panel .setup-profile-rate{padding:7px 8px!important;border-radius:8px!important}
-.signal-panel>.setup-profile-panel .setup-rate-main span{font-size:8px!important}
-.signal-panel>.setup-profile-panel .setup-rate-main strong{font-size:23px!important}
-.signal-panel>.setup-profile-panel .setup-rate-main b{font-size:9px!important}
-.signal-panel>.setup-profile-panel .setup-rate-track{height:4px!important;margin-top:6px!important}
-.signal-panel>.setup-profile-panel .setup-rate-meta{font-size:7.5px!important;margin-top:5px!important}
-.signal-panel>.setup-profile-panel .setup-exact-row{
- padding:6px 1px!important;gap:1px 7px!important
-}
-.signal-panel>.setup-profile-panel .setup-exact-row span{font-size:8px!important}
-.signal-panel>.setup-profile-panel .setup-exact-row b{font-size:11px!important}
-.signal-panel>.setup-profile-panel .setup-exact-row small{font-size:7.5px!important}
-.signal-panel>.setup-profile-panel .setup-live-grid{
- grid-template-columns:repeat(2,minmax(0,1fr))!important;
- gap:4px!important;margin:6px 0!important
-}
-.signal-panel>.setup-profile-panel .setup-live-grid>div{padding:5px 6px!important;border-radius:6px!important}
-.signal-panel>.setup-profile-panel .setup-live-grid span{font-size:7px!important;margin-bottom:2px!important}
-.signal-panel>.setup-profile-panel .setup-live-grid b{font-size:9px!important}
-.signal-panel>.setup-profile-panel .setup-profile-reasons{
- display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:3px
-}
-.signal-panel>.setup-profile-panel .setup-profile-section{
- min-width:0;padding:6px!important;margin:0!important;
- border:1px solid #1e2b3d!important;border-radius:7px;background:#0b141f
-}
-.signal-panel>.setup-profile-panel .setup-profile-section h4{font-size:8.5px!important;margin:0 0 4px!important}
-.signal-panel>.setup-profile-panel .setup-profile-section ul{gap:3px!important}
-.signal-panel>.setup-profile-panel .setup-profile-section li{
- font-size:7.5px!important;line-height:1.3!important;padding-left:10px!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-section li:before{
- width:4px!important;height:4px!important;left:0!important
-}
-.signal-panel>.setup-profile-panel .setup-profile-section li:nth-child(n+4){display:none}
-.signal-panel>.setup-profile-panel .setup-profile-foot{
- margin-top:5px!important;padding-top:5px!important;
- font-size:7px!important;line-height:1.25!important;
- white-space:nowrap;overflow:hidden;text-overflow:ellipsis
-}
+.setup-profile-compact h3{font-size:13px;line-height:1.2;font-weight:600;margin:0 0 3px;color:#dfeaf8}
+.setup-profile-compact>p{font-size:8.5px;line-height:1.35;color:#8396af;margin:0 0 8px}
+.setup-compact-rate{padding:8px;border:1px solid #2a3c55;border-radius:8px;background:#0a131f}
+.setup-compact-rate>span{display:block;font-size:8px;color:#8194ad;margin-bottom:4px}
+.setup-compact-rate-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.setup-compact-rate-head strong{font:700 23px/1 'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;color:#dce9f8}
+.setup-compact-rate-head b{font-size:9px;font-weight:600;color:#aebed1;text-align:right}
+.setup-compact-rate.good .setup-compact-rate-head strong,.setup-compact-rate.good .setup-compact-rate-head b{color:#69e9c5}
+.setup-compact-rate.bad .setup-compact-rate-head strong,.setup-compact-rate.bad .setup-compact-rate-head b{color:#ff8da1}
+.setup-compact-track{height:4px;margin-top:6px;border-radius:8px;overflow:hidden;background:#273348}
+.setup-compact-track>div{height:100%;width:0;background:linear-gradient(90deg,#788ba5,#9db0c8);transition:width .25s ease}
+.setup-compact-rate.good .setup-compact-track>div{background:linear-gradient(90deg,#2f9a7e,#69e9c5)}
+.setup-compact-rate.bad .setup-compact-track>div{background:linear-gradient(90deg,#bd5368,#ff8da1)}
+.setup-compact-meta{display:flex;justify-content:space-between;gap:8px;margin-top:5px;font-size:7.5px;color:#8497b0}
+.setup-compact-meta span:last-child{text-align:right}
+.setup-compact-exact{padding:7px 1px 0}
+.setup-compact-exact>div{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.setup-compact-exact span{font-size:8px;color:#9bacc1}
+.setup-compact-exact b{font:600 11px 'Segoe UI',sans-serif}
+.setup-compact-exact small{display:block;margin-top:2px;font-size:7.5px;color:#70849f}
 @media(max-width:900px){
  .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry{grid-column:span 3!important}
- .signal-panel>.setup-profile-panel{grid-column:1/-1!important}
- .signal-panel>.setup-profile-panel .setup-profile-reasons{grid-template-columns:1fr 1fr}
+ .signal-panel>.setup-profile-compact{grid-column:1/-1!important}
 }
 @media(max-width:560px){
- .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry,.signal-panel>.setup-profile-panel{grid-column:1/-1!important}
- .signal-panel>.setup-profile-panel .setup-profile-reasons{grid-template-columns:1fr}
- .signal-panel>.setup-profile-panel .setup-profile-section li{font-size:8.5px!important}
+ .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry,.signal-panel>.setup-profile-compact{grid-column:1/-1!important}
 }
 
 </style>
@@ -426,7 +380,44 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     </div>
   </section>
 
-<section class="setup-profile-panel" id="setup-profile-panel" aria-live="polite">
+<section class="setup-profile-compact" id="setup-profile-compact" aria-live="polite">
+  <h3 id="setup-compact-name">กำลังรอจุดเข้า</h3>
+  <p id="setup-compact-desc">เมื่อมีจังหวะหรือเพิ่งมีสัญญาณ ช่องนี้จะเทียบกับไม้ย้อนหลังและอัปเดตจากราคาตอนนี้แบบเรียลไทม์</p>
+  <div class="setup-compact-rate" id="setup-compact-rate">
+    <span>ถ้าเข้าจากตำแหน่งคล้ายตอนนี้</span>
+    <div class="setup-compact-rate-head"><strong id="setup-compact-similar-rate">—</strong><b id="setup-compact-history-lean">รอข้อมูล</b></div>
+    <div class="setup-compact-track"><div id="setup-compact-rate-bar"></div></div>
+    <div class="setup-compact-meta"><span id="setup-compact-similar-record">—</span><span id="setup-compact-sample-quality">—</span></div>
+  </div>
+  <div class="setup-compact-exact">
+    <div><span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-compact-exact-rate">—</b></div>
+    <small id="setup-compact-exact-record">ยังไม่มีท่าปัจจุบัน</small>
+  </div>
+</section>
+
+  <section class="signal-card signal-card-market">
+    <div class="signal-card-title"><span>ข้อมูลตลาดตอนนี้</span></div>
+    <div class="analysis-grid">
+      <div><span>สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
+      <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
+      <div><span>แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
+      <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
+      <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
+      <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
+      <div><span>ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
+      <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
+      <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
+      <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
+    </div>
+  </section>
+
+  <div class="last-entry" id="last-entry" hidden>
+    <div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div>
+    <div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div>
+    <small class="last-entry-meta" id="last-entry-meta">—</small>
+  </div>
+</aside>
+<aside class="setup-profile-panel" id="setup-profile-panel" aria-live="polite">
   <div class="setup-profile-head">
     <div><span class="setup-profile-kicker">ประกอบการตัดสินใจ · REALTIME</span><h2>โปรไฟล์ท่านี้</h2></div>
     <span class="setup-profile-status learning" id="setup-profile-status">รอจังหวะ</span>
@@ -466,29 +457,6 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </div>
 
   <div class="setup-profile-foot" id="setup-profile-foot">คำนวณจากไม้ที่จบผลแล้วของเวอร์ชันปัจจุบันในเบราว์เซอร์นี้ · ไม่เปลี่ยนสูตรหรือบล็อกสัญญาณจุดเข้า</div>
-</section>
-
-  <section class="signal-card signal-card-market">
-    <div class="signal-card-title"><span>ข้อมูลตลาดตอนนี้</span></div>
-    <div class="analysis-grid">
-      <div><span>สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
-      <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
-      <div><span>แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
-      <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
-      <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
-      <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
-      <div><span>ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
-      <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
-      <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
-      <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
-    </div>
-  </section>
-
-  <div class="last-entry" id="last-entry" hidden>
-    <div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div>
-    <div class="last-entry-price"><strong id="last-entry-price">—</strong><small id="last-entry-time">—</small></div>
-    <small class="last-entry-meta" id="last-entry-meta">—</small>
-  </div>
 </aside>
 
 </div>
@@ -1611,6 +1579,22 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-profile-foot').textContent=`อัปเดต ${clockMs((state.quote?.ts||0)*1000)} · สถิติ V${CFG.version} เฉพาะไม้ที่จบผลแล้ว · เปรียบเทียบจากท่า ฝั่ง ช่วงตลาด ระยะจากฐาน แนวสำคัญ Volume และแรงตลาด · ไม่เปลี่ยนสูตรจุดเข้า`;
   }
 
+  function renderCompactSetupProfile(){
+   const copyText=(from,to)=>{const a=$(from),b=$(to);if(a&&b)b.textContent=a.textContent;};
+   copyText('setup-profile-name','setup-compact-name');
+   copyText('setup-profile-desc','setup-compact-desc');
+   copyText('setup-similar-rate','setup-compact-similar-rate');
+   copyText('setup-history-lean','setup-compact-history-lean');
+   copyText('setup-similar-record','setup-compact-similar-record');
+   copyText('setup-sample-quality','setup-compact-sample-quality');
+   copyText('setup-exact-rate','setup-compact-exact-rate');
+   copyText('setup-exact-record','setup-compact-exact-record');
+   const fullRate=$('setup-profile-rate'),compactRate=$('setup-compact-rate');
+   if(fullRate&&compactRate)compactRate.className='setup-compact-rate'+(fullRate.classList.contains('good')?' good':fullRate.classList.contains('bad')?' bad':'');
+   const fullBar=$('setup-rate-bar'),compactBar=$('setup-compact-rate-bar');
+   if(fullBar&&compactBar)compactBar.style.width=fullBar.style.width||'0%';
+  }
+
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
   function purgeOldVersions(){
    const old=engine.signals.filter(s=>s.version!==CFG.version);
@@ -1987,7 +1971,7 @@ function openReport(){
    if(v.f)engine.observeContext({ts:q.ts*1000,price:q.price,flow,coverage,book,bookValid:valid,regime:v.regime?.mode||null,phase:v.phase?.phase||null,trend:v.f.trend,momentum:v.f.mom,rangePosition:v.f.rangePosition,room:directionView.room});
    if(v.signal?.dataset?.entry){const liq=liquidationSnapshot(q.ts);v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};}
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
-   renderEvent(v);renderSetupProfile(v,directionView,{flow,book,bookValid:valid});if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
+   renderEvent(v);renderSetupProfile(v,directionView,{flow,book,bookValid:valid});renderCompactSetupProfile();if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
   }
 
   function normalizeKline(row){return {time:Math.floor(Number(row[0])/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4],volume:+row[5],closed:Number(row[6])<Date.now()};}
@@ -2183,7 +2167,7 @@ function openReport(){
   setInterval(()=>analyseNow(true),1500);
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,ingest,analyseNow};
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
-  renderSetupProfile(null,null,{});
+  renderSetupProfile(null,null,{});renderCompactSetupProfile();
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
   setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();},1000);
   window.addEventListener('pagehide',()=>persist(true));
