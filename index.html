@@ -2900,10 +2900,10 @@ function openReport(){
    }
    throw new Error('โหลด 10m ไม่สำเร็จ: '+(lastError?.message||'unknown error'));
   }
-  async function ensureTimeframe(tf){
+  async function ensureTimeframe(tf,force=false){
    const existing=state.bars[tf]||[],last=existing.at(-1),seconds=TF_SECONDS[tf]||60;
    const currentEnough=existing.length>=20&&last&&(Date.now()/1000-last.time)<seconds*1.5+120;
-   if(currentEnough)return existing;
+   if(!force&&currentEnough)return existing;
    if(tf==='10m')state.bars[tf]=await loadTenMinuteHistory();
    else if(['1m','5m','15m','1h','4h','1d','1w'].includes(tf))state.bars[tf]=await loadHistory(tf);
    return state.bars[tf]||[];
@@ -3020,9 +3020,16 @@ function openReport(){
        .forEach(b=>merged.set(b.time,b));
       state.bars['1m']=[...merged.values()].sort((a,b)=>a.time-b.time).slice(-1000);
       state.booted=true;
+      if(state.analysisTf!=='1m'){
+       try{
+        await ensureTimeframe(state.analysisTf,true);
+       }catch(tfErr){
+        console.warn('ซิงก์ไทม์เฟรมวิเคราะห์ '+state.analysisTf+' ไม่สำเร็จ',tfErr);
+       }
+      }
       renderChart(false);
-      statusView(state.historyFallback?'stale':'live',
-       state.historyFallback?'แสดง Spot สำรอง · รอข้อมูล Futures เพื่อวิเคราะห์สด':'');
+      statusView(analysisUsesSpot(state.analysisTf)?'stale':'live',
+       analysisUsesSpot(state.analysisTf)?'แสดง Spot สำรอง · รอข้อมูล Futures ของ '+state.analysisTf+' เพื่อวิเคราะห์สด':'');
       analyseNow(true);
       for(const tf of ['5m','15m']){
        loadHistory(tf).then(other=>{
@@ -3191,7 +3198,8 @@ function openReport(){
     if(!next||next===state.analysisTf||state.analysisSwitching)return;
     state.analysisSwitching=true;analysisTfConfirm.disabled=true;analysisTfConfirm.textContent='กำลังโหลด…';
     try{
-     await ensureTimeframe(next);
+     await ensureTimeframe(next,true);
+     if(state.selectedTf===next)renderChart(false);
      if((state.bars[next]||[]).filter(b=>b.closed).length<35)throw new Error('ข้อมูล '+next+' ยังไม่พอสำหรับวิเคราะห์');
      state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;
      resetContextEngine(next);
