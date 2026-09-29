@@ -406,22 +406,19 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .candle-state.high{border-color:#2d876d;background:#102922;color:#61e3bc}
 .candle-state.low{border-color:#a3485f;background:#301b26;color:#ff8da1}
 .candle-state.wait{border-color:#40516a;background:#141e2c;color:#aab9cc}
-.candle-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;padding:8px 0 6px}
-.candle-hero>div:first-child>span,.candle-confidence>span{display:block;font-size:7.5px;color:#768ba6;margin-bottom:2px}
-.candle-hero strong{font-size:18px;line-height:1.15;color:#cfdbea}
-.signal-card-candle.high .candle-hero strong,.signal-card-candle.high .candle-confidence b{color:#61e3bc}
-.signal-card-candle.low .candle-hero strong,.signal-card-candle.low .candle-confidence b{color:#ff8da1}
-.candle-confidence{text-align:right}
-.candle-confidence b{font:700 20px/1 'Segoe UI',sans-serif;color:#dbe7f5}
-.candle-status-summary{margin:3px 0 7px;padding:8px 9px;border:1px solid #304258;border-radius:8px;background:#0b141f}
-.candle-status-summary>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:2px}
-.candle-status-summary>b{display:block;font-size:12px;line-height:1.3;color:#dbe7f5}
+.candle-status-summary{margin:3px 0 7px;padding:9px 10px;border:1px solid #304258;border-radius:8px;background:#0b141f}
+.candle-summary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
+.candle-summary-top>span{display:block;font-size:7.5px;color:#7f93ad}
+.candle-confidence{text-align:right;flex:0 0 auto}
+.candle-confidence>span{display:block;font-size:7px;color:#768ba6;line-height:1}
+.candle-confidence b{display:block;margin-top:2px;font:700 16px/1 'Segoe UI',sans-serif;color:#dbe7f5}
+.candle-status-summary>b{display:block;font-size:13px;line-height:1.3;color:#dbe7f5}
 .candle-status-summary>small{display:block;margin-top:3px;font-size:8px;line-height:1.4;color:#9fb1c6}
 .candle-status-summary.high{border-color:#2d6f5d;background:#0d1d19}.candle-status-summary.high>b{color:#61e3bc}
 .candle-status-summary.low{border-color:#7d3d50;background:#22141b}.candle-status-summary.low>b{color:#ff8da1}
 .candle-status-summary.wait{border-color:#35475d}
 .candle-summary{font-size:8.5px;line-height:1.45;color:#9cafc5;margin:0 0 6px}
-.candle-patterns{margin-top:2px;padding:7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
+.candle-patterns{margin-top:0;padding:7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
 .candle-patterns>span,.candle-reading>span,.candle-change>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:5px}
 .candle-pattern-list{display:flex;flex-wrap:wrap;gap:4px}
 .candle-pattern{display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border:1px solid #33445b;border-radius:999px;background:#111d2b;color:#b7c5d6;font-size:8px;line-height:1.2}
@@ -429,13 +426,13 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .candle-pattern.bear{border-color:#834154;background:#2a1821;color:#ef8da2}
 .candle-pattern.neutral{border-color:#53627a;color:#b8c6d8}
 .candle-pattern.empty{opacity:.75}
-.candle-reading,.candle-change{margin-top:6px;padding:7px 8px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
+.candle-reading,.candle-change{margin-top:5px;padding:6px 7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
 .candle-reading p,.candle-change p{margin:0;font-size:8.5px;line-height:1.5;color:#b8c7d9}
 .candle-reading p{color:#c7d5e5}
 .candle-change p{color:#9fb1c6}
 .signal-card-candle.high .candle-reading{border-color:#285d4f}
 .signal-card-candle.low .candle-reading{border-color:#663747}
-.candle-lock{margin-top:6px;padding:6px 7px;border-top:1px solid #24344a}
+.candle-lock{margin-top:5px;padding:6px 7px;border-top:1px solid #24344a}
 .candle-lock>span{display:block;font-size:7px;color:#70849d;margin-bottom:2px}
 .candle-lock b{display:block;font-size:9px;color:#c5d2e2}
 .candle-lock small{display:block;margin-top:2px;font-size:7.5px;line-height:1.35;color:#7f92aa}
@@ -514,7 +511,7 @@ main{padding-top:10px}
  .entry-gate-detail ul{padding-left:12px!important;font-size:7.5px!important}
  .candle-hero{gap:4px!important}
  .candle-hero strong,.candle-confidence b{font-size:12px!important}
- .candle-status-summary{padding:6px!important}.candle-status-summary>b{font-size:10px!important}.candle-status-summary>small{font-size:7px!important}
+ .candle-status-summary{padding:6px!important}.candle-status-summary>b{font-size:10px!important}.candle-status-summary>small{font-size:7px!important}.candle-confidence b{font-size:12px!important}.candle-summary-top{gap:4px!important}
  .candle-summary,.candle-reading p,.candle-change p,.candle-lock small{font-size:7.5px!important}
  .compact-next>p{font-size:10px!important}
  .compact-entry-line>b{font-size:8.5px!important}
@@ -615,21 +612,17 @@ main{padding-top:10px}
       <span class="candle-state wait" id="candle-state">WAIT</span>
     </div>
 
-    <div class="candle-hero">
-      <div>
-        <span>มุมมองจากแท่งเทียน</span>
-        <strong id="candle-direction">รอข้อมูล</strong>
-      </div>
-      <div class="candle-confidence"><span>ความชัด</span><b id="candle-confidence">—</b></div>
-    </div>
-
     <div class="candle-status-summary wait" id="candle-status-summary">
-      <span>สรุปแท่งเทียนตอนนี้</span>
+      <div class="candle-summary-top">
+        <span>สรุปตอนนี้</span>
+        <div class="candle-confidence"><span>ความชัด</span><b id="candle-confidence">—</b></div>
+      </div>
       <b id="candle-status-title">ยังไม่ชัด</b>
       <small id="candle-status-text">กำลังรอข้อมูลแท่งเทียน</small>
+      <strong id="candle-direction" hidden>รอข้อมูล</strong>
     </div>
 
-    <p class="candle-summary" id="candle-summary">รอข้อมูล</p>
+    <p class="candle-summary" id="candle-summary" hidden>รอข้อมูล</p>
 
     <div class="candle-patterns">
       <span>รูปแบบ</span>
@@ -637,12 +630,12 @@ main{padding-top:10px}
     </div>
 
     <div class="candle-reading">
-      <span>แปลว่า</span>
+      <span>ความหมาย</span>
       <p id="candle-meaning">กำลังรอข้อมูลแท่งเทียน</p>
     </div>
 
     <div class="candle-change">
-      <span>อะไรจะทำให้มุมมองเปลี่ยน</span>
+      <span>จะเปลี่ยนเมื่อ</span>
       <p id="candle-change-text">รอให้มีแพตเทิร์นที่ชัดก่อน</p>
     </div>
 
