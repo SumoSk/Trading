@@ -498,11 +498,11 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">สัญญาณ V7.1.0</span></div>
+  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">สัญญาณ V7.2.0</span></div>
 
   <section class="signal-card signal-card-main" id="main-signal-card">
     <div class="main-signal-head">
-      <span>สัญญาณหลัก · V<span id="main-version-inline">7.1.1</span></span>
+      <span>สัญญาณหลัก · V<span id="main-version-inline">7.2.0</span></span>
       <small id="main-analysis-scope">แนวโน้ม + จุดเข้า · วิเคราะห์ 1m</small>
     </div>
 
@@ -698,7 +698,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </script>
 <script>
 
-/* Event Engine 7.1.x — selectable V7.1.0 / V7.1.1, +10 minute horizon first, causal, 1m-first.
+/* Event Engine 7.2 — selectable V7.1.0 / V7.1.1 / V7.2.0, +10 minute horizon first, causal, 1m-first.
    Market Phase routes each setup: RANGE, TREND, IMPULSE, MATURE_IMPULSE, EXHAUSTION, REVERSAL.
    RSI/MACD are chart-only and never enter signal decisions. */
 (function(root){
@@ -2871,10 +2871,12 @@ function openReport(){
    const box=$('entry-gate-detail'),head=$('entry-gate-status'),ul=$('entry-gate-reasons');if(!box||!head||!ul)return;
    const gate=v.gate||null,watch=v.watch||null,cv=state.continuousView;
    let stateName=gate?.state||watch?.state||'WAIT';
-   if(!gate&&!watch&&cv?.available&&['HIGH','LOW'].includes(cv.direction))stateName='WATCH';
+   if(v.status==='expired'&&(String(v.reason||'').includes('พ้นเขตเข้า')||String(v.reason||'').includes('ช้าเกินไป')))stateName='TOO_LATE';
+   else if(!gate&&!watch&&cv?.available&&['HIGH','LOW'].includes(cv.direction))stateName='WATCH';
    box.className='entry-gate-detail '+(stateName==='ENTER'?'enter':stateName==='READY'?'ready':stateName==='TOO_LATE'?'late':stateName==='WATCH'?'watch':'');
    head.textContent=stateName==='ENTER'?'ผ่านแล้ว · เข้าได้':stateName==='READY'?'READY · ใกล้ผ่าน':stateName==='TOO_LATE'?'ช้าแล้ว · ไม่ไล่':stateName==='WATCH'?'WATCH · เริ่มจับตา':'WAIT · ยังไม่เข้า';
    const rows=[];
+   if(v.status==='expired')rows.push('จังหวะถูกยกเลิก: '+(v.reason||'หมดอายุ'));
    if(gate?.waitingFor?.length)rows.push(...gate.waitingFor);
    else if(watch?.reasons?.length)rows.push(...watch.reasons.slice(0,4),'ยังรอ trigger จุดเข้าที่ผ่าน Entry Gate');
    else if(cv?.available&&['HIGH','LOW'].includes(cv.direction))rows.push('Direction Engine เอน '+cv.direction+' '+(cv.direction==='HIGH'?cv.high:cv.low)+'% แต่ Entry Engine ยังไม่มี trigger ที่ผ่าน','กำลังรอรูปแบบจุดเข้า ไม่ได้แปลว่าทิศทางหาย');
