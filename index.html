@@ -446,6 +446,17 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-profile-compact.side-conflict h3,.setup-profile-compact.side-conflict .compact-brief-status{color:#f0bf74}
 .setup-profile-compact.side-conflict .compact-brief-status{border-color:#8d6b35;background:#2a2115}
 
+
+.analysis-tf-control{display:flex;align-items:center;gap:5px;white-space:nowrap;color:#8799b1;font-size:9px}
+.analysis-tf-control>span{font-size:9px}
+.analysis-tf-control select{height:32px;min-height:32px;padding:0 24px 0 8px;border:1px solid #2b3b50;border-radius:7px;background:#0d1622;color:#d2deed;font:600 11px 'Segoe UI',sans-serif;outline:none}
+.analysis-tf-control button{height:32px;padding:0 9px;border:1px solid #3b536f;border-radius:7px;background:#152235;color:#cfe0f3;font-size:9px}
+.analysis-tf-control button:not(:disabled){border-color:#3f8871;background:#123026;color:#6ce0bc;cursor:pointer}
+.analysis-tf-control button:disabled{opacity:.38;cursor:default}
+.analysis-tf-control small{padding:3px 6px;border:1px solid #2a394d;border-radius:999px;color:#8ea2bb;font-size:8px}
+.analysis-tf-control.pending small{border-color:#81632e;color:#e2bd74}
+@media(max-width:900px){.analysis-tf-control{order:2;max-width:100%;overflow-x:auto}.analysis-tf-control small{display:none}}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -466,6 +477,16 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 <section class="chart-card">
   <div class="chart-toolbar">
     <div class="timeframes" aria-label="ช่วงแท่งเทียน"><button data-tf="1m" aria-pressed="true">1m</button><button data-tf="5m" aria-pressed="false">5m</button><button data-tf="10m" aria-pressed="false">10m</button><button data-tf="15m" aria-pressed="false">15m</button><button data-tf="1h" aria-pressed="false">1h</button><button data-tf="4h" aria-pressed="false">4h</button><button data-tf="1d" aria-pressed="false">1D</button><button data-tf="1w" aria-pressed="false">1W</button></div>
+    <span class="toolbar-divider"></span>
+    <div class="analysis-tf-control" title="กราฟที่ดูเปลี่ยนได้อิสระ การวิเคราะห์จะเปลี่ยนเมื่อกดยืนยันเท่านั้น">
+      <span>วิเคราะห์จาก</span>
+      <select id="analysis-tf-select" aria-label="เลือกไทม์เฟรมสำหรับการวิเคราะห์">
+        <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
+        <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
+      </select>
+      <button id="analysis-tf-confirm" type="button" disabled>ยืนยัน</button>
+      <small id="analysis-tf-active">ใช้อยู่ 1m</small>
+    </div>
     <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="true" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▾</button><label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option></select></label>
     <div class="chart-actions"><button id="latest" class="quiet">กลับล่าสุด</button></div>
   </div>
@@ -480,13 +501,13 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <section class="signal-card signal-card-main" id="main-signal-card">
     <div class="main-signal-head">
       <span>สัญญาณหลัก · V<span id="main-version-inline">7.1.1</span></span>
-      <small>แนวโน้ม + จุดเข้า</small>
+      <small id="main-analysis-scope">แนวโน้ม + จุดเข้า · วิเคราะห์ 1m</small>
     </div>
 
     <div class="main-signal-section signal-card-direction">
-      <div class="signal-card-title"><span>แนวโน้ม +10 นาที</span></div>
+      <div class="signal-card-title"><span id="main-outlook-title">แนวโน้ม +10 นาที</span></div>
       <div class="probability-block">
-        <div class="probability-head"><span>อีก 10 นาที</span></div>
+        <div class="probability-head"><span id="main-probability-label">อีก 10 นาที</span></div>
         <div class="probability-values"><span class="prob-up">สูงกว่า <strong id="prob-high">—</strong></span><span class="prob-down">ต่ำกว่า <strong id="prob-low">—</strong></span></div>
         <div class="probability-track"><div id="prob-high-bar"></div></div>
       </div>
@@ -511,7 +532,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 
   <section class="signal-card signal-card-candle wait" id="candle-signal-card" aria-live="polite">
     <div class="candle-card-head">
-      <div><span class="candle-kicker">CANDLE BEHAVIOR v0.2 · ทดลองอิสระ</span><h3>พฤติกรรมแท่งเทียน · +10 นาที</h3></div>
+      <div><span class="candle-kicker">CANDLE BEHAVIOR v0.2 · ทดลองอิสระ</span><h3 id="candle-analysis-title">พฤติกรรมแท่งเทียน · 1 นาที</h3></div>
       <span class="candle-state wait" id="candle-state">WAIT</span>
     </div>
 
@@ -552,7 +573,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 <section class="setup-profile-compact" id="setup-profile-compact" aria-live="polite">
   <div class="compact-brief-head">
     <div>
-      <span class="compact-brief-kicker">สรุปสำคัญ · REALTIME</span>
+      <span class="compact-brief-kicker" id="realtime-analysis-kicker">สรุปสำคัญ · REALTIME · วิเคราะห์ 1m</span>
       <h3 id="setup-compact-name">กำลังอ่านตลาด</h3>
     </div>
     <span class="compact-brief-status" id="setup-compact-status">รอข้อมูล</span>
@@ -586,15 +607,15 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </section>
 
   <section class="signal-card signal-card-market">
-    <div class="signal-card-title"><span>ข้อมูลตลาดตอนนี้</span></div>
+    <div class="signal-card-title"><span id="market-analysis-title">ข้อมูลตลาดตอนนี้ · 1 นาที</span></div>
     <div class="analysis-grid">
-      <div><span>สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
+      <div><span id="analysis-regime-label">สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
       <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
-      <div><span>แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
+      <div><span id="analysis-trend-label">แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
       <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
       <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
       <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
-      <div><span>ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
+      <div><span id="analysis-volatility-label">ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
       <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
       <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
       <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
@@ -619,7 +640,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </section>
   <section class="setup-profile-rate" id="setup-profile-rate">
     <div class="setup-rate-main">
-      <div><span>น้ำหนักตลาดสดของฝั่งที่แสดง · +10 นาที</span><strong id="setup-similar-rate">—</strong></div>
+      <div><span id="setup-rate-label">น้ำหนักตลาดสดของฝั่งที่แสดง · +10 นาที</span><strong id="setup-similar-rate">—</strong></div>
       <b id="setup-history-lean">รอข้อมูล</b>
     </div>
     <div class="setup-rate-track"><div id="setup-rate-bar"></div></div>
@@ -634,7 +655,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <small id="setup-exact-record">ยังไม่มีข้อมูล</small>
   </div>
   <div class="setup-live-grid">
-    <div><span>น้ำหนัก +10 นาที</span><b id="setup-live-direction">—</b></div>
+    <div><span id="setup-live-direction-label">น้ำหนัก +10 นาที</span><b id="setup-live-direction">—</b></div>
     <div><span>วิ่งจากฐาน</span><b id="setup-live-extension">—</b></div>
     <div><span>ระยะก่อนชนแนว</span><b id="setup-live-room">—</b></div>
     <div><span>Volume ตอนนี้</span><b id="setup-live-volume">—</b></div>
@@ -1459,6 +1480,9 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     candleView: null,
     shadowCache: null,
     selectedTf: '1m',
+    analysisTf: '1m',
+    pendingAnalysisTf: '1m',
+    analysisSwitching: false,
     chart: null,
     candleSeries: null,
     volumeSeries: null,
@@ -2770,7 +2794,34 @@ function openReport(){
     throw new Error(`โหลด ${interval} ไม่สำเร็จ: ${lastError?.message||'unknown error'}`);
   }
   const TF_LABELS={'1m':'1 นาที','5m':'5 นาที','10m':'10 นาที','15m':'15 นาที','1h':'1 ชั่วโมง','4h':'4 ชั่วโมง','1d':'1 วัน','1w':'1 สัปดาห์'};
+  const TF_SECONDS={'1m':60,'5m':300,'10m':600,'15m':900,'1h':3600,'4h':14400,'1d':86400,'1w':604800};
+  const ANALYSIS_HORIZON_BARS={'1m':10,'5m':2,'10m':1,'15m':1,'1h':1,'4h':1,'1d':1,'1w':1};
   const LAZY_TF_SECONDS={'10m':600,'1h':3600,'4h':14400,'1d':86400,'1w':604800};
+  const analysisHorizonMs=tf=>(TF_SECONDS[tf]||60)*1000*(ANALYSIS_HORIZON_BARS[tf]||1);
+  const analysisHorizonLabel=tf=>{
+   const ms=analysisHorizonMs(tf),min=ms/60000;
+   if(min<60)return '+'+Math.round(min)+' นาที';
+   if(min<1440)return '+'+Math.round(min/60)+' ชั่วโมง';
+   if(min<10080)return '+'+Math.round(min/1440)+' วัน';
+   return '+'+Math.round(min/10080)+' สัปดาห์';
+  };
+  const analysisIsPrimary=()=>state.analysisTf==='1m';
+  function refreshAnalysisLabels(){
+   const tf=state.analysisTf,label=TF_LABELS[tf]||tf,horizon=analysisHorizonLabel(tf),primary=tf==='1m';
+   $('analysis-tf-active').textContent='ใช้อยู่ '+tf;
+   $('analysis-tf-active').title='ระบบกำลังวิเคราะห์จากแท่ง '+label;
+   $('main-analysis-scope').textContent='แนวโน้ม + จุดเข้า · วิเคราะห์ '+tf+(primary?'':' · โหมดบริบท');
+   $('main-outlook-title').textContent=primary?'แนวโน้ม +10 นาที':'มุมมองจากกราฟ '+label;
+   $('main-probability-label').textContent=primary?'อีก 10 นาที':'น้ำหนักทิศทางจาก '+label;
+   $('candle-analysis-title').textContent='พฤติกรรมแท่งเทียน · '+label;
+   $('realtime-analysis-kicker').textContent='สรุปสำคัญ · REALTIME · วิเคราะห์ '+tf;
+   $('market-analysis-title').textContent='ข้อมูลตลาดตอนนี้ · '+label;
+   $('analysis-regime-label').textContent='สภาพตลาด '+label;
+   $('analysis-trend-label').textContent='แนวโน้ม '+label;
+   $('analysis-volatility-label').textContent='ความผันผวน '+label;
+   $('setup-rate-label').textContent='น้ำหนักตลาดสดของฝั่งที่แสดง · '+horizon;
+   $('setup-live-direction-label').textContent='น้ำหนัก '+horizon;
+  }
   function aggregateBars(source,seconds){
    const groups=new Map();
    for(const b of source){
