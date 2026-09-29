@@ -644,7 +644,7 @@ main{padding-top:10px}
 
   <section class="signal-card signal-card-main" id="main-signal-card">
     <div class="main-signal-head">
-      <span>สัญญาณหลัก · V<span id="main-version-inline">7.2.0</span></span>
+      <span>สัญญาณหลัก · <span id="main-version-inline">V7.2.0</span></span>
       <small id="main-analysis-scope">แนวโน้ม + จุดเข้า · วิเคราะห์ 1m</small>
     </div>
 
@@ -2289,6 +2289,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    lastIssuedAt:Number(candleSaved.lastIssuedAt)||0
   };
   const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว',early_impulse:'ต้นขาเร่ง',pullback_reclaim:'ย่อแล้ว reclaim',range_rejection:'เด้งจากขอบกรอบ',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว'};
+  const versionDisplay=v=>v==='ARIS-1.0.0'?'ARIS V1':'V'+(v||'—');
   function directionThai(v){
   return v==='HIGH'?'สูงกว่า':v==='LOW'?'ต่ำกว่า':v==='BALANCED'?'ใกล้เคียงกัน':v||'—';
 }
@@ -3188,11 +3189,11 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function refreshVersionFilter(){
    const el=$('version-filter'),selected=historyVersionFilter;el.replaceChildren();
    const all=document.createElement('option');all.value='all';all.textContent='ทั้งหมด';el.append(all);
-   for(const v of availableVersions()){const o=document.createElement('option');o.value=v;o.textContent='V'+v+(v===CFG.version?' · ปัจจุบัน':'');el.append(o);}
+   for(const v of availableVersions()){const o=document.createElement('option');o.value=v;o.textContent=versionDisplay(v)+(v===CFG.version?' · ปัจจุบัน':'');el.append(o);}
    historyVersionFilter=availableVersions().includes(selected)||selected==='all'?selected:'all';el.value=historyVersionFilter;
   }
   function filterByVersion(rows){return historyVersionFilter==='all'?rows:rows.filter(s=>s.version===historyVersionFilter);}
-  function versionLabel(){return historyVersionFilter==='all'?'ทุกเวอร์ชัน':'V'+historyVersionFilter;}
+  function versionLabel(){return historyVersionFilter==='all'?'ทุกเวอร์ชัน':versionDisplay(historyVersionFilter);}
   function groupStats(rows,keyFn){const m=new Map();for(const s of rows){const k=keyFn(s)||'ไม่ทราบ';if(!m.has(k))m.set(k,{key:k,n:0,w:0,l:0});const x=m.get(k);x.n++;if(s.result==='correct')x.w++;else if(s.result==='incorrect')x.l++;}return [...m.values()].sort((a,b)=>b.n-a.n).map(x=>({...x,rate:(x.w+x.l)?x.w/(x.w+x.l):null}));}
   function renderGroup(title,items){
  return `<div class="report-card"><h4>${esc(title)}</h4>${items.map(x=>`<p><b>${esc(x.key)}</b> · ${x.n} ไม้ · ถูก ${x.w} / ผิด ${x.l}${Number.isFinite(x.rate)?' · อัตราถูก '+(x.rate*100).toFixed(1)+'%':''}</p><div class="report-bar"><i style="width:${Number.isFinite(x.rate)?Math.round(x.rate*100):0}%"></i></div>`).join('')||'<p>ยังไม่มีผลที่ตัดสินแล้ว</p>'}</div>`;
@@ -3458,7 +3459,7 @@ function openReport(){
     const tr=document.createElement('tr');const labels={correct:'ถูก',incorrect:'ผิด',equal:'เสมอ',missing:'ข้อมูลขาด',pending:'รอผล'};
     const remain=Math.max(0,Math.ceil((s.expiresAt-Date.now())/1000));
     const winPct=liveWinPercent(s);const vals=[clockMs(s.entryTime),typeName[s.type]||s.type,directionThai(s.direction),money(s.entryPrice),clockMs(s.expiresAt),s.exitPrice?money(s.exitPrice):'—',s.result==='pending'?`${Math.floor(remain/60)}:${String(remain%60).padStart(2,'0')}`:labels[s.result]];
-    for(const v of vals){const td=document.createElement('td');td.textContent=v;tr.append(td);}const liveTd=document.createElement('td');liveTd.className='live-win-cell '+(!Number.isFinite(winPct)?'mid':winPct>=60?'good':winPct<=40?'bad':'mid');liveTd.textContent=s.result==='pending'&&Number.isFinite(winPct)?winPct+'%':'—';tr.append(liveTd);const detail=document.createElement('td'),btn=document.createElement('button');btn.type='button';btn.className='detail-button';btn.dataset.reviewId=s.id;btn.textContent=s.dataset?.review?'ดูบทเรียน':s.dataset?'ดูรายละเอียด':'ดูข้อมูล';detail.append(btn);tr.append(detail);const ver=document.createElement('td');ver.className='version-cell';ver.textContent='V'+(s.version||'—');tr.append(ver);tb.append(tr);
+    for(const v of vals){const td=document.createElement('td');td.textContent=v;tr.append(td);}const liveTd=document.createElement('td');liveTd.className='live-win-cell '+(!Number.isFinite(winPct)?'mid':winPct>=60?'good':winPct<=40?'bad':'mid');liveTd.textContent=s.result==='pending'&&Number.isFinite(winPct)?winPct+'%':'—';tr.append(liveTd);const detail=document.createElement('td'),btn=document.createElement('button');btn.type='button';btn.className='detail-button';btn.dataset.reviewId=s.id;btn.textContent=s.dataset?.review?'ดูบทเรียน':s.dataset?'ดูรายละเอียด':'ดูข้อมูล';detail.append(btn);tr.append(detail);const ver=document.createElement('td');ver.className='version-cell';ver.textContent=versionDisplay(s.version);tr.append(ver);tb.append(tr);
    }
    const last=rows.at(-1);if(last){$('last-entry').hidden=false;$('last-entry-direction').textContent=directionThai(last.direction);$('last-entry-price').textContent=money(last.entryPrice);$('last-entry-time').textContent=clockMs(last.entryTime);$('last-entry-meta').textContent=`${typeName[last.type]}${last.setupStatus==='invalidated'?' · เงื่อนไขเสียแล้ว':''} · ครบ ${clockMs(last.expiresAt)} · ล็อกราคาแล้ว`;}
    syncSignalChart(rows);
@@ -3479,9 +3480,12 @@ function openReport(){
    else rows.push(v.reason||'ยังไม่มี trigger จุดเข้า');
    const m=gate?.metrics;
    if(m&&v.event){
-    if(Number.isFinite(m.flow))rows.push('flow ตามฝั่ง setup '+m.flow.toFixed(2)+' · เกณฑ์ขั้นต่ำ '+CFG.minFlow.toFixed(2));
+    if(CFG.version==='ARIS-1.0.0'&&Number.isFinite(m.bias))rows.push('ARIS Bias '+(m.bias>=0?'+':'')+m.bias.toFixed(2)+' · ENTER ต้อง |Bias| ≥ '+CFG.arisBiasEnter.toFixed(2));
+    if(CFG.version==='ARIS-1.0.0'&&Number.isFinite(m.timing))rows.push('Timing '+Math.round(m.timing)+'/100 · ENTER ≥ '+CFG.arisTimingEnter);
+    if(Number.isFinite(m.flow))rows.push('flow ตามฝั่ง setup '+m.flow.toFixed(2)+(CFG.version==='ARIS-1.0.0'?'':' · เกณฑ์ขั้นต่ำ '+CFG.minFlow.toFixed(2)));
     if(Number.isFinite(m.progress))rows.push('ระยะพ้น trigger '+m.progress.toFixed(2)+' ATR');
     if(Number.isFinite(m.room))rows.push('พื้นที่ถึงแนวสำคัญข้างหน้า '+m.room.toFixed(2)+' ATR');
+    if(CFG.version==='ARIS-1.0.0'&&Number.isFinite(m.extensionAtr))rows.push('วิ่งจากฐาน '+m.extensionAtr.toFixed(2)+' ATR · Hard late '+CFG.arisHardLateExtension.toFixed(2)+' ATR');
     if(Number.isFinite(m.evidenceScore)&&v.event.type==='breakout')rows.push('หลักฐาน breakout '+m.evidenceScore+'/'+CFG.breakoutMinScore+(m.acceptedClosed?' · แท่งปิดยืนยันแล้ว':m.earlyAccepted?' · live acceptance ผ่าน':' · ยังรอยืนยัน'));
    }
    ul.replaceChildren();for(const t of [...new Set(rows.filter(Boolean))].slice(0,6)){const li=document.createElement('li');li.textContent=tfHumanText(t);ul.append(li);}
@@ -3492,7 +3496,7 @@ function openReport(){
    const watchD=v.watch?.direction==='HIGH'?1:v.watch?.direction==='LOW'?-1:0,continuousD=state.continuousView?.direction==='HIGH'?1:state.continuousView?.direction==='LOW'?-1:0;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:watchD||continuousD;
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent=contextMode?`V${CFG.version} · ${tf}`:`V${CFG.version}`;
+   $('signal-tag').textContent=contextMode?`${versionDisplay(CFG.version)} · ${tf}`:versionDisplay(CFG.version);
    $('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels=contextMode
     ?{invalidated:'เงื่อนไขเดิมเสีย',new:'จังหวะผ่านเงื่อนไข · ทดลอง',issued:'กำลังติดตามจังหวะ',expired:'จังหวะหมดอายุ',offline:'พักการวิเคราะห์',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดูบริบท',confirming:'กำลังยืนยันบริบท',watch:'รอจังหวะ'}
@@ -3519,7 +3523,7 @@ function openReport(){
     :v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม'
     :v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';
    $('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`
-    :v.watch?`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`
+    :v.watch?(CFG.version==='ARIS-1.0.0'?`${v.watch.state} ${v.watch.direction} · Bias ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
     :d?`มุมมอง ${d>0?'HIGH':'LOW'} · Entry ยังรอ trigger`
     :contextMode?'บริบท '+tf+' · '+idle:idle;
 
@@ -4126,7 +4130,7 @@ function openReport(){
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,candleState,candleBehaviorAssess,candleMaybeIssue,candleSettle,ingest,analyseNow,trainingBundle};
   refreshAnalysisLabels();
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
-  $('main-version-inline').textContent=CFG.version;
+  $('main-version-inline').textContent=versionDisplay(CFG.version);
   state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
