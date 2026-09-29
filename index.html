@@ -2173,15 +2173,15 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
 
   function setupFeedHealth(){
-   const q=state.quote,age=q?(Date.now()-q.ts*1000)/1000:Infinity;
-   const closed=(state.bars['1m']||[]).filter(b=>b.closed).length;
+   const q=state.quote,age=q?(Date.now()-q.ts*1000)/1000:Infinity,tf=state.analysisTf,label=TF_LABELS[tf]||tf;
+   const closed=(state.bars[tf]||[]).filter(b=>b.closed).length;
    if(state.historyFallback)return {kind:'warning',label:'Spot สำรอง · กำลังรอ Futures จริงเพื่อวิเคราะห์สด'};
-   if(!q)return {kind:'warning',label:'รอราคา Binance Futures · แท่งปิด '+closed+' แท่ง'};
+   if(!q)return {kind:'warning',label:'รอราคา Binance Futures · '+label+' ปิดแล้ว '+closed+' แท่ง'};
    if(state.socket?.readyState!==1)return {kind:'warning',label:'Futures ขาดการเชื่อมต่อ · ราคาล่าสุด '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
    if(age>4||Date.now()-state.lastMessageAt>4500)
     return {kind:'warning',label:'Futures ล่าช้า '+Math.max(0,Math.round(age))+' วินาที · ไม่ใช้ราคาเก่าเป็นสัญญาณใหม่'};
-   if(closed<35)return {kind:'warning',label:'กำลังสะสมแท่ง 1 นาที · มี '+closed+' แท่ง'};
-   return {kind:'live',label:'● Futures สด · อัปเดต '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
+   if(closed<35)return {kind:'warning',label:'กำลังสะสมแท่ง '+label+' · มี '+closed+' แท่ง'};
+   return {kind:'live',label:'● Futures สด · วิเคราะห์ '+tf+' · อัปเดต '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
   }
   function updateSetupHealth(){
    const h=setupFeedHealth();
@@ -2736,38 +2736,50 @@ function openReport(){
 
   function renderDirection(x){
    state.continuousView=x;
+   const tf=state.analysisTf,primary=tf==='1m',label=TF_LABELS[tf]||tf;
    $('prob-high').textContent=x.available?x.high+'%':'—';$('prob-low').textContent=x.available?x.low+'%':'—';
    $('prob-high-bar').style.width=x.available?x.high+'%':'50%';$('prob-high-bar').style.opacity=x.available?'1':'.25';
    $('direction-now').textContent=x.available?(x.direction==='BALANCED'?'สองฝั่งใกล้เคียง':'เอนเอียงฝั่ง '+directionThai(x.direction)):'รอข้อมูลสด';
    $('risk-now').textContent=x.available?'ความเสี่ยงจุดเข้า: '+x.risk:'พักการประเมิน';
    $('risk-now').style.color=x.available?(x.risk==='สูง'?'#ff8da1':x.risk==='กลาง'?'#eac784':'#93d9c4'):'#93a4bb';
-   $('risk-reason').textContent=humanText(x.reason);
-   $('direction-reference').textContent=x.available?`ราคาอ้างอิง ${money(x.referencePrice)} · ดูผลเวลา ${clockMs(x.targetTime)}`:'รอข้อมูล Futures สด';
+   $('risk-reason').textContent=tfHumanText(x.reason);
+   $('direction-reference').textContent=x.available
+    ?(primary?`ราคาอ้างอิง ${money(x.referencePrice)} · ดูผลเวลา ${clockMs(x.targetTime)}`:`ราคาอ้างอิง ${money(x.referencePrice)} · บริบทจากกราฟ ${label} · เป้าหมายสังเกต ${analysisHorizonLabel(tf)}`)
+    :'รอข้อมูล Futures สด';
    const roomEl=$('analysis-room');roomEl.textContent=x.available&&Number.isFinite(x.room)?x.room.toFixed(2)+' ATR':'—';roomEl.className=x.available&&Number.isFinite(x.room)?(x.room<.3?'down':x.room>.6?'up':'neutral'):'neutral';
   }
 
   function analyseNow(force=false){
-   if(!state.booted||!state.quote)return;
+   if(!state.booted||!state.quote||state.analysisSwitching)return;
    const now=performance.now();if(!force&&now-state.lastAnalysisAt<200)return;state.lastAnalysisAt=now;
-   const q=state.quote,f=flowSnapshot(q.ts),coverage=f.coverageSeconds||0;
+   const q=state.quote,tf=state.analysisTf,data=analysisDataReady(tf),bars=data.bars,current=data.current,f=flowSnapshot(q.ts),coverage=f.coverageSeconds||0;
    const flow=(f['15s']||0)*.65+(f['60s']||0)*.35;
    const depth=depthSnapshot(q.ts),valid=depth.valid&&depth.ageSeconds<2&&depth.spreadBps<3;
    const book=valid?.76*depth.imbalance+.24*depth.micropriceBias:0;
-   const current=state.bars['1m'].at(-1),recent=state.bars['1m'].slice(-36);
-   const continuous=recent.length>=35&&recent.every((b,i)=>i===0||b.time-recent[i-1].time===60);
-   const fresh=!state.historyFallback&&!document.hidden&&state.socket?.readyState===1&&Date.now()-q.ts*1000<3000&&Date.now()-state.lastMessageAt<3000&&continuous&&current&&q.ts-current.time<75;
-   const before=engine.audit.length;
-   const v=engine.step({ts:q.ts*1000,id:q.id,price:q.price,bars:state.bars['1m'],five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh});if(state.historyFallback)v.reason='แสดงแท่ง Spot สำรองเท่านั้น — พักสัญญาณ Futures จนโหลด Futures ได้ครบ';lastView=v;
-   const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});renderDirection(directionView);
+   const fresh=data.fresh;
+   const aEngine=analysisEngine(tf),before=aEngine.audit.length;
+   const v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh,current});
+   if(state.historyFallback)v.reason='แสดงแท่ง Spot สำรองเท่านั้น — พักการประเมิน Futures จนโหลด Futures ได้ครบ';
+   lastView=v;
+   const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});
+   if(directionView?.available){
+    directionView.targetTime=q.ts*1000+analysisHorizonMs(tf);
+    directionView.analysisTf=tf;
+    directionView.reason=tfHumanText(directionView.reason);
+   }
+   renderDirection(directionView);
    if(force||now-state.lastCandleAt>=500){
     state.lastCandleAt=now;
-    const candleView=candleBehaviorAssess(fresh);
+    const candleView=candleBehaviorAssess(fresh,tf);
     state.candleView=candleView;
-    if(candleView.available)candleMaybeIssue(candleView,q.ts*1000,q.price);
+    if(candleView.available)candleMaybeIssue(candleView,q.ts*1000,q.price,tf);
     renderCandleBehavior(candleView);
    }
-   if(v.f)engine.observeContext({ts:q.ts*1000,price:q.price,flow,coverage,book,bookValid:valid,regime:v.regime?.mode||null,phase:v.phase?.phase||null,trend:v.f.trend,momentum:v.f.mom,rangePosition:v.f.rangePosition,room:directionView.room});
-   if(v.signal?.dataset?.entry){const liq=liquidationSnapshot(q.ts);v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};}
+   if(tf==='1m'&&v.f)engine.observeContext({ts:q.ts*1000,price:q.price,flow,coverage,book,bookValid:valid,regime:v.regime?.mode||null,phase:v.phase?.phase||null,trend:v.f.trend,momentum:v.f.mom,rangePosition:v.f.rangePosition,room:directionView.room});
+   if(tf==='1m'&&v.signal?.dataset?.entry){
+    const liq=liquidationSnapshot(q.ts);
+    v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};
+   }
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
    renderEvent(v);
    const profileNow=performance.now();
@@ -2778,7 +2790,10 @@ function openReport(){
     renderCompactSetupProfile();
     updateSetupHealth();
    }
-   if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
+   // Only the original 1m engine is persisted/training data. Other TF engines are read-only session context.
+   if(tf==='1m'){
+    if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
+   }
   }
 
   function normalizeKline(row){return {time:Math.floor(Number(row[0])/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4],volume:+row[5],closed:Number(row[6])<Date.now()};}
@@ -2891,7 +2906,7 @@ function openReport(){
    const bars=state.bars[tf]||[],seconds=TF_SECONDS[tf]||60,recent=bars.slice(-36);
    const continuous=recent.length>=35&&recent.every((b,i)=>i===0||b.time-recent[i-1].time===seconds);
    const current=bars.at(-1),q=state.quote;
-   const fresh=!state.historyFallback&&!document.hidden&&state.socket?.readyState===1&&q&&Date.now()-q.ts*1000<3000&&Date.now()-state.lastMessageAt<3000&&continuous&&current&&q.ts-current.time<seconds+75;
+   const fresh=!state.historyFallback&&!document.hidden&&state.socket?.readyState===1&&q&&Date.now()-q.ts*1000<3000&&Date.now()-state.lastMessageAt<3000&&continuous&&current&&q.ts-current.time<(tf==='1m'?75:seconds+75);
    return {bars,current:analysisCurrentBar(tf),continuous,fresh,seconds};
   }
   function tfHumanText(value){
