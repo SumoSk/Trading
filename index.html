@@ -2701,46 +2701,61 @@ function openReport(){
    syncSignalChart(rows);
   }
   function renderEvent(v){
-   const e=v.event,modelD=e?.d||0;const freshSignal=v.status==='new',preview=e?selectOutputDecision(e.type,modelD,v.f,v.phase):null;
+   const tf=state.analysisTf,tfLabel=TF_LABELS[tf]||tf,contextMode=tf!=='1m';
+   const e=v.event,modelD=e?.d||0,freshSignal=v.status==='new',preview=e?selectOutputDecision(e.type,modelD,v.f,v.phase):null;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:0;
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent=`สัญญาณ V${CFG.version} · ข้อมูล 1 นาที`;$('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
-   const labels={invalidated:'เงื่อนไขเดิมเสีย',new:'เข้าได้ตอนนี้',issued:'จุดเข้าออกแล้ว',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดู · ยังไม่เข้า',confirming:'กำลังยืนยัน · ยังไม่เข้า',watch:'รอจุดเข้า'};
+   $('signal-tag').textContent=contextMode?`วิเคราะห์ V${CFG.version} · ${tf} · บริบททดลอง`:`สัญญาณ V${CFG.version} · ข้อมูล 1 นาที`;
+   $('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
+   const labels=contextMode
+    ?{invalidated:'เงื่อนไขเดิมเสีย',new:'จังหวะผ่านเงื่อนไข · ทดลอง',issued:'กำลังติดตามจังหวะ',expired:'จังหวะหมดอายุ',offline:'พักการวิเคราะห์',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดูบริบท',confirming:'กำลังยืนยันบริบท',watch:'รอจังหวะ'}
+    :{invalidated:'เงื่อนไขเดิมเสีย',new:'เข้าได้ตอนนี้',issued:'จุดเข้าออกแล้ว',expired:'จังหวะหมดอายุ',offline:'พักสัญญาณ',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดู · ยังไม่เข้า',confirming:'กำลังยืนยัน · ยังไม่เข้า',watch:'รอจุดเข้า'};
    $('signal-title').textContent=(freshSignal?directionThai(d>0?'HIGH':'LOW')+' · ':'')+(labels[v.status]||'ติดตาม');
-   $('signal-description').textContent=humanText(v.reason);$('signal-updated').textContent='ข้อมูลตลาด '+clockMs((state.quote?.ts||0)*1000);
-   $('strong-banner').hidden=!freshSignal;const idle=v.phase?.phase==='RANGE'?'ตลาดแกว่งในกรอบ · รอจุดกลับจากขอบ':v.phase?.phase==='IMPULSE'?'ราคากำลังวิ่งแรง · รอดูว่าจะไปต่อไหม':v.phase?.phase==='MATURE_IMPULSE'?'ราคาวิ่งแรงมาไกลแล้ว · รอสัญญาณยืนยัน':v.phase?.phase==='EXHAUSTION'?'แรงเริ่มหมด · รอยืนยันการกลับตัว':v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม':v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';$('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}`:idle;
+   $('signal-description').textContent=(contextMode?'บริบท '+tf+' · ':'')+tfHumanText(v.reason);
+   $('signal-updated').textContent='ข้อมูล '+tf+' · '+clockMs((state.quote?.ts||0)*1000);
+   const banner=$('strong-banner');banner.hidden=!freshSignal;
+   if(banner){
+    const [small,strong]=banner.children;
+    if(small)small.textContent=contextMode?'จังหวะทดลอง':'สัญญาณใหม่';
+    if(strong)strong.textContent=contextMode?'พบจังหวะตามกราฟ '+tf:'พบจุดเข้าใหม่';
+   }
+   const idle=v.phase?.phase==='RANGE'?'ตลาดแกว่งในกรอบ · รอจุดกลับจากขอบ'
+    :v.phase?.phase==='IMPULSE'?'ราคากำลังวิ่งแรง · รอดูว่าจะไปต่อไหม'
+    :v.phase?.phase==='MATURE_IMPULSE'?'ราคาวิ่งแรงมาไกลแล้ว · รอสัญญาณยืนยัน'
+    :v.phase?.phase==='EXHAUSTION'?'แรงเริ่มหมด · รอยืนยันการกลับตัว'
+    :v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม'
+    :v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';
+   $('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}`:contextMode?'บริบท '+tf+' · '+idle:idle;
 
-   $('event-detail').textContent=e?`${phaseThai(v.phase?.phase||'TRANSITION')} · ${humanText(preview?.reason||'กำลังประเมินช่วงตลาด')} · โมเดลมอง ${directionThai(modelD>0?'HIGH':'LOW')}${preview?.direction?' → ระบบเลือก '+directionThai(preview.direction):''} · แนวสำคัญ ${money(e.level)} · ช่วงราคาเข้า ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · คะแนนหลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}`:'';
-   if(v.f){setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);const ph=$('analysis-phase');ph.textContent=phaseThai(v.phase?.phase)+(v.phase?.dir?' '+(v.phase.dir>0?'↑':'↓'):'');ph.className=['IMPULSE','MATURE_IMPULSE','REVERSAL'].includes(v.phase?.phase)?'up':v.phase?.phase==='EXHAUSTION'?'down':'neutral';const rv=$('analysis-relvol'),rel=Math.max(v.f.relVolume||0,v.phase?.liveVolumePace||0);rv.textContent=Number.isFinite(rel)?rel.toFixed(2)+'x':'—';rv.className=rel>=1.45?'up':'neutral';const reg=$('analysis-regime'),mode=v.regime?.mode||'TRANSITION';reg.textContent=regimeThai(mode);reg.className=mode==='TREND'?'up':mode==='RANGE'?'neutral':'neutral';const pos=$('analysis-position'),pct=Math.round((v.regime?.position??v.f.rangePosition)*100);pos.textContent=(pct>=70?'ขอบบน ':pct<=30?'ขอบล่าง ':'กลางกรอบ ')+pct+'%';pos.className=pct>=70?'down':pct<=30?'up':'neutral';}
-   // Always display both kinds of 1m zone, prioritizing the nearest support below and resistance above.
+   $('event-detail').textContent=e?`${phaseThai(v.phase?.phase||'TRANSITION')} · ${tfHumanText(preview?.reason||'กำลังประเมินช่วงตลาด')} · โมเดลมอง ${directionThai(modelD>0?'HIGH':'LOW')}${preview?.direction?' → ระบบเลือก '+directionThai(preview.direction):''} · แนวสำคัญ ${money(e.level)} · ช่วงราคา ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · คะแนนหลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}${contextMode?' · ไม่บันทึกเป็นไม้จริง':''}`:'';
+   if(v.f){
+    setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);
+    const ph=$('analysis-phase');ph.textContent=phaseThai(v.phase?.phase)+(v.phase?.dir?' '+(v.phase.dir>0?'↑':'↓'):'');ph.className=['IMPULSE','MATURE_IMPULSE','REVERSAL'].includes(v.phase?.phase)?'up':v.phase?.phase==='EXHAUSTION'?'down':'neutral';
+    const rv=$('analysis-relvol'),rel=Math.max(v.f.relVolume||0,v.phase?.liveVolumePace||0);rv.textContent=Number.isFinite(rel)?rel.toFixed(2)+'x':'—';rv.className=rel>=1.45?'up':'neutral';
+    const reg=$('analysis-regime'),mode=v.regime?.mode||'TRANSITION';reg.textContent=regimeThai(mode);reg.className=mode==='TREND'?'up':'neutral';
+    const pos=$('analysis-position'),pct=Math.round((v.regime?.position??v.f.rangePosition)*100);pos.textContent=(pct>=70?'ขอบบน ':pct<=30?'ขอบล่าง ':'กลางกรอบ ')+pct+'%';pos.className=pct>=70?'down':pct<=30?'up':'neutral';
+   }
    const price=state.quote?.price||0,all=v.z||[];
    const choose=(kind,preferAbove)=>{
     const entries=all.filter(z=>z.kind===kind).sort((a,b)=>{
      const aSide=preferAbove?a.price>=price:a.price<=price,bSide=preferAbove?b.price>=price:b.price<=price;
      return (aSide===bSide?0:aSide?-1:1)||Math.abs(a.price-price)-Math.abs(b.price-price);
     });
-    const chosen=[];
-    for(const z of entries){if(chosen.every(y=>Math.abs(y.price-z.price)>(v.f?.atr||1)*.3))chosen.push(z);if(chosen.length===2)break;}
-    return chosen;
+    const chosen=[];for(const z of entries){if(chosen.every(y=>Math.abs(y.price-z.price)>(v.f?.atr||1)*.3))chosen.push(z);if(chosen.length===2)break;}return chosen;
    };
    const supports=choose('support',false),resistances=choose('resistance',true),zs=[...supports,...resistances];
-   $('zone-legend').textContent=`1m รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
+   $('zone-legend').textContent=`${tf} รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
    leftZoneLabels=[
-    ...zs.map(z=>({kind:'zone',price:z.price,color:'#f2c94c',text:z.kind==='resistance'?'1m ต้าน':'1m รับ'})),
+    ...zs.map(z=>({kind:'zone',price:z.price,color:'#f2c94c',text:z.kind==='resistance'?tf+' ต้าน':tf+' รับ'})),
     ...(e?[[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:title})):[])
    ];
-   const zkey=zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
-   if(state.chartReady&&zkey!==state.zoneKey){state.zoneKey=zkey;
-    for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
-    for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({
-     price:z.price,color:'#f2c94c',lineWidth:1,
-     lineStyle:2,axisLabelVisible:false,title:''
-    }));
-    if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])
-     if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
+   const zkey=tf+'|'+zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'');
+   if(state.chartReady&&zkey!==state.zoneKey){
+    state.zoneKey=zkey;for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
+    for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({price:z.price,color:'#f2c94c',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
+    if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
    }
-   renderLeftLineLabels();
-   renderRightOrderLabels();
+   renderLeftLineLabels();renderRightOrderLabels();
   }
 
   function renderDirection(x){
