@@ -1664,25 +1664,29 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    for(const side of ['high','low']){
     const row=sideStats[side],s=side==='high'?'HIGH':'LOW',box=$('setup-full-'+side);
     $('setup-full-'+side+'-rate').textContent=Math.round(live.model[s])+'%';
-    $('setup-full-'+side+'-count').textContent=row.n
-      ?'ย้อนหลัง '+row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis)
-      :'ย้อนหลังยังไม่มีตัวอย่างฝั่งนี้';
+    $('setup-full-'+side+'-count').textContent=live.chartBasis
+      ?'กราฟจริง T+10 · '+(s==='HIGH'?live.shadow.highWins:live.shadow.lowWins)+'/'+live.shadow.n+' ครั้ง'
+      :row.n?'ไม้จริง '+row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis):'ไม้จริงยังไม่พอ';
     box.className='setup-side '+side+(live.displayLeading===s?' active':'');
    }
    if(live.displayLeading)panel.classList.add(live.displayLeading==='HIGH'?'side-high':'side-low');
    $('setup-profile-name').textContent=setupName(snap);
-   $('setup-profile-desc').textContent=(snap.hasConfirmedEntry?'จุดเข้าออกสัญญาณแล้ว · อัปเดตการประเมินจากราคาสด':snap.isLiveEvent?'ระบบกำลังติดตามท่านี้ แต่จุดเข้ายังไม่ผ่านการยืนยัน':'ประเมินสภาพตลาดสดทั้งสองฝั่ง แม้จุดเข้ายังไม่แนะนำให้เข้า')
-     +' · สถิติ '+(live.isReference?'อ้างอิง V7.1.0 (สูตรก่อนหน้า)':'V'+live.version);
+   $('setup-profile-desc').textContent=(snap.hasConfirmedEntry?'เครื่องยนต์ส่งจุดเข้าแล้ว':snap.isLiveEvent?'กำลังติดตามท่านี้ · จุดเข้ายังไม่ผ่าน':'ประเมิน HIGH/LOW สด แม้จุดเข้ายังไม่แนะนำ')
+      +' · '+(live.chartBasis?'กราฟ Futures จริงย้อนหลังที่ครบ T+10':live.isReference?'ไม้สัญญาณ V7.1.0':'ไม้สัญญาณ V'+live.version);
    const pct=Number.isFinite(snap.probability)?Math.round(snap.probability):null;
    $('setup-similar-rate').textContent=pct===null?'—':pct+'%';
    $('setup-rate-bar').style.width=pct===null?'0%':pct+'%';
    $('setup-history-lean').textContent=live.displayLeading
      ?(live.displaySource==='history'?'ย้อนหลังหนุน':'น้ำหนักสดเอนเอียง')+' '+directionThai(live.displayLeading)
      :'สองฝั่งใกล้เคียง';
-   $('setup-similar-record').textContent=sim.n
-     ?'ผลย้อนหลัง V'+live.version+' · '+sim.wins+' ชนะ / '+sim.losses+' แพ้ ('+Math.round(sim.rate*100)+'%)'
-     :'ผลย้อนหลัง · ยังไม่มีตัวอย่างฝั่งนี้';
-   $('setup-sample-quality').textContent=sim.n?setupSampleLabel(sim.n,cmp.meanSimilarity):'ดูน้ำหนักสด · รอเก็บสถิติจริง';
+   const observedWins=live.chartBasis?(snap.direction==='HIGH'?live.shadow.highWins:live.shadow.lowWins):0;
+   const observedRate=live.chartBasis?(snap.direction==='HIGH'?live.shadow.highRate:live.shadow.lowRate):null;
+   $('setup-similar-record').textContent=live.chartBasis
+      ?'กราฟจริง T+10 · '+observedWins+'/'+live.shadow.n+' ครั้ง ('+Math.round(observedRate*100)+'%)'
+      :sim.n?'ไม้จริง V'+live.version+' · '+sim.wins+' ชนะ / '+sim.losses+' แพ้ ('+Math.round(sim.rate*100)+'%)'
+       :'ข้อมูลไม้จริงยังไม่พอ · แสดงน้ำหนักตลาดสด';
+   $('setup-sample-quality').textContent=live.chartBasis?'จำลองจากแท่งปิด ไม่ใช่ผลไม้จริง'
+      :sim.n?setupSampleLabel(sim.n,cmp.meanSimilarity):'รอเก็บไม้จริง';
    rateBox.className='setup-profile-rate '+(live.displayLeading==='HIGH'?'good':live.displayLeading==='LOW'?'bad':'');
    $('setup-exact-rate').textContent=Number.isFinite(exact.rate)?Math.round(exact.rate*100)+'%':'—';
    $('setup-exact-record').textContent=exact.n?`${exact.wins} ชนะ / ${exact.losses} แพ้ จาก ${exact.n} ไม้ตรงท่า`:'ยังไม่มีไม้ที่ตรงทั้งท่า ฝั่ง และช่วงตลาด';
