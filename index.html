@@ -459,6 +459,12 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .analysis-tf-control.pending small{border-color:#81632e;color:#e2bd74}
 @media(max-width:900px){.analysis-tf-control{order:2;max-width:100%;overflow-x:auto}.analysis-tf-control small{display:none}}
 
+.main-signal-head,.probability-head,.candle-kicker,.setup-profile-compact,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
+#setup-data-health.live,.setup-compact-health.live{display:none!important}
+.panel-heading{justify-content:flex-end}
+.chart-meta{min-height:34px;padding-block:6px}
+.signal-card-main .signal-description{margin-bottom:10px}
+.prediction-log-head p:empty{display:none}
 </style>
 </head>
 <body data-feed="syncing">
@@ -468,10 +474,10 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </header>
 <main>
 <section class="market-strip">
-  <div class="market-name"><span class="coin">₿</span><div><h1>BTC <span>/ USDT</span></h1><p>BINANCE FUTURES <span class="contract">สัญญาถาวร</span></p></div></div>
-  <div class="quote"><strong id="last-price">—</strong><span>USDT · ราคาล่าสุด</span></div>
-  <div class="market-stat"><span>สูงสุดในช่วงข้อมูล</span><b id="high-price">—</b></div>
-  <div class="market-stat"><span>ต่ำสุดในช่วงข้อมูล</span><b id="low-price">—</b></div>
+  <div class="market-name"><span class="coin">₿</span><div><h1>BTC <span>/ USDT</span></h1><p>BINANCE FUTURES</p></div></div>
+  <div class="quote"><strong id="last-price">—</strong><span>USDT</span></div>
+  <div class="market-stat"><span>สูงสุด</span><b id="high-price">—</b></div>
+  <div class="market-stat"><span>ต่ำสุด</span><b id="low-price">—</b></div>
   <div class="market-status"><span class="status-dot"></span><span><span id="connection-text">กำลังโหลดแท่งเทียน</span><small id="connection-time">รอข้อมูลใหม่</small></span></div><button id="reconnect" class="quiet reconnect-mini">เชื่อมใหม่</button>
 </section>
 <div id="fatal" class="fatal" hidden></div>
@@ -498,7 +504,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
-  <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">สัญญาณ V7.2.0</span></div>
+  <div class="panel-heading"><span class="small-tag" id="signal-tag">V7.2.0</span></div>
 
   <section class="signal-card signal-card-main" id="main-signal-card">
     <div class="main-signal-head">
@@ -538,7 +544,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 
   <section class="signal-card signal-card-candle wait" id="candle-signal-card" aria-live="polite">
     <div class="candle-card-head">
-      <div><span class="candle-kicker">CANDLE BEHAVIOR v0.2 · ทดลองอิสระ</span><h3 id="candle-analysis-title">พฤติกรรมแท่งเทียน · 1 นาที</h3></div>
+      <div><span class="candle-kicker">CANDLE v0.2</span><h3 id="candle-analysis-title">แท่งเทียน</h3></div>
       <span class="candle-state wait" id="candle-state">WAIT</span>
     </div>
 
@@ -550,10 +556,10 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
       <div class="candle-confidence"><span>ความชัด</span><b id="candle-confidence">—</b></div>
     </div>
 
-    <p class="candle-summary" id="candle-summary">อ่านพฤติกรรมหลายแท่งจาก OHLCV 1 นาที โดยไม่ใช้คำตอบจาก V7.1.1</p>
+    <p class="candle-summary" id="candle-summary">รอข้อมูล</p>
 
     <div class="candle-patterns">
-      <span>พบอะไรตอนนี้</span>
+      <span>รูปแบบ</span>
       <div class="candle-pattern-list" id="candle-pattern-list"><span class="candle-pattern empty">รอแท่ง Futures 1 นาที</span></div>
     </div>
 
@@ -568,7 +574,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     </div>
 
     <div class="candle-lock" id="candle-lock">
-      <span>สัญญาณทดลอง</span>
+      <span>สัญญาณ</span>
       <b id="candle-lock-title">ยังไม่มีสัญญาณล็อก</b>
       <small id="candle-lock-meta">จะล็อกเมื่อพฤติกรรมแท่งมีความชัดพอ และตัดสินผลหลัง 10 นาที</small>
     </div>
@@ -613,15 +619,15 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </section>
 
   <section class="signal-card signal-card-market">
-    <div class="signal-card-title"><span id="market-analysis-title">ข้อมูลตลาดตอนนี้ · 1 นาที</span></div>
+    <div class="signal-card-title"><span id="market-analysis-title">ตลาดตอนนี้</span></div>
     <div class="analysis-grid">
-      <div><span id="analysis-regime-label">สภาพตลาด 1 นาที</span><b id="analysis-regime">—</b></div>
+      <div><span id="analysis-regime-label">สภาพตลาด</span><b id="analysis-regime">—</b></div>
       <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
-      <div><span id="analysis-trend-label">แนวโน้ม 1 นาที</span><b id="analysis-trend">—</b></div>
+      <div><span id="analysis-trend-label">แนวโน้ม</span><b id="analysis-trend">—</b></div>
       <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
       <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
       <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
-      <div><span id="analysis-volatility-label">ความผันผวน 1 นาที</span><b id="analysis-volatility">—</b></div>
+      <div><span id="analysis-volatility-label">ความผันผวน</span><b id="analysis-volatility">—</b></div>
       <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
       <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
       <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
@@ -636,43 +642,43 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </aside>
 <aside class="setup-profile-panel" id="setup-profile-panel" aria-live="polite">
   <div class="setup-profile-head">
-    <div><span class="setup-profile-kicker">ประกอบการตัดสินใจ · REALTIME</span><h2>โปรไฟล์ท่านี้</h2></div>
+    <div><span class="setup-profile-kicker">REALTIME</span><h2>ท่านี้</h2></div>
     <span class="setup-profile-status learning" id="setup-profile-status">รอจังหวะ</span>
   </div>
   <section class="setup-profile-hero">
-    <span>ท่าที่ระบบกำลังเห็น</span>
+    <span>รูปแบบ</span>
     <h3 id="setup-profile-name">กำลังรอจุดเข้า</h3>
     <p id="setup-profile-desc">จุดเข้าเดิมยังทำงานตามปกติ ช่องนี้ใช้ดูสถิติและบริบทประกอบเท่านั้น</p>
   </section>
   <section class="setup-profile-rate" id="setup-profile-rate">
     <div class="setup-rate-main">
-      <div><span id="setup-rate-label">น้ำหนักตลาดสดของฝั่งที่แสดง · +10 นาที</span><strong id="setup-similar-rate">—</strong></div>
+      <div><span id="setup-rate-label">น้ำหนักตลาดสด</span><strong id="setup-similar-rate">—</strong></div>
       <b id="setup-history-lean">รอข้อมูล</b>
     </div>
     <div class="setup-rate-track"><div id="setup-rate-bar"></div></div>
     <div class="setup-rate-meta"><span id="setup-similar-record">—</span><span id="setup-sample-quality">—</span></div>
   </section>
   <div class="setup-side-compare" id="setup-side-compare">
-    <div class="setup-side high" id="setup-full-high"><span>สูงกว่า · น้ำหนักตลาดสด</span><b id="setup-full-high-rate">—</b><small id="setup-full-high-count">รอข้อมูล</small></div>
-    <div class="setup-side low" id="setup-full-low"><span>ต่ำกว่า · น้ำหนักตลาดสด</span><b id="setup-full-low-rate">—</b><small id="setup-full-low-count">รอข้อมูล</small></div>
+    <div class="setup-side high" id="setup-full-high"><span>สูงกว่า</span><b id="setup-full-high-rate">—</b><small id="setup-full-high-count">รอข้อมูล</small></div>
+    <div class="setup-side low" id="setup-full-low"><span>ต่ำกว่า</span><b id="setup-full-low-rate">—</b><small id="setup-full-low-count">รอข้อมูล</small></div>
   </div>
   <div class="setup-exact-row">
-    <span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-exact-rate">—</b>
+    <span>ท่าเดียวกัน</span><b id="setup-exact-rate">—</b>
     <small id="setup-exact-record">ยังไม่มีข้อมูล</small>
   </div>
   <div class="setup-live-grid">
-    <div><span id="setup-live-direction-label">น้ำหนัก +10 นาที</span><b id="setup-live-direction">—</b></div>
+    <div><span id="setup-live-direction-label">น้ำหนัก</span><b id="setup-live-direction">—</b></div>
     <div><span>วิ่งจากฐาน</span><b id="setup-live-extension">—</b></div>
     <div><span>ระยะก่อนชนแนว</span><b id="setup-live-room">—</b></div>
-    <div><span>Volume ตอนนี้</span><b id="setup-live-volume">—</b></div>
+    <div><span>Volume</span><b id="setup-live-volume">—</b></div>
   </div>
   <div class="setup-profile-reasons">
   <section class="setup-profile-section support">
-    <h4>เหตุผลที่หนุนจุดนี้</h4>
+    <h4>หนุน</h4>
     <ul id="setup-support-list"><li>รอข้อมูลตลาดสด</li></ul>
   </section>
   <section class="setup-profile-section warning">
-    <h4>สิ่งที่ต้องระวังตอนนี้</h4>
+    <h4>ระวัง</h4>
     <ul id="setup-warning-list"><li>รอข้อมูลตลาดสด</li></ul>
   </section>
   </div>
@@ -682,7 +688,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </aside>
 
 </div>
-<section class="prediction-log"><div class="prediction-log-head"><div><h2>ผลสัญญาณจริง 1m · +10 นาที</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">เวอร์ชัน <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">สรุปรีพอร์ตทั้งหมด</button><button id="export-training-csv">ข้อมูลเทรน CSV</button><button id="export-history">ข้อมูลเทรน JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เวลาเข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบ 10 นาที</th><th>ราคาตัดสิน</th><th>ผล / เหลือเวลา</th><th>โอกาสชนะตอนนี้</th><th>บทเรียน</th><th>เวอร์ชัน</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+<section class="prediction-log"><div class="prediction-log-head"><div><h2>ประวัติสัญญาณ</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">V <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">รีพอร์ต</button><button id="export-training-csv">CSV</button><button id="export-history">JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบเวลา</th><th>ราคาตัดสิน</th><th>ผล</th><th>Live %</th><th>บทเรียน</th><th>V</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
 <dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">ทบทวนหลังจบไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
 <dialog id="report-dialog" class="review-dialog report-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปข้อมูลเพื่อพัฒนาระบบ</span><h2>สรุปบทเรียนทั้งหมด</h2><p id="report-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="report-dialog" aria-label="ปิด">×</button></div><div id="report-body" class="review-body"></div><div class="review-foot"><button type="button" id="report-export-json">ข้อมูลเทรน JSON</button><button type="button" id="report-export-csv">ข้อมูลเทรน CSV</button><button type="button" data-close-dialog="report-dialog">ปิด</button></div></div></dialog>
 </main>
@@ -2304,14 +2310,14 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('candle-summary').textContent=view?.reason||'รอข้อมูล Futures สด';
     renderPatterns([]);
     $('candle-meaning').textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';
-    $('candle-change-text').textContent='รอแท่ง Futures '+tfLabel+' ที่ปิดครบก่อน';
+    $('candle-change-text').textContent='รอแท่งปิดเพิ่ม';
    }else{
     const cls=view.direction==='HIGH'?'high':view.direction==='LOW'?'low':'wait';
     card.classList.add(cls);stateEl.className='candle-state '+cls;stateEl.textContent=view.direction;
     $('candle-direction').textContent=view.direction==='WAIT'?'รอก่อน':directionThai(view.direction);
     $('candle-confidence').textContent=view.confidence+'%';
     const top=view.patterns?.[0]?.name;
-    $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label+' · อ่านจากแท่ง '+tfLabel+' · ชื่อแพตเทิร์นใช้แท่งที่ปิดแล้ว';
+    $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label;
     renderPatterns(view.patterns);
     $('candle-meaning').textContent=view.plainMeaning||view.label;
     $('candle-change-text').textContent=view.changeTrigger||'รอแท่งถัดไปยืนยันหรือทำลายรูปแบบปัจจุบัน';
@@ -2321,21 +2327,21 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     lock.classList.add('active');
     const remain=Math.max(0,pending.targetTime-(state.quote?.ts||0)*1000),pattern=pending.snapshot?.patterns?.[0]?.name;
     $('candle-lock-title').textContent='CANDLE '+directionThai(pending.direction)+' · ล็อก '+money(pending.entryPrice);
-    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'ความชัด '+pending.confidence+'% · เป้าหมาย '+horizon+' · '+candleRemaining(remain);
+    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+pending.confidence+'% · '+horizon+' · '+candleRemaining(remain);
    }else if(latest){
     lock.classList.remove('active');
     const pattern=latest.snapshot?.patterns?.[0]?.name;
     $('candle-lock-title').textContent='ล่าสุด '+directionThai(latest.direction)+' · '+resultThai(latest.result);
-    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → ตัดสิน '+money(latest.exitPrice):'')+' · '+tf+' · เป้าหมาย '+horizon;
+    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → '+money(latest.exitPrice):'')+' · '+horizon;
    }else{
     lock.classList.remove('active');
     $('candle-lock-title').textContent='ยังไม่มีสัญญาณล็อก';
-    $('candle-lock-meta').textContent='จะล็อกเมื่อความชัดถึงเกณฑ์ · แยกสถิติ '+tf+' · เป้าหมาย '+horizon;
+    $('candle-lock-meta').textContent='รอความชัดถึงเกณฑ์ · '+horizon;
    }
    const st=candleStats(tf);
    $('candle-stats').textContent=st.done.length
-    ?'Candle Engine '+tf+' · '+st.done.length+' ไม้ · '+st.wins+' ชนะ / '+st.losses+' แพ้ · '+(st.rate*100).toFixed(1)+'%'
-    :'Candle Engine '+tf+' · ยังไม่มีผลที่จบตามเป้าหมาย '+horizon;
+    ?st.done.length+' ไม้ · '+st.wins+' ชนะ / '+st.losses+' แพ้ · '+(st.rate*100).toFixed(1)+'%'
+    :'ยังไม่มีผล';
   }
 
   function setupFeedHealth(){
@@ -2348,7 +2354,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(age>4||Date.now()-state.lastMessageAt>4500)
     return {kind:'warning',label:'Futures ล่าช้า '+Math.max(0,Math.round(age))+' วินาที · ไม่ใช้ราคาเก่าเป็นสัญญาณใหม่'};
    if(closed<35)return {kind:'warning',label:'กำลังสะสมแท่ง '+label+' · มี '+closed+' แท่ง'};
-   return {kind:'live',label:'● Futures สด · วิเคราะห์ '+tf+' · อัปเดต '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
+   return {kind:'live',label:'สด'};
   }
   function updateSetupHealth(){
    const h=setupFeedHealth();
@@ -2359,7 +2365,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    }
    for(const id of ['setup-data-health','setup-compact-health']){
     const el=$(id);
-    if(el){el.textContent=h.label;el.className=(id==='setup-data-health'?'setup-data-health':'setup-compact-health')+' '+h.kind;}
+    if(el){el.textContent=h.label;el.className=(id==='setup-data-health'?'setup-data-health':'setup-compact-health')+' '+h.kind;el.hidden=h.kind==='live';}
    }
   }
   function renderSetupProfile(v,directionView,micro={}){
@@ -2559,7 +2565,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-compact-next').textContent=next||'ติดตามตลาดสดต่อ';
   }
 
-  function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
+  function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
   function purgeOldVersions(){
    const old=engine.signals.filter(s=>s.version!==CFG.version);
    if(!old.length){alert('ไม่มีข้อมูลเวอร์ชันเก่าให้ลบค่ะ');return;}
@@ -2896,7 +2902,7 @@ function openReport(){
    const watchD=v.watch?.direction==='HIGH'?1:v.watch?.direction==='LOW'?-1:0,continuousD=state.continuousView?.direction==='HIGH'?1:state.continuousView?.direction==='LOW'?-1:0;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:watchD||continuousD;
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
-   $('signal-tag').textContent=contextMode?`วิเคราะห์ V${CFG.version} · ${tf} · บริบททดลอง`:`สัญญาณ V${CFG.version} · ข้อมูล 1 นาที`;
+   $('signal-tag').textContent=contextMode?`V${CFG.version} · ${tf}`:`V${CFG.version}`;
    $('direction-icon').textContent=d>0?'↑':d<0?'↓':'—';
    const labels=contextMode
     ?{invalidated:'เงื่อนไขเดิมเสีย',new:'จังหวะผ่านเงื่อนไข · ทดลอง',issued:'กำลังติดตามจังหวะ',expired:'จังหวะหมดอายุ',offline:'พักการวิเคราะห์',warming:'เริ่มข้อมูลสด',warmup:'รอข้อมูล',tracking:'เฝ้าดูบริบท',confirming:'กำลังยืนยันบริบท',watch:'รอจังหวะ'}
@@ -2909,7 +2915,7 @@ function openReport(){
    $('signal-title').textContent=statusText;
    $('signal-description').textContent=(contextMode?'บริบท '+tf+' · ':'')+tfHumanText(v.reason);
    renderEntryGateDetails(v,preview,d);
-   $('signal-updated').textContent='ข้อมูล '+tf+' · '+clockMs((state.quote?.ts||0)*1000);
+   $('signal-updated').textContent=clockMs((state.quote?.ts||0)*1000);
    const banner=$('strong-banner');banner.hidden=!freshSignal;
    if(banner){
     const [small,strong]=banner.children;
@@ -3057,17 +3063,17 @@ function openReport(){
   const analysisUsesSpot=(tf=state.analysisTf)=>analysisSource(tf)!=='Futures';
   function refreshAnalysisLabels(){
    const tf=state.analysisTf,label=TF_LABELS[tf]||tf,horizon=analysisHorizonLabel(tf),primary=tf==='1m';
-   $('analysis-tf-active').textContent='ใช้อยู่ '+tf;
+   $('analysis-tf-active').textContent='วิเคราะห์ '+tf;
    $('analysis-tf-active').title='ระบบกำลังวิเคราะห์จากแท่ง '+label;
-   $('main-analysis-scope').textContent='แนวโน้ม + จุดเข้า · วิเคราะห์ '+tf+(primary?'':' · โหมดบริบท');
+   $('main-analysis-scope').textContent=tf;
    $('main-outlook-title').textContent=primary?'แนวโน้ม +10 นาที':'มุมมองจากกราฟ '+label;
    $('main-probability-label').textContent=primary?'อีก 10 นาที':'น้ำหนักทิศทางจาก '+label;
-   $('candle-analysis-title').textContent='พฤติกรรมแท่งเทียน · '+label;
-   $('realtime-analysis-kicker').textContent='สรุปสำคัญ · REALTIME · วิเคราะห์ '+tf;
-   $('market-analysis-title').textContent='ข้อมูลตลาดตอนนี้ · '+label;
-   $('analysis-regime-label').textContent='สภาพตลาด '+label;
-   $('analysis-trend-label').textContent='แนวโน้ม '+label;
-   $('analysis-volatility-label').textContent='ความผันผวน '+label;
+   $('candle-analysis-title').textContent='แท่งเทียน';
+   $('realtime-analysis-kicker').textContent='REALTIME';
+   $('market-analysis-title').textContent='ตลาดตอนนี้';
+   $('analysis-regime-label').textContent='สภาพตลาด';
+   $('analysis-trend-label').textContent='แนวโน้ม';
+   $('analysis-volatility-label').textContent='ความผันผวน';
    $('setup-rate-label').textContent='น้ำหนักตลาดสดของฝั่งที่แสดง · '+horizon;
    $('setup-live-direction-label').textContent='น้ำหนัก '+horizon;
   }
