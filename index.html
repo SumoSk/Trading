@@ -439,6 +439,10 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
  .signal-panel>.signal-card-main,.signal-panel>.signal-card-candle,.signal-panel>.setup-profile-compact{grid-column:1/-1!important}
 }
 
+
+.setup-profile-compact.side-conflict h3,.setup-profile-compact.side-conflict .compact-brief-status{color:#f0bf74}
+.setup-profile-compact.side-conflict .compact-brief-status{border-color:#8d6b35;background:#2a2115}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -1444,6 +1448,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     lastMessageAt: 0,
     lastAnalysisAt: 0,
     lastProfileAt: 0,
+    lastCandleAt: 0,
+    candleView: null,
     shadowCache: null,
     selectedTf: '1m',
     chart: null,
@@ -1535,6 +1541,13 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   let versionSettings=rememberVersionSettings();
   let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;}
   const engine=new Engine(saved);let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null;
+  const CANDLE_VERSION='0.1.0',CANDLE_STORE='btc-candle-behavior-v1';
+  let candleSaved={};try{candleSaved=JSON.parse(localStorage.getItem(CANDLE_STORE)||'{}')||{};}catch{}
+  const candleState={
+   version:CANDLE_VERSION,
+   signals:Array.isArray(candleSaved.signals)?candleSaved.signals.filter(s=>s&&Number.isFinite(s.entryTime)&&Number.isFinite(s.entryPrice)&&['HIGH','LOW'].includes(s.direction)).slice(-500):[],
+   lastIssuedAt:Number(candleSaved.lastIssuedAt)||0
+  };
   const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว'};
   function directionThai(v){
   return v==='HIGH'?'สูงกว่า':v==='LOW'?'ต่ำกว่า':v==='BALANCED'?'ใกล้เคียงกัน':v||'—';
@@ -1786,6 +1799,213 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    return n>=8?'ตัวอย่างค่อนข้างพอ'+sim:n>=5?'ตัวอย่างปานกลาง'+sim:n>=3?'ตัวอย่างยังน้อย'+sim:'ข้อมูลยังน้อยมาก'+sim;
   }
 
+
+  function candlePersist(){
+   try{localStorage.setItem(CANDLE_STORE,JSON.stringify({version:CANDLE_VERSION,signals:candleState.signals,lastIssuedAt:candleState.lastIssuedAt}));}catch{}
+  }
+  function candleAtr(bars){
+   const b=(bars||[]).filter(x=>x.closed).slice(-16);
+   if(b.length<3)return null;
+   let sum=0,n=0;
+   for(let i=Math.max(1,b.length-14);i<b.length;i++){
+    const x=b[i],prev=b[i-1].close;
+    sum+=Math.max(x.high-x.low,Math.abs(x.high-prev),Math.abs(x.low-prev));n++;
+   }
+   return n?sum/n:null;
+  }
+  function candleMetric(b,atr){
+   const range=Math.max(b.high-b.low,1e-9),body=b.close-b.open,dir=Math.sign(body);
+   return {
+    ...b,dir,bodyAtr:Math.abs(body)/atr,rangeAtr:range/atr,
+    closeLocation:clip((b.close-b.low)/range,0,1),
+    upperWick:clip((b.high-Math.max(b.open,b.close))/range,0,1),
+    lowerWick:clip((Math.min(b.open,b.close)-b.low)/range,0,1)
+   };
+  }
+  function candleLevel(v){
+   return v>=.68?'สูง':v>=.42?'กลาง':'ต่ำ';
+  }
+  function candleBehaviorAssess(fresh=true){
+   if(!fresh||state.historyFallback||!state.quote)return {available:false,direction:'WAIT',reason:'รอข้อมูล Futures สด'};
+   const source=(state.bars['1m']||[]).slice(-32);
+   const closed=source.filter(b=>b.closed);
+   const atr=candleAtr(source);
+   if(closed.length<20||!(atr>0))return {available:false,direction:'WAIT',reason:'รอแท่ง 1 นาทีต่อเนื่องให้พอ'};
+   const minute=Math.floor(state.quote.ts/60)*60;
+   let work=source.slice(-7).map(b=>({...b}));
+   let last=work.at(-1);
+   if(!last||last.time<minute){
+    const open=last?.close||state.quote.price;
+    work.push({time:minute,open,high:Math.max(open,state.quote.price),low:Math.min(open,state.quote.price),close:state.quote.price,volume:0,closed:false});
+   }else if(last.time===minute){
+    last.close=state.quote.price;last.high=Math.max(last.high,state.quote.price);last.low=Math.min(last.low,state.quote.price);
+   }
+   if(work.length<5)return {available:false,direction:'WAIT',reason:'รอแท่งล่าสุดเพิ่ม'};
+   const m=work.slice(-5).map(b=>candleMetric(b,atr)),cur=m.at(-1),prev=m.at(-2);
+   const pairs=[];
+   for(let i=1;i<m.length;i++)pairs.push([m[i-1],m[i]]);
+   let bull=0,bear=0;
+   for(const [a,b] of pairs){
+    if(b.high>a.high)bull++;else if(b.high<a.high)bear++;
+    if(b.low>a.low)bull++;else if(b.low<a.low)bear++;
+    if(b.close>a.close)bull++;else if(b.close<a.close)bear++;
+   }
+   const progression=clip((bull-bear)/(pairs.length*3),-1,1);
+   const last4=m.slice(-4);
+   const bodyBias=clip(last4.reduce((s,x,i)=>s+x.dir*Math.tanh(x.bodyAtr/.45)*(i+1),0)/10,-1,1);
+   const closeBias=clip(last4.reduce((s,x,i)=>s+(x.closeLocation*2-1)*(i+1),0)/10,-1,1);
+   const wickBias=clip(last4.reduce((s,x,i)=>s+(x.lowerWick-x.upperWick)*(i+1),0)/10,-1,1);
+   const overlaps=[];
+   for(const [a,b] of pairs.slice(-3)){
+    const inter=Math.max(0,Math.min(a.high,b.high)-Math.max(a.low,b.low));
+    overlaps.push(clip(inter/Math.max(Math.min(a.high-a.low,b.high-b.low),1e-9),0,1));
+   }
+   const overlap=overlaps.length?overlaps.reduce((a,b)=>a+b,0)/overlaps.length:.5;
+   const cleanliness=1-overlap;
+   const prior=m.slice(0,-1),priorHigh=Math.max(...prior.map(x=>x.high)),priorLow=Math.min(...prior.map(x=>x.low));
+   let breakout=0;
+   if(cur.close>priorHigh+atr*.03&&cur.closeLocation>=.66)breakout=1;
+   else if(cur.high>priorHigh+atr*.03&&cur.close<=priorHigh)breakout=-.85;
+   else if(cur.close<priorLow-atr*.03&&cur.closeLocation<=.34)breakout=-1;
+   else if(cur.low<priorLow-atr*.03&&cur.close>=priorLow)breakout=.85;
+   const ranges=m.slice(-4).map(x=>x.rangeAtr),compression=(ranges[0]>ranges[1]&&ranges[1]>ranges[2])?1:0;
+   const expansion=compression&&ranges[3]>=Math.max(.20,ranges[2]*1.25)?cur.dir:0;
+   const prevVol=closed.slice(-24,-1).map(x=>x.volume).filter(x=>x>0),volMed=Math.max(median(prevVol)||1,1e-9);
+   const relVol=(work.at(-1).volume||0)/volMed;
+   const volumeBias=relVol>=1.05?cur.dir*clip((relVol-1)/1.5,0,1):0;
+   const preliminary=24*progression+18*bodyBias+16*closeBias+12*wickBias+12*breakout+8*cleanliness*Math.sign(progression+bodyBias+closeBias)+5*volumeBias+5*expansion;
+   const dominant=Math.sign(preliminary)||cur.dir||1;
+   const bodies=m.slice(-3).map(x=>x.bodyAtr);
+   let bodyDecay=clip((bodies[0]-bodies[2])/Math.max(bodies[0],.08),0,1);
+   if(bodies[0]>bodies[1]&&bodies[1]>bodies[2])bodyDecay=clip(bodyDecay+.18,0,1);
+   const oppWicks=m.slice(-3).map(x=>dominant>0?x.upperWick:x.lowerWick);
+   const oppWick=clip(oppWicks.reduce((a,b)=>a+b,0)/oppWicks.length+(oppWicks[2]-oppWicks[0])*.6,0,1);
+   let failedContinuation=0;
+   if(dominant>0&&cur.high>=prev.high&&(cur.closeLocation<.55||cur.close<prev.close))failedContinuation=.75;
+   if(dominant<0&&cur.low<=prev.low&&(cur.closeLocation>.45||cur.close>prev.close))failedContinuation=.75;
+   if(dominant>0&&cur.high>priorHigh&&cur.close<=priorHigh)failedContinuation=1;
+   if(dominant<0&&cur.low<priorLow&&cur.close>=priorLow)failedContinuation=1;
+   const counterBody=cur.dir===-dominant?clip(cur.bodyAtr/.55,0,1):0;
+   const exhaustion=clip(.35*bodyDecay+.27*oppWick+.26*failedContinuation+.12*counterBody,0,1);
+   const reversalPressure=clip(.38*counterBody+.26*failedContinuation+.20*oppWick+.16*(dominant>0?1-cur.closeLocation:cur.closeLocation),0,1);
+   let pullbackQuality=.5;
+   if(cur.dir===-dominant){
+    const depth=dominant>0?(priorHigh-cur.close)/atr:(cur.close-priorLow)/atr;
+    const structureHeld=dominant>0?cur.low>Math.min(...m.slice(-4,-1).map(x=>x.low)):cur.high<Math.max(...m.slice(-4,-1).map(x=>x.high));
+    pullbackQuality=clip((depth<.65?.45:.1)+(cur.bodyAtr<.35?.30:.05)+(structureHeld?.25:0),0,1);
+   }
+   let score=preliminary-Math.sign(preliminary||dominant)*exhaustion*18-dominant*reversalPressure*8;
+   score=clip(score,-100,100);
+   const abs=Math.abs(score),confidence=Math.round(clip(50+abs*.55,50,90));
+   let direction=score>=26?'HIGH':score<=-26?'LOW':'WAIT';
+   if(direction!=='WAIT'&&exhaustion>=.74&&abs<46)direction='WAIT';
+   const continuation=clip(.5+(Math.sign(score||dominant)*(progression*.30+bodyBias*.26+closeBias*.22+breakout*.14+cleanliness*Math.sign(score||dominant)*.08))/2,0,1);
+   const reasons=[],warnings=[];
+   const side=direction==='WAIT'?(score>=0?'HIGH':'LOW'):direction,sd=side==='HIGH'?1:-1;
+   if(sd*progression>.22)reasons.push(side==='HIGH'?'High / Low / Close ยกขึ้นต่อเนื่อง':'High / Low / Close ลดลงต่อเนื่อง');
+   if(sd*closeBias>.22)reasons.push(side==='HIGH'?'หลายแท่งปิดใกล้ด้านบนของช่วงราคา':'หลายแท่งปิดใกล้ด้านล่างของช่วงราคา');
+   if(sd*bodyBias>.20)reasons.push('Body หลายแท่งยังเดินไปทางเดียวกัน');
+   if(sd*breakout>.45)reasons.push(side==='HIGH'?'ทะลุกรอบแท่งก่อนและยังปิดค้างเหนือได้':'หลุดกรอบแท่งก่อนและยังปิดค้างใต้ได้');
+   if(cleanliness>.55&&sd*(progression+bodyBias)>.20)reasons.push('แท่งซ้อนกันน้อย การเดินราคาค่อนข้างสะอาด');
+   if(cur.dir===-dominant&&pullbackQuality>=.68)reasons.push('แท่งย่อสวนยังเล็กและโครงสร้างเดิมยังรับอยู่');
+   if(expansion===sd)reasons.push('เกิดการขยายตัวหลังช่วงแท่งหด');
+   if(bodyDecay>.48)warnings.push('Body หดลงต่อเนื่อง แรงเดิมเริ่มลด');
+   if(oppWick>.48)warnings.push(dominant>0?'ไส้บนเริ่มเด่น มีแรงขายกดจากด้านบน':'ไส้ล่างเริ่มเด่น มีแรงซื้อรับจากด้านล่าง');
+   if(failedContinuation>=.7)warnings.push('มีอาการไปต่อไม่สำเร็จหลังทดสอบปลายราคา');
+   if(overlap>.68)warnings.push('แท่งซ้อนกันมาก ตลาดยังแกว่งและมี noise สูง');
+   if(reversalPressure>.58)warnings.push('แรงแท่งสวนเริ่มก่อตัว ต้องระวังการกลับทิศ');
+   if(cur.dir===-dominant&&pullbackQuality<.45)warnings.push('แท่งสวนมีขนาด/ความลึกมากกว่าการย่อปกติ');
+   let label='แท่งยังขัดกัน';
+   if(direction==='HIGH')label=exhaustion>.55?'ยังเอนขึ้น แต่แรงเริ่มอ่อน':'แรงแท่งเอนขึ้น';
+   else if(direction==='LOW')label=exhaustion>.55?'ยังเอนลง แต่แรงเริ่มอ่อน':'แรงแท่งเอนลง';
+   else if(exhaustion>.62)label='แรงเดิมเริ่มหมด · รอแท่งยืนยัน';
+   else if(reversalPressure>.58)label='เริ่มมีแรงกลับตัว · ยังไม่ชัดพอ';
+   return {
+    available:true,direction,confidence,score,label,reasons:reasons.slice(0,4),warnings:warnings.slice(0,4),
+    metrics:{continuation,exhaustion,reversalPressure,progression,bodyBias,closeBias,wickBias,overlap,cleanliness,breakout,pullbackQuality,bodyDecay,failedContinuation,relVol},
+    snapshot:{bars:m.map(x=>({time:x.time,open:x.open,high:x.high,low:x.low,close:x.close,volume:x.volume,bodyAtr:x.bodyAtr,closeLocation:x.closeLocation,upperWick:x.upperWick,lowerWick:x.lowerWick})),atr}
+   };
+  }
+  function candleStats(){
+   const done=candleState.signals.filter(s=>['correct','incorrect'].includes(s.result)),wins=done.filter(s=>s.result==='correct').length,losses=done.length-wins;
+   return {done,wins,losses,rate:done.length?wins/done.length:null};
+  }
+  function candlePending(){
+   return [...candleState.signals].reverse().find(s=>s.result==='pending')||null;
+  }
+  function candleMaybeIssue(view,ts,price){
+   if(!view?.available||!['HIGH','LOW'].includes(view.direction)||view.confidence<64||candlePending())return null;
+   const now=ts,signal={
+    id:'CANDLE-'+now+'-'+view.direction,engine:'candle-behavior',version:CANDLE_VERSION,
+    entryTime:now,targetTime:now+600000,entryPrice:price,direction:view.direction,
+    confidence:view.confidence,score:view.score,label:view.label,result:'pending',
+    snapshot:{metrics:view.metrics,reasons:view.reasons,warnings:view.warnings,bars:view.snapshot?.bars,atr:view.snapshot?.atr}
+   };
+   candleState.signals.push(signal);if(candleState.signals.length>500)candleState.signals.splice(0,candleState.signals.length-500);
+   candleState.lastIssuedAt=now;candlePersist();return signal;
+  }
+  function candleSettle(ts,price){
+   let changed=false;
+   for(const s of candleState.signals){
+    if(s.result!=='pending'||ts<s.targetTime)continue;
+    const delay=ts-s.targetTime;
+    if(delay>90000){s.result='missing';s.settledAt=ts;changed=true;continue;}
+    s.exitPrice=price;s.settledAt=ts;
+    const delta=price-s.entryPrice;
+    s.result=Math.abs(delta)<1e-9?'equal':((s.direction==='HIGH'&&delta>0)||(s.direction==='LOW'&&delta<0))?'correct':'incorrect';
+    s.movePoints=s.direction==='HIGH'?delta:-delta;changed=true;
+   }
+   if(changed)candlePersist();
+   return changed;
+  }
+  function candleMetricText(v){
+   return !Number.isFinite(v)?'—':candleLevel(v);
+  }
+  function renderCandleBehavior(view){
+   const card=$('candle-signal-card'),stateEl=$('candle-state');
+   if(!card||!stateEl)return;
+   card.classList.remove('high','low','wait');stateEl.className='candle-state wait';
+   if(!view?.available){
+    card.classList.add('wait');stateEl.textContent='WAIT';
+    $('candle-direction').textContent='รอข้อมูล';
+    $('candle-confidence').textContent='—';
+    $('candle-summary').textContent=view?.reason||'รอข้อมูล Futures สด';
+    for(const id of ['candle-continuation','candle-exhaustion','candle-reversal'])$(id).textContent='—';
+    const ul=$('candle-reason-list');ul.replaceChildren();const li=document.createElement('li');li.textContent=view?.reason||'รอแท่ง Futures 1 นาที';ul.append(li);
+   }else{
+    const cls=view.direction==='HIGH'?'high':view.direction==='LOW'?'low':'wait';
+    card.classList.add(cls);stateEl.className='candle-state '+cls;stateEl.textContent=view.direction;
+    $('candle-direction').textContent=view.direction==='WAIT'?'รอก่อน':directionThai(view.direction);
+    $('candle-confidence').textContent=view.confidence+'%';
+    $('candle-summary').textContent=view.label+' · อ่านจากพฤติกรรม OHLCV หลายแท่ง ไม่ใช้ผลจากสัญญาณหลัก';
+    $('candle-continuation').textContent=candleMetricText(view.metrics.continuation);
+    $('candle-exhaustion').textContent=candleMetricText(view.metrics.exhaustion);
+    $('candle-reversal').textContent=candleMetricText(view.metrics.reversalPressure);
+    const ul=$('candle-reason-list');ul.replaceChildren();
+    const rows=[...view.reasons.slice(0,2),...view.warnings.slice(0,2).map(x=>'ระวัง: '+x)];
+    for(const text of (rows.length?rows:['แท่งยังไม่มีพฤติกรรมเด่นพอ'])){const li=document.createElement('li');li.textContent=text;ul.append(li);}
+   }
+   const pending=candlePending(),latest=candleState.signals.at(-1),lock=$('candle-lock');
+   if(pending){
+    lock.classList.add('active');
+    const remain=Math.max(0,pending.targetTime-(state.quote?.ts||0)*1000);
+    $('candle-lock-title').textContent='CANDLE '+directionThai(pending.direction)+' · ล็อก '+money(pending.entryPrice);
+    $('candle-lock-meta').textContent='ความชัด '+pending.confidence+'% · ตัดสินเวลา '+clockMs(pending.targetTime)+' · เหลือ '+Math.ceil(remain/60000)+' นาที';
+   }else if(latest){
+    lock.classList.remove('active');
+    $('candle-lock-title').textContent='ล่าสุด '+directionThai(latest.direction)+' · '+resultThai(latest.result);
+    $('candle-lock-meta').textContent='เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → ตัดสิน '+money(latest.exitPrice):'')+' · '+clockMs(latest.entryTime);
+   }else{
+    lock.classList.remove('active');
+    $('candle-lock-title').textContent='ยังไม่มีสัญญาณล็อก';
+    $('candle-lock-meta').textContent='จะล็อกเมื่อความชัดถึงเกณฑ์ และมีได้ทีละ 1 ไม้เพื่อไม่ให้ผลทับกัน';
+   }
+   const st=candleStats();
+   $('candle-stats').textContent=st.done.length
+    ?'Candle Engine '+st.done.length+' ไม้ · '+st.wins+' ชนะ / '+st.losses+' แพ้ · '+(st.rate*100).toFixed(1)+'%'
+    :'Candle Engine · ยังไม่มีผลที่จบครบ 10 นาที';
+  }
+
   function setupFeedHealth(){
    const q=state.quote,age=q?(Date.now()-q.ts*1000)/1000:Infinity;
    const closed=(state.bars['1m']||[]).filter(b=>b.closed).length;
@@ -1937,18 +2157,34 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
 
   function renderCompactSetupProfile(){
-   const target=$('setup-profile-compact'),source=$('setup-profile-panel');
-   if(!target||!source)return;
-
-   target.classList.toggle('side-high',source.classList.contains('side-high'));
-   target.classList.toggle('side-low',source.classList.contains('side-low'));
-
-   const profileName=$('setup-profile-name')?.textContent||'กำลังอ่านตลาด';
-   const profileDesc=$('setup-profile-desc')?.textContent||'รอข้อมูลตลาดสด';
-   const profileStatus=$('setup-profile-status')?.textContent||'รอข้อมูล';
-   $('setup-compact-name').textContent=profileName;
-   $('setup-compact-desc').textContent=profileDesc;
-   $('setup-compact-status').textContent=profileStatus;
+   const target=$('setup-profile-compact');if(!target)return;
+   const main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
+   const mainDir=main&&['HIGH','LOW'].includes(main.direction)?main.direction:null;
+   const candleDir=candle&&['HIGH','LOW'].includes(candle.direction)?candle.direction:null;
+   target.classList.remove('side-high','side-low','side-conflict');
+   let title='กำลังอ่านตลาด',status='รอข้อมูล',desc='รอข้อมูล Futures สด';
+   if(mainDir&&candleDir&&mainDir===candleDir){
+    title='สองระบบเห็นตรงกัน · '+directionThai(mainDir);
+    status='เห็นตรงกัน';desc='สัญญาณหลักเอน '+directionThai(mainDir)+' และพฤติกรรมแท่งเทียนยืนยันทางเดียวกัน';
+    target.classList.add(mainDir==='HIGH'?'side-high':'side-low');
+   }else if(mainDir&&candleDir&&mainDir!==candleDir){
+    title='สัญญาณขัดกัน · หลัก '+directionThai(mainDir)+' / แท่ง '+directionThai(candleDir);
+    status='ขัดกัน';desc='ระบบหลักกับ Candle Behavior มองคนละทาง · ใช้เป็นเหตุผลให้รอหลักฐานเพิ่ม';
+    target.classList.add('side-conflict');
+   }else if(mainDir&&candle){
+    title='สัญญาณหลัก '+directionThai(mainDir)+' · แท่งเทียนยังรอ';
+    status='แท่งยัง WAIT';desc='ภาพหลักมีทิศ แต่พฤติกรรมหลายแท่งยังไม่ชัดพอจะออกสัญญาณอิสระ';
+    target.classList.add(mainDir==='HIGH'?'side-high':'side-low');
+   }else if(candleDir){
+    title='Candle Behavior เอน '+directionThai(candleDir);
+    status='แท่งนำ';desc='ระบบหลักยังไม่มีทิศชัด แต่พฤติกรรมแท่งเทียนเริ่มให้สัญญาณ';
+    target.classList.add(candleDir==='HIGH'?'side-high':'side-low');
+   }else if(main){
+    title='ตลาดหลักยังสูสี · Candle ยังรอ';status='WAIT';desc='ทั้งสองระบบยังไม่มีฝั่งที่ชัดพอ';
+   }
+   $('setup-compact-name').textContent=title;
+   $('setup-compact-status').textContent=status;
+   $('setup-compact-desc').textContent=desc;
 
    const signalTitle=$('signal-title')?.textContent||'กำลังวิเคราะห์';
    const entryState=$('entry-state')?.textContent||'รอข้อมูลตลาด';
@@ -1956,25 +2192,29 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-compact-entry').textContent=signalTitle+(entryState&&entryState!==signalTitle?' · '+entryState:'');
    $('setup-compact-entry-reason').textContent=signalReason;
 
-   const copyList=(fromId,toId,max=3)=>{
-    const from=$(fromId),to=$(toId);if(!to)return;
-    to.replaceChildren();
-    const rows=[...(from?.querySelectorAll('li')||[])].map(li=>li.textContent.trim()).filter(Boolean).slice(0,max);
-    for(const text of (rows.length?rows:['ยังไม่มีข้อมูลเด่นในขณะนี้'])){
-     const li=document.createElement('li');li.textContent=text;to.append(li);
-    }
+   const toList=(id,rows,fallback)=>{
+    const ul=$(id);if(!ul)return;ul.replaceChildren();
+    for(const text of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=text;ul.append(li);}
    };
-   copyList('setup-support-list','setup-compact-support',3);
-   copyList('setup-warning-list','setup-compact-warning',3);
+   const mainSupports=[...($('setup-support-list')?.querySelectorAll('li')||[])].map(x=>x.textContent.trim()).filter(Boolean);
+   const mainWarnings=[...($('setup-warning-list')?.querySelectorAll('li')||[])].map(x=>x.textContent.trim()).filter(Boolean);
+   const supports=[];
+   if(mainDir&&candleDir&&mainDir===candleDir)supports.push('ระบบหลักและ Candle Behavior เห็นตรงกันฝั่ง'+directionThai(mainDir));
+   if(candle?.reasons?.length)supports.push(...candle.reasons.slice(0,2));
+   supports.push(...mainSupports.slice(0,1));
+   const warnings=[];
+   if(mainDir&&candleDir&&mainDir!==candleDir)warnings.push('สองระบบขัดกัน: หลัก '+directionThai(mainDir)+' แต่แท่ง '+directionThai(candleDir));
+   if(candle?.warnings?.length)warnings.push(...candle.warnings.slice(0,2));
+   warnings.push(...mainWarnings.slice(0,1));
+   toList('setup-compact-support',supports.slice(0,3),'ยังไม่มีแรงหนุนเด่น');
+   toList('setup-compact-warning',warnings.slice(0,3),'ยังไม่พบจุดเตือนเด่น');
 
    let next=signalReason;
-   if(signalTitle.includes('เข้าได้ตอนนี้'))next='มีจุดเข้าที่ผ่านเงื่อนไขแล้ว · ดูราคาล็อกและทิศที่ระบบออกก่อนตัดสินใจ';
-   else if(signalTitle.includes('จุดเข้าออกแล้ว'))next='สัญญาณถูกล็อกแล้ว · ระบบกำลังติดตามผลจนครบ 10 นาที';
-   else if(signalTitle.includes('กำลังยืนยัน'))next='รอหลักฐานยืนยันเพิ่มก่อนออกไม้';
-   else if(signalTitle.includes('เฝ้าดู'))next='เฝ้าดูว่าท่าปัจจุบันจะผ่านเงื่อนไขจุดเข้าหรือเสียรูปก่อน';
-   else if(signalTitle.includes('รอจุดเข้า'))next='รอให้ราคาและแรงตลาดเข้าตำแหน่งที่ระบบยอมรับก่อน';
-   else if(signalTitle.includes('พักสัญญาณ'))next='รอข้อมูล Futures สดกลับมาครบก่อนประเมินจุดเข้าใหม่';
-   $('setup-compact-next').textContent=next||'ติดตามข้อมูลตลาดสดต่อ';
+   if(mainDir&&candleDir&&mainDir!==candleDir)next='รอให้สัญญาณหลักกับพฤติกรรมแท่งเริ่มสอดคล้องกัน หรือให้จุดเข้าหลักยืนยันชัดกว่านี้';
+   else if(mainDir&&candleDir&&mainDir===candleDir&&signalTitle.includes('รอ'))next='สองระบบเห็นตรงกันแล้ว แต่ยังรอจุดเข้าหลักผ่านเงื่อนไข';
+   else if(candle?.direction==='WAIT')next='รอแท่งใหม่ให้โครงสร้าง Body / Close / Wick ชัดขึ้น';
+   else if(signalTitle.includes('เข้าได้ตอนนี้'))next='จุดเข้าหลักผ่านแล้ว · ใช้ Candle Behavior เป็นข้อมูลประกอบก่อนตัดสินใจ';
+   $('setup-compact-next').textContent=next||'ติดตามตลาดสดต่อ';
   }
 
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
@@ -2000,7 +2240,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])),nfmt=(v,d=2)=>Number.isFinite(v)?Number(v).toFixed(d):'—';
   function candidateDataset(){const map=new Map(),out=[],signalVersions=new Map(engine.signals.map(s=>[s.id,s.version]));for(const a of engine.audit){const detected=a.type==='detected'||(!!a.candidate&&Number.isFinite(a.detectedAt)),issued=a.type==='issued'||(!a.candidate&&!!a.modelDirection&&!!a.direction&&!!a.episodeId);if(detected&&a.id){const r={id:a.id,version:a.version||signalVersions.get(a.id)||'6.5.0',detectedAt:a.detectedAt||a.time,type:a.setupType||a.candidate?.type||(a.type!=='detected'?a.type:null),direction:a.candidate?.modelDirection||a.direction,status:'detected',input:a.candidate||null};map.set(a.id,r);out.push(r);}else if(a.id&&map.has(a.id)){const r=map.get(a.id);if(issued){r.status='issued';r.issuedAt=a.time;r.outputDirection=a.direction;r.episodeId=a.episodeId;}else if(['cancelled','failed_break','invalidated'].includes(a.type)){r.status=a.type;r.endedAt=a.time;r.reason=a.reason||a.type;}}}return out.slice(-1500);}
-  function trainingBundle(){return {schema:DATASET_SCHEMA,exportedAt:new Date().toISOString(),symbol:SYMBOL,horizonMs:CFG.horizonMs,currentVersion:CFG.version,leakageRule:'Only dataset.entry and candidate.input are valid model inputs. dataset.path1m, dataset.context1m, dataset.outcome, result and review are future/label fields.',config:CFG,versionProfile:VERSION_PROFILE,versionSettings,signals:engine.signals,candidates:candidateDataset(),audit:engine.audit};}
+  function trainingBundle(){return {schema:DATASET_SCHEMA,exportedAt:new Date().toISOString(),symbol:SYMBOL,horizonMs:CFG.horizonMs,currentVersion:CFG.version,leakageRule:'Only dataset.entry and candidate.input are valid model inputs. dataset.path1m, dataset.context1m, dataset.outcome, result and review are future/label fields. candleBehavior signals are a separate experimental engine and must not be merged into main-signal labels.',config:CFG,versionProfile:VERSION_PROFILE,versionSettings,signals:engine.signals,candidates:candidateDataset(),audit:engine.audit,candleBehavior:{schema:'candle-behavior-v1',version:CANDLE_VERSION,independentFromMain:true,signals:candleState.signals}};}
   function downloadText(value,name,type){const blob=new Blob([value],{type}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),5000);}
   function exportHistory(){downloadText(JSON.stringify(trainingBundle(),null,2),'BTC-T10-training-'+Date.now()+'.json','application/json');}
   function csvValue(v){const s=Array.isArray(v)?v.join('|'):String(v??'');return '"'+s.replaceAll('"','""')+'"';}
@@ -2350,6 +2590,13 @@ function openReport(){
    const before=engine.audit.length;
    const v=engine.step({ts:q.ts*1000,id:q.id,price:q.price,bars:state.bars['1m'],five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh});if(state.historyFallback)v.reason='แสดงแท่ง Spot สำรองเท่านั้น — พักสัญญาณ Futures จนโหลด Futures ได้ครบ';lastView=v;
    const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});renderDirection(directionView);
+   if(force||now-state.lastCandleAt>=500){
+    state.lastCandleAt=now;
+    const candleView=candleBehaviorAssess(fresh);
+    state.candleView=candleView;
+    if(candleView.available)candleMaybeIssue(candleView,q.ts*1000,q.price);
+    renderCandleBehavior(candleView);
+   }
    if(v.f)engine.observeContext({ts:q.ts*1000,price:q.price,flow,coverage,book,bookValid:valid,regime:v.regime?.mode||null,phase:v.phase?.phase||null,trend:v.f.trend,momentum:v.f.mom,rangePosition:v.f.rangePosition,room:directionView.room});
    if(v.signal?.dataset?.entry){const liq=liquidationSnapshot(q.ts);v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};}
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
@@ -2358,6 +2605,7 @@ function openReport(){
    if(v.signal||profileNow-state.lastProfileAt>=750){
     state.lastProfileAt=profileNow;
     renderSetupProfile(v,directionView,{flow,book,bookValid:valid});
+    renderCandleBehavior(state.candleView);
     renderCompactSetupProfile();
     updateSetupHealth();
    }
@@ -2412,7 +2660,7 @@ function openReport(){
   function ingest(data){
     const e=data.e,nowSec=Date.now()/1000;
     if(e==='aggTrade'){
-      const price=+data.p,qty=+data.q,ts=Number(data.T)/1000;if(!(price>0&&qty>0))return;if(state.quote&&Number(data.a)<=state.quote.id)return;state.quote={price,ts,id:Number(data.a)};if(engine.settle({ts:ts*1000,price})) {persist(true);drawHistory();}
+      const price=+data.p,qty=+data.q,ts=Number(data.T)/1000;if(!(price>0&&qty>0))return;if(state.quote&&Number(data.a)<=state.quote.id)return;state.quote={price,ts,id:Number(data.a)};if(engine.settle({ts:ts*1000,price})) {persist(true);drawHistory();}if(candleSettle(ts*1000,price))renderCandleBehavior(state.candleView);
       const notional=price*qty,signed=data.m?-notional:notional;state.tradeTape.push({ts,signed,notional});const cutoff=ts-300;while(state.tradeTape.length&&state.tradeTape[0].ts<cutoff)state.tradeTape.shift();
       $('last-price').textContent=money(price);$('connection-time').textContent='ซื้อขายล่าสุด '+clockMs(Number(data.T));analyseNow();return;
     }
@@ -2480,7 +2728,7 @@ function openReport(){
     ws.onerror=()=>statusView('stale','WebSocket มีปัญหา กำลังเชื่อมต่อใหม่');
     ws.onclose=()=>{if(state.socket!==ws)return;state.booted=false;engine.reset('การเชื่อมต่อขาด',Date.now());$('strong-banner').hidden=true;$('signal-title').textContent='พักสัญญาณ';statusView('offline','การเชื่อมต่อขาด กำลังลองใหม่');const delay=Math.min(30000,1500*2**Math.min(state.reconnectCount++,4));state.reconnectTimer=setTimeout(connect,delay);};
   }
-  function statusView(s,msg=''){if(s!=='live')renderDirection({available:false,reason:msg||'กำลังเชื่อมต่อข้อมูลสด'});document.body.dataset.feed=s;$('mode').textContent=s==='live'?'● ข้อมูลจริง':'ข้อมูลจริง · '+({connecting:'กำลังเชื่อม',syncing:'กำลังโหลด',stale:'ข้อมูลล่าช้า',offline:'ขาดการเชื่อมต่อ'}[s]||s);$('connection-text').textContent=s==='live'?'เชื่อมต่อ Binance แล้ว':({connecting:'กำลังเชื่อม Binance',syncing:'กำลังโหลดแท่งเทียน',stale:'ข้อมูลล่าช้า',offline:'การเชื่อมต่อขาด'}[s]||s);$('feed-banner').hidden=s==='live';$('feed-banner').textContent=msg||'กำลังเชื่อมต่อข้อมูลตลาด';}
+  function statusView(s,msg=''){if(s!=='live'){renderDirection({available:false,reason:msg||'กำลังเชื่อมต่อข้อมูลสด'});state.candleView={available:false,direction:'WAIT',reason:msg||'รอข้อมูล Futures สด'};renderCandleBehavior(state.candleView);}document.body.dataset.feed=s;$('mode').textContent=s==='live'?'● ข้อมูลจริง':'ข้อมูลจริง · '+({connecting:'กำลังเชื่อม',syncing:'กำลังโหลด',stale:'ข้อมูลล่าช้า',offline:'ขาดการเชื่อมต่อ'}[s]||s);$('connection-text').textContent=s==='live'?'เชื่อมต่อ Binance แล้ว':({connecting:'กำลังเชื่อม Binance',syncing:'กำลังโหลดแท่งเทียน',stale:'ข้อมูลล่าช้า',offline:'การเชื่อมต่อขาด'}[s]||s);$('feed-banner').hidden=s==='live';$('feed-banner').textContent=msg||'กำลังเชื่อมต่อข้อมูลตลาด';}
 
   function makeChart(){
     const L=window.LightweightCharts;if(!L)throw new Error('โหลดไลบรารีกราฟไม่สำเร็จ');
@@ -2617,12 +2865,14 @@ function openReport(){
   setInterval(()=>{if(!document.hidden&&state.lastMessageAt&&Date.now()-state.lastMessageAt>12000){statusView('stale','ไม่ได้รับข้อมูลใหม่เกิน 12 วินาที กำลังเชื่อมต่อใหม่');connect();}},3000);
   setInterval(()=>fallbackPoll(),2500);
   setInterval(()=>{updateSetupHealth();analyseNow(true);},1500);
-  if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,ingest,analyseNow};
+  if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,candleState,candleBehaviorAssess,candleMaybeIssue,candleSettle,ingest,analyseNow};
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
+  $('main-version-inline').textContent=CFG.version;
+  state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
-  setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();},1000);
-  window.addEventListener('pagehide',()=>persist(true));
+  setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);},1000);
+  window.addEventListener('pagehide',()=>{persist(true);candlePersist();});
 })();
 
 
