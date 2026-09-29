@@ -1463,6 +1463,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 
   const state = {
     bars: {'1m': [], '5m': [], '10m': [], '15m': [], '1h': [], '4h': [], '1d': [], '1w': []},
+    barSource: {},
     quote: null,
     tradeTape: [],
     liquidationTape: [],
@@ -1650,7 +1651,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 
   /* Read-only T+10 candle observation study. Never saved as real issued trades. */
   function setupShadowHistory(){
-   if(state.historyFallback)return [];
+   if(analysisUsesSpot(state.analysisTf))return [];
    const tf=state.analysisTf,seconds=TF_SECONDS[tf]||60,ahead=ANALYSIS_HORIZON_BARS[tf]||1;
    const bars=(state.bars[tf]||[]).filter(b=>b.closed).slice(-350);
    if(bars.length<45+ahead)return [];
@@ -1727,7 +1728,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    return null;
   }
   function setupLiveSnapshot(v,directionView,micro={},side='HIGH'){
-   if(state.historyFallback||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
+   if(analysisUsesSpot(state.analysisTf)||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
    const e=v.event,f=v.f,ph=v.phase;
    const nowMs=state.quote.ts*1000,aEngine=analysisEngine(state.analysisTf),recentWindow=Math.max(180000,Math.min(900000,analysisHorizonMs(state.analysisTf)));
    const recentIssued=[...aEngine.signals].reverse().find(s=>s.version===CFG.version&&s.direction===side&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=recentWindow);
@@ -1785,7 +1786,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     meanSimilarity:selected.length?selected.reduce((a,x)=>a+x.score,0)/selected.length:null};
   }
   function setupPickLive(v,directionView,micro={}){
-   if(state.historyFallback||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
+   if(analysisUsesSpot(state.analysisTf)||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
    const snaps={HIGH:setupLiveSnapshot(v,directionView,micro,'HIGH'),LOW:setupLiveSnapshot(v,directionView,micro,'LOW')};
    const primary=state.analysisTf==='1m',own=primary?setupDoneSignals():[],previous=primary&&CFG.version!=='7.1.0'?setupDoneSignals('7.1.0'):[];
    const ownEnough=['HIGH','LOW'].every(d=>own.filter(s=>s.direction===d).length>=3);
@@ -1976,7 +1977,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    return v>=.68?'สูง':v>=.42?'กลาง':'ต่ำ';
   }
   function candleBehaviorAssess(fresh=true,tf=state.analysisTf){
-   if(!fresh||state.historyFallback||!state.quote)return {available:false,direction:'WAIT',reason:'รอข้อมูล Futures สด'};
+   if(!fresh||analysisUsesSpot(tf)||!state.quote)return {available:false,direction:'WAIT',reason:analysisUsesSpot(tf)?'แท่ง '+tf+' เป็น Spot สำรอง · รอ Futures จริง':'รอข้อมูล Futures สด',analysisTf:tf};
    const source=(state.bars[tf]||[]).slice(-32),seconds=TF_SECONDS[tf]||60,tfLabel=TF_LABELS[tf]||tf;
    const closed=source.filter(b=>b.closed);
    const atr=candleAtr(source);
@@ -2179,7 +2180,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function setupFeedHealth(){
    const q=state.quote,age=q?(Date.now()-q.ts*1000)/1000:Infinity,tf=state.analysisTf,label=TF_LABELS[tf]||tf;
    const closed=(state.bars[tf]||[]).filter(b=>b.closed).length;
-   if(state.historyFallback)return {kind:'warning',label:'Spot สำรอง · กำลังรอ Futures จริงเพื่อวิเคราะห์สด'};
+   if(analysisUsesSpot(tf))return {kind:'warning',label:'Spot สำรองของ '+tf+' · กำลังรอ Futures จริงเพื่อวิเคราะห์สด'};
    if(!q)return {kind:'warning',label:'รอราคา Binance Futures · '+label+' ปิดแล้ว '+closed+' แท่ง'};
    if(state.socket?.readyState!==1)return {kind:'warning',label:'Futures ขาดการเชื่อมต่อ · ราคาล่าสุด '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
    if(age>4||Date.now()-state.lastMessageAt>4500)
@@ -2782,7 +2783,7 @@ function openReport(){
    const fresh=data.fresh;
    const aEngine=analysisEngine(tf),before=aEngine.audit.length;
    const v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh,current});
-   if(state.historyFallback)v.reason='แสดงแท่ง Spot สำรองเท่านั้น — พักการประเมิน Futures จนโหลด Futures ได้ครบ';
+   if(data.sourceFallback)v.reason='แสดงแท่ง Spot สำรองของ '+tf+' เท่านั้น — พักการประเมินจนโหลด Futures ได้ครบ';
    lastView=v;
    const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});
    if(directionView?.available){
@@ -2832,6 +2833,7 @@ function openReport(){
         if(!r.ok)throw new Error(`HTTP ${r.status}`);
         const rows=await r.json();
         if(!Array.isArray(rows)||rows.length<30)throw new Error('ข้อมูลแท่งไม่ครบ');
+        state.barSource[interval]=src.name;
         if(interval==='1m')state.historyFallback=src.name!=='Futures';
         return rows.map(normalizeKline);
       }catch(err){lastError=err;console.warn('history source failed',src.name,interval,err);}
@@ -2851,6 +2853,7 @@ function openReport(){
    return '+'+Math.round(min/10080)+' สัปดาห์';
   };
   const analysisIsPrimary=()=>state.analysisTf==='1m';
+  const analysisUsesSpot=(tf=state.analysisTf)=>state.barSource?.[tf]==='Spot fallback'||(tf==='1m'&&state.historyFallback);
   function refreshAnalysisLabels(){
    const tf=state.analysisTf,label=TF_LABELS[tf]||tf,horizon=analysisHorizonLabel(tf),primary=tf==='1m';
    $('analysis-tf-active').textContent='ใช้อยู่ '+tf;
@@ -2889,6 +2892,7 @@ function openReport(){
      if(!res.ok)throw new Error('HTTP '+res.status);
      const rows=await res.json();
      if(!Array.isArray(rows)||rows.length<100)throw new Error('ข้อมูล 1 นาทีไม่พอ');
+     state.barSource['10m']=src.name;
      return aggregateBars(rows.map(normalizeKline),600).slice(-240);
     }catch(err){lastError=err;console.warn('10m source failed',src.name,err);}
    }
@@ -2929,8 +2933,9 @@ function openReport(){
    const bars=state.bars[tf]||[],seconds=TF_SECONDS[tf]||60,recent=bars.slice(-36);
    const continuous=recent.length>=35&&recent.every((b,i)=>i===0||b.time-recent[i-1].time===seconds);
    const current=bars.at(-1),q=state.quote;
-   const fresh=!state.historyFallback&&!document.hidden&&state.socket?.readyState===1&&q&&Date.now()-q.ts*1000<3000&&Date.now()-state.lastMessageAt<3000&&continuous&&current&&q.ts-current.time<(tf==='1m'?75:seconds+75);
-   return {bars,current:analysisCurrentBar(tf),continuous,fresh,seconds};
+   const sourceFallback=analysisUsesSpot(tf);
+   const fresh=!sourceFallback&&!document.hidden&&state.socket?.readyState===1&&q&&Date.now()-q.ts*1000<3000&&Date.now()-state.lastMessageAt<3000&&continuous&&current&&q.ts-current.time<(tf==='1m'?75:seconds+75);
+   return {bars,current:analysisCurrentBar(tf),continuous,fresh,seconds,sourceFallback};
   }
   function tfHumanText(value){
    const label=TF_LABELS[state.analysisTf]||state.analysisTf;
