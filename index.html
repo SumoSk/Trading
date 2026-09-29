@@ -2180,7 +2180,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function setupFeedHealth(){
    const q=state.quote,age=q?(Date.now()-q.ts*1000)/1000:Infinity,tf=state.analysisTf,label=TF_LABELS[tf]||tf;
    const closed=(state.bars[tf]||[]).filter(b=>b.closed).length;
-   if(analysisUsesSpot(tf))return {kind:'warning',label:'Spot สำรองของ '+tf+' · กำลังรอ Futures จริงเพื่อวิเคราะห์สด'};
+   if(analysisSource(tf)==='Spot fallback')return {kind:'warning',label:'Spot สำรองของ '+tf+' · กำลังรอ Futures จริงเพื่อวิเคราะห์สด'};
+   if(analysisSource(tf)!=='Futures')return {kind:'warning',label:'ข้อมูล Futures '+tf+' ยังไม่พร้อม · พักการวิเคราะห์'};
    if(!q)return {kind:'warning',label:'รอราคา Binance Futures · '+label+' ปิดแล้ว '+closed+' แท่ง'};
    if(state.socket?.readyState!==1)return {kind:'warning',label:'Futures ขาดการเชื่อมต่อ · ราคาล่าสุด '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
    if(age>4||Date.now()-state.lastMessageAt>4500)
@@ -2855,7 +2856,8 @@ function openReport(){
    return '+'+Math.round(min/10080)+' สัปดาห์';
   };
   const analysisIsPrimary=()=>state.analysisTf==='1m';
-  const analysisUsesSpot=(tf=state.analysisTf)=>state.barSource?.[tf]==='Spot fallback'||(tf==='1m'&&state.historyFallback);
+  const analysisSource=(tf=state.analysisTf)=>tf==='1m'?(state.historyFallback?'Spot fallback':'Futures'):(state.barSource?.[tf]||'Unavailable');
+  const analysisUsesSpot=(tf=state.analysisTf)=>analysisSource(tf)!=='Futures';
   function refreshAnalysisLabels(){
    const tf=state.analysisTf,label=TF_LABELS[tf]||tf,horizon=analysisHorizonLabel(tf),primary=tf==='1m';
    $('analysis-tf-active').textContent='ใช้อยู่ '+tf;
@@ -3024,6 +3026,7 @@ function openReport(){
        try{
         await ensureTimeframe(state.analysisTf,true);
        }catch(tfErr){
+        state.barSource[state.analysisTf]='Unavailable';
         console.warn('ซิงก์ไทม์เฟรมวิเคราะห์ '+state.analysisTf+' ไม่สำเร็จ',tfErr);
        }
       }
