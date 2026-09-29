@@ -411,17 +411,20 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .candle-confidence{text-align:right}
 .candle-confidence b{font:700 20px/1 'Segoe UI',sans-serif;color:#dbe7f5}
 .candle-summary{font-size:8.5px;line-height:1.45;color:#9cafc5;margin:0 0 6px}
-.candle-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.candle-metrics>div{padding:5px 6px;border:1px solid #24344a;border-radius:6px;background:#0b141f}
-.candle-metrics span{display:block;font-size:7px;color:#71869f;margin-bottom:2px}
-.candle-metrics b{font-size:9px;color:#c3d0df}
-.candle-reasons{margin-top:6px;padding:6px 7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
-.candle-reasons>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:4px}
-.candle-reasons ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
-.candle-reasons li{position:relative;padding-left:9px;font-size:8px;line-height:1.35;color:#aebed0}
-.candle-reasons li:before{content:'';position:absolute;left:0;top:.5em;width:4px;height:4px;border-radius:50%;background:#657991}
-.signal-card-candle.high .candle-reasons li:first-child:before{background:#58cda8}
-.signal-card-candle.low .candle-reasons li:first-child:before{background:#e06f89}
+.candle-patterns{margin-top:2px;padding:7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
+.candle-patterns>span,.candle-reading>span,.candle-change>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:5px}
+.candle-pattern-list{display:flex;flex-wrap:wrap;gap:4px}
+.candle-pattern{display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border:1px solid #33445b;border-radius:999px;background:#111d2b;color:#b7c5d6;font-size:8px;line-height:1.2}
+.candle-pattern.bull{border-color:#2d765f;background:#10251f;color:#66d8b7}
+.candle-pattern.bear{border-color:#834154;background:#2a1821;color:#ef8da2}
+.candle-pattern.neutral{border-color:#53627a;color:#b8c6d8}
+.candle-pattern.empty{opacity:.75}
+.candle-reading,.candle-change{margin-top:6px;padding:7px 8px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
+.candle-reading p,.candle-change p{margin:0;font-size:8.5px;line-height:1.5;color:#b8c7d9}
+.candle-reading p{color:#c7d5e5}
+.candle-change p{color:#9fb1c6}
+.signal-card-candle.high .candle-reading{border-color:#285d4f}
+.signal-card-candle.low .candle-reading{border-color:#663747}
 .candle-lock{margin-top:6px;padding:6px 7px;border-top:1px solid #24344a}
 .candle-lock>span{display:block;font-size:7px;color:#70849d;margin-bottom:2px}
 .candle-lock b{display:block;font-size:9px;color:#c5d2e2}
@@ -508,7 +511,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 
   <section class="signal-card signal-card-candle wait" id="candle-signal-card" aria-live="polite">
     <div class="candle-card-head">
-      <div><span class="candle-kicker">CANDLE BEHAVIOR v0.1 · ทดลองอิสระ</span><h3>พฤติกรรมแท่งเทียน · +10 นาที</h3></div>
+      <div><span class="candle-kicker">CANDLE BEHAVIOR v0.2 · ทดลองอิสระ</span><h3>พฤติกรรมแท่งเทียน · +10 นาที</h3></div>
       <span class="candle-state wait" id="candle-state">WAIT</span>
     </div>
 
@@ -522,15 +525,19 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 
     <p class="candle-summary" id="candle-summary">อ่านพฤติกรรมหลายแท่งจาก OHLCV 1 นาที โดยไม่ใช้คำตอบจาก V7.1.1</p>
 
-    <div class="candle-metrics">
-      <div><span>ไปต่อ</span><b id="candle-continuation">—</b></div>
-      <div><span>หมดแรง</span><b id="candle-exhaustion">—</b></div>
-      <div><span>แรงกลับตัว</span><b id="candle-reversal">—</b></div>
+    <div class="candle-patterns">
+      <span>พบอะไรตอนนี้</span>
+      <div class="candle-pattern-list" id="candle-pattern-list"><span class="candle-pattern empty">รอแท่ง Futures 1 นาที</span></div>
     </div>
 
-    <div class="candle-reasons">
-      <span>สิ่งที่แท่งกำลังบอก</span>
-      <ul id="candle-reason-list"><li>รอแท่ง Futures 1 นาที</li></ul>
+    <div class="candle-reading">
+      <span>แปลว่า</span>
+      <p id="candle-meaning">กำลังรอข้อมูลแท่งเทียน</p>
+    </div>
+
+    <div class="candle-change">
+      <span>อะไรจะทำให้มุมมองเปลี่ยน</span>
+      <p id="candle-change-text">รอให้มีแพตเทิร์นที่ชัดก่อน</p>
     </div>
 
     <div class="candle-lock" id="candle-lock">
@@ -1541,7 +1548,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   let versionSettings=rememberVersionSettings();
   let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;}
   const engine=new Engine(saved);let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null;
-  const CANDLE_VERSION='0.1.0',CANDLE_STORE='btc-candle-behavior-v1';
+  const CANDLE_VERSION='0.2.0',CANDLE_STORE='btc-candle-behavior-v1';
   let candleSaved={};try{candleSaved=JSON.parse(localStorage.getItem(CANDLE_STORE)||'{}')||{};}catch{}
   const candleState={
    version:CANDLE_VERSION,
@@ -1822,6 +1829,123 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     lowerWick:clip((Math.min(b.open,b.close)-b.low)/range,0,1)
    };
   }
+  function candlePatternRead(metrics,atr){
+   const closed=metrics.filter(x=>x.closed!==false),patterns=[];
+   if(closed.length<2)return {patterns,meaning:'รอแท่งปิดเพิ่มเพื่อเรียกชื่อแพตเทิร์น',change:'รอแท่ง 1 นาทีปิดเพิ่ม'};
+   const a=closed.at(-1),b=closed.at(-2),d=closed.at(-3),e=closed.at(-4);
+   const bodyRatio=x=>Math.abs(x.close-x.open)/Math.max(x.high-x.low,1e-9);
+   const bodyHigh=x=>Math.max(x.open,x.close),bodyLow=x=>Math.min(x.open,x.close);
+   const push=(name,bias,priority,meaning,change)=>patterns.push({name,bias,priority,meaning,change});
+   const recentTrend=closed.slice(-5,-1).reduce((s,x)=>s+(x.close-x.open),0);
+   const trendSign=Math.sign(recentTrend);
+
+   // One-candle shapes: use the most recently CLOSED candle so the label is stable during the next minute.
+   const br=bodyRatio(a);
+   if(br<=.12&&a.rangeAtr>=.16)push('Doji',0,82,'แรงซื้อกับแรงขายสูสีกัน แท่งล่าสุดปิดใกล้ราคาเปิด',
+     'ถ้าแท่งถัดไปปิดพ้น High/Low ของ Doji ชัด ๆ จะช่วยเลือกทิศ');
+   else if(br<=.30&&a.upperWick>=.22&&a.lowerWick>=.22)push('Spinning Top',0,58,'ตลาดลังเลและมีแรงสวนทั้งสองด้าน',
+     'รอแท่งถัดไปปิดพ้นกรอบของ Spinning Top');
+
+   if(a.lowerWick>=.52&&a.upperWick<=.20&&br<=.40){
+    if(trendSign<0)push('Hammer',1,90,'หลังลงมา มีแรงซื้อดันกลับจากด้านล่างอย่างชัดเจน',
+      'ถ้าแท่งถัดไปปิดเหนือ High ของ Hammer จะยืนยันเด้งมากขึ้น; ถ้าหลุด Low รูปแบบเสีย');
+    else push('ไส้ล่างยาว',1,62,'มีแรงซื้อรับกลับจากราคาด้านล่าง',
+      'ถ้าหลุด Low ของแท่งนี้ แรงรับถือว่าล้มเหลว');
+   }
+   if(a.upperWick>=.52&&a.lowerWick<=.20&&br<=.40){
+    if(trendSign>0)push('Shooting Star',-1,90,'หลังขึ้นมา มีแรงขายกดกลับจากด้านบนอย่างชัดเจน',
+      'ถ้าแท่งถัดไปปิดต่ำกว่า Low ของ Shooting Star จะยืนยันแรงลงมากขึ้น; ถ้าทะลุ High รูปแบบเสีย');
+    else push('Inverted Hammer',1,68,'หลังลงมา ราคาเริ่มถูกดันขึ้น แต่ยังถูกขายกดกลับบางส่วน',
+      'ถ้าแท่งถัดไปปิดเหนือ High จะเพิ่มน้ำหนักการเด้ง; ถ้าหลุด Low รูปแบบเสีย');
+   }
+   if(br>=.78&&a.upperWick<=.12&&a.lowerWick<=.12){
+    push(a.dir>0?'Bullish Marubozu':'Bearish Marubozu',a.dir>0?1:-1,78,
+      a.dir>0?'แท่งเขียวยาวปิดใกล้ยอด แรงซื้อคุมแท่งเกือบทั้งหมด':'แท่งแดงยาวปิดใกล้ฐาน แรงขายคุมแท่งเกือบทั้งหมด',
+      a.dir>0?'ถ้าแท่งถัดไปปิดกลับต่ำกว่าครึ่งแท่งนี้ แรง HIGH จะอ่อนลง':'ถ้าแท่งถัดไปปิดกลับสูงกว่าครึ่งแท่งนี้ แรง LOW จะอ่อนลง');
+   }
+
+   // Two-candle patterns.
+   const bullEngulf=a.dir>0&&b.dir<0&&bodyLow(a)<=bodyLow(b)&&bodyHigh(a)>=bodyHigh(b)&&Math.abs(a.close-a.open)>=Math.abs(b.close-b.open)*1.02;
+   const bearEngulf=a.dir<0&&b.dir>0&&bodyLow(a)<=bodyLow(b)&&bodyHigh(a)>=bodyHigh(b)&&Math.abs(a.close-a.open)>=Math.abs(b.close-b.open)*1.02;
+   if(bullEngulf)push('Bullish Engulfing',1,94,'แท่งเขียวล่าสุดกิน Body แดงก่อนหน้า แสดงแรงซื้อแย่งจังหวะกลับมา',
+     'ถ้าราคาหลุด Low ของ Engulfing น้ำหนักกลับขึ้นจะเสีย');
+   if(bearEngulf)push('Bearish Engulfing',-1,94,'แท่งแดงล่าสุดกิน Body เขียวก่อนหน้า แสดงแรงขายแย่งจังหวะกลับมา',
+     'ถ้าราคาทะลุ High ของ Engulfing น้ำหนักกลับลงจะเสีย');
+   if(a.high<b.high&&a.low>b.low)push('Inside Bar',0,54,'แท่งล่าสุดถูกบีบอยู่ในกรอบแท่งก่อน ตลาดกำลังพักและรอเลือกทาง',
+     'รอปิดพ้น High หรือ Low ของ Mother Bar ก่อนให้น้ำหนักเพิ่ม');
+   if(a.high>b.high&&a.low<b.low)push('Outside Bar',a.dir>0?1:-1,60,'ช่วงราคาขยายกินกรอบแท่งก่อนทั้งด้านบนและล่าง มีการแย่งทางแรง',
+     a.dir>0?'ถ้าปิดยืนเหนือครึ่งบนของ Outside Bar ได้ ฝั่งขึ้นได้เปรียบกว่า':'ถ้าปิดยืนใต้ครึ่งล่างของ Outside Bar ได้ ฝั่งลงได้เปรียบกว่า');
+   if(Math.abs(a.high-b.high)<=atr*.07&&a.dir<0&&b.dir>0)push('Tweezer Top',-1,74,'สองแท่งถูกขายจากยอดราคาใกล้กัน เป็นแนวต้านระยะสั้น',
+     'ถ้าทะลุยอดร่วมของสองแท่งได้ รูปแบบกลับลงจะเสีย');
+   if(Math.abs(a.low-b.low)<=atr*.07&&a.dir>0&&b.dir<0)push('Tweezer Bottom',1,74,'สองแท่งถูกซื้อรับจากฐานราคาใกล้กัน เป็นแนวรับระยะสั้น',
+     'ถ้าหลุดฐานร่วมของสองแท่งได้ รูปแบบเด้งจะเสีย');
+
+   // Three-candle formations and plain consecutive-bar behavior.
+   if(d){
+    const three=[d,b,a];
+    const green3=three.every(x=>x.dir>0),red3=three.every(x=>x.dir<0);
+    if(green3&&three[1].close>three[0].close&&three[2].close>three[1].close){
+     const clean=three.every(x=>x.bodyAtr>=.16&&x.closeLocation>=.62);
+     push(clean?'Three White Soldiers':'เขียว 3 แท่งติด',1,clean?88:72,
+       clean?'แท่งเขียว 3 แท่งเดินหน้าต่อเนื่องและปิดแข็ง แรงซื้อคุมจังหวะ':'ราคาปิดสูงขึ้น 3 แท่งติด ฝั่งซื้อยังเดินหน้าต่อ',
+       'ถ้าเกิดแท่งแดงใหญ่กิน Body แท่งล่าสุดเกินครึ่ง น้ำหนัก HIGH จะลดลง');
+    }
+    if(red3&&three[1].close<three[0].close&&three[2].close<three[1].close){
+     const clean=three.every(x=>x.bodyAtr>=.16&&x.closeLocation<=.38);
+     push(clean?'Three Black Crows':'แดง 3 แท่งติด',-1,clean?88:72,
+       clean?'แท่งแดง 3 แท่งเดินลงต่อเนื่องและปิดอ่อน แรงขายคุมจังหวะ':'ราคาปิดต่ำลง 3 แท่งติด ฝั่งขายยังเดินหน้าต่อ',
+       'ถ้าเกิดแท่งเขียวใหญ่กิน Body แท่งล่าสุดเกินครึ่ง น้ำหนัก LOW จะลดลง');
+    }
+    const firstBody=Math.abs(d.close-d.open),midBody=Math.abs(b.close-b.open),lastBody=Math.abs(a.close-a.open);
+    if(d.dir<0&&firstBody>=atr*.28&&midBody<=firstBody*.45&&a.dir>0&&lastBody>=atr*.25&&a.close>=(d.open+d.close)/2)
+     push('Morning Star',1,92,'แรงขายชะลอผ่านแท่งกลางเล็ก แล้วแท่งเขียวกลับมากินพื้นที่ของแท่งแดงแรก',
+       'ถ้าหลุด Low ของชุด 3 แท่ง รูปแบบกลับขึ้นจะเสีย');
+    if(d.dir>0&&firstBody>=atr*.28&&midBody<=firstBody*.45&&a.dir<0&&lastBody>=atr*.25&&a.close<=(d.open+d.close)/2)
+     push('Evening Star',-1,92,'แรงซื้อชะลอผ่านแท่งกลางเล็ก แล้วแท่งแดงกลับมากินพื้นที่ของแท่งเขียวแรก',
+       'ถ้าทะลุ High ของชุด 3 แท่ง รูปแบบกลับลงจะเสีย');
+
+    const bodies=three.map(x=>x.bodyAtr);
+    if(bodies[0]>bodies[1]&&bodies[1]>bodies[2]&&bodies[0]-bodies[2]>=.12)
+     push('Body หด 3 แท่งติด',-Math.sign(d.dir||recentTrend),76,'ขนาด Body เล็กลงต่อเนื่อง แรงของทิศเดิมกำลังแผ่ว',
+       'ถ้า Body แท่งใหม่กลับมาขยายและปิดไปทางเดิม อาการหมดแรงจะลดลง');
+    const upper=three.map(x=>x.upperWick),lower=three.map(x=>x.lowerWick);
+    if(upper[0]<upper[1]&&upper[1]<upper[2]&&upper[2]>=.28)
+     push('ไส้บนยาวขึ้น 3 แท่ง',-1,78,'ทุกครั้งที่ราคาขึ้นเริ่มถูกขายกดกลับแรงขึ้น',
+       'ถ้าแท่งใหม่ปิดใกล้ High โดยไส้บนสั้นลง แรงกดด้านบนจะลด');
+    if(lower[0]<lower[1]&&lower[1]<lower[2]&&lower[2]>=.28)
+     push('ไส้ล่างยาวขึ้น 3 แท่ง',1,78,'ทุกครั้งที่ราคาลงเริ่มมีแรงซื้อรับกลับแรงขึ้น',
+       'ถ้าแท่งใหม่ปิดใกล้ Low โดยไส้ล่างสั้นลง แรงรับด้านล่างจะลด');
+   }
+
+   if(e){
+    const four=[e,d,b,a];
+    if(four.every(x=>x.dir>0))push('เขียว 4 แท่งติด',1,70,'แรงซื้อเดินต่อหลายแท่ง ต้องดูว่ากำลังเร่งหรือเริ่มหมดแรง',
+      'ถ้า Body เริ่มหดและมีไส้บนยาว ให้ระวังปลายขา');
+    if(four.every(x=>x.dir<0))push('แดง 4 แท่งติด',-1,70,'แรงขายเดินต่อหลายแท่ง ต้องดูว่ากำลังเร่งหรือเริ่มหมดแรง',
+      'ถ้า Body เริ่มหดและมีไส้ล่างยาว ให้ระวังปลายขา');
+   }
+
+   // Price makes a new extreme but the close quality fails.
+   const before=closed.slice(-5,-1);
+   if(before.length){
+    const hh=Math.max(...before.map(x=>x.high)),ll=Math.min(...before.map(x=>x.low));
+    if(a.high>hh&&a.closeLocation<.48)push('High ใหม่แต่ปิดอ่อน',-1,84,'ราคาทำยอดใหม่ได้ แต่รักษาราคาใกล้ยอดไว้ไม่ได้ มีแรงขายสวน',
+      'ถ้าแท่งถัดไปกลับมาปิดเหนือ High นี้ได้ สัญญาณอ่อนแรงจะถูกล้าง');
+    if(a.low<ll&&a.closeLocation>.52)push('Low ใหม่แต่ถูกซื้อกลับ',1,84,'ราคาทำ Low ใหม่แต่ถูกดันกลับขึ้นจากฐาน มีแรงซื้อรับ',
+      'ถ้าแท่งถัดไปหลุด Low นี้อีกครั้ง สัญญาณรับกลับจะถูกล้าง');
+   }
+
+   patterns.sort((x,y)=>y.priority-x.priority);
+   const top=patterns[0]||null;
+   const biasScore=patterns.slice(0,4).reduce((s,p)=>s+p.bias*p.priority,0);
+   const bias=Math.sign(biasScore);
+   let meaning=top?.meaning||'ยังไม่พบแพตเทิร์นชื่อชัด แต่ระบบยังอ่านโครงสร้าง Body / Close / Wick ต่อเนื่องอยู่';
+   if(top&&patterns[1]&&top.bias&&patterns[1].bias===-top.bias&&patterns[1].priority>=top.priority-12)
+    meaning='พบสัญญาณแท่งขัดกัน: '+top.name+' แต่มี '+patterns[1].name+' สวนอยู่ จึงควรรอแท่งยืนยันเพิ่ม';
+   const change=top?.change||(bias>0?'ถ้าแท่งใหม่ปิดอ่อนลงหรือหลุด Low ล่าสุด น้ำหนักฝั่งขึ้นจะลด':
+     bias<0?'ถ้าแท่งใหม่ปิดแข็งขึ้นหรือทะลุ High ล่าสุด น้ำหนักฝั่งลงจะลด':'รอแท่งปิดพ้นกรอบล่าสุดเพื่อเลือกทิศ');
+   return {patterns:patterns.slice(0,5),bias,meaning,change};
+  }
   function candleLevel(v){
    return v>=.68?'สูง':v>=.42?'กลาง':'ต่ำ';
   }
@@ -1920,8 +2044,11 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    else if(direction==='LOW')label=exhaustion>.55?'ยังเอนลง แต่แรงเริ่มอ่อน':'แรงแท่งเอนลง';
    else if(exhaustion>.62)label='แรงเดิมเริ่มหมด · รอแท่งยืนยัน';
    else if(reversalPressure>.58)label='เริ่มมีแรงกลับตัว · ยังไม่ชัดพอ';
+   const patternRead=candlePatternRead(m,atr);
    return {
-    available:true,direction,confidence,score,label,reasons:reasons.slice(0,4),warnings:warnings.slice(0,4),
+    available:true,direction,confidence,score,label,
+    patterns:patternRead.patterns,patternBias:patternRead.bias,plainMeaning:patternRead.meaning,changeTrigger:patternRead.change,
+    reasons:reasons.slice(0,4),warnings:warnings.slice(0,4),
     metrics:{continuation,exhaustion,reversalPressure,progression,bodyBias,closeBias,wickBias,overlap,cleanliness,breakout,pullbackQuality,bodyDecay,failedContinuation,relVol},
     snapshot:{bars:m.map(x=>({time:x.time,open:x.open,high:x.high,low:x.low,close:x.close,volume:x.volume,bodyAtr:x.bodyAtr,closeLocation:x.closeLocation,upperWick:x.upperWick,lowerWick:x.lowerWick})),atr}
    };
@@ -1939,7 +2066,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     id:'CANDLE-'+now+'-'+view.direction,engine:'candle-behavior',version:CANDLE_VERSION,
     entryTime:now,targetTime:now+600000,entryPrice:price,direction:view.direction,
     confidence:view.confidence,score:view.score,label:view.label,result:'pending',
-    snapshot:{metrics:view.metrics,reasons:view.reasons,warnings:view.warnings,bars:view.snapshot?.bars,atr:view.snapshot?.atr}
+    snapshot:{metrics:view.metrics,patterns:view.patterns,plainMeaning:view.plainMeaning,changeTrigger:view.changeTrigger,reasons:view.reasons,warnings:view.warnings,bars:view.snapshot?.bars,atr:view.snapshot?.atr}
    };
    candleState.signals.push(signal);if(candleState.signals.length>500)candleState.signals.splice(0,candleState.signals.length-500);
    candleState.lastIssuedAt=now;candlePersist();return signal;
@@ -1958,47 +2085,55 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(changed)candlePersist();
    return changed;
   }
-  function candleMetricText(v){
-   return !Number.isFinite(v)?'—':candleLevel(v);
-  }
   function renderCandleBehavior(view){
    const card=$('candle-signal-card'),stateEl=$('candle-state');
    if(!card||!stateEl)return;
    card.classList.remove('high','low','wait');stateEl.className='candle-state wait';
+   const patternBox=$('candle-pattern-list');
+   const renderPatterns=(rows)=>{
+    patternBox.replaceChildren();
+    const list=rows?.length?rows:[{name:'ยังไม่พบแพตเทิร์นชื่อชัด',bias:0}];
+    for(const p of list.slice(0,4)){
+     const span=document.createElement('span');
+     span.className='candle-pattern '+(p.bias>0?'bull':p.bias<0?'bear':'neutral');
+     span.textContent=p.name;patternBox.append(span);
+    }
+   };
    if(!view?.available){
     card.classList.add('wait');stateEl.textContent='WAIT';
     $('candle-direction').textContent='รอข้อมูล';
     $('candle-confidence').textContent='—';
     $('candle-summary').textContent=view?.reason||'รอข้อมูล Futures สด';
-    for(const id of ['candle-continuation','candle-exhaustion','candle-reversal'])$(id).textContent='—';
-    const ul=$('candle-reason-list');ul.replaceChildren();const li=document.createElement('li');li.textContent=view?.reason||'รอแท่ง Futures 1 นาที';ul.append(li);
+    renderPatterns([]);
+    $('candle-meaning').textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';
+    $('candle-change-text').textContent='รอแท่ง Futures 1 นาทีที่ปิดครบก่อน';
    }else{
     const cls=view.direction==='HIGH'?'high':view.direction==='LOW'?'low':'wait';
     card.classList.add(cls);stateEl.className='candle-state '+cls;stateEl.textContent=view.direction;
     $('candle-direction').textContent=view.direction==='WAIT'?'รอก่อน':directionThai(view.direction);
     $('candle-confidence').textContent=view.confidence+'%';
-    $('candle-summary').textContent=view.label+' · อ่านจากพฤติกรรม OHLCV หลายแท่ง ไม่ใช้ผลจากสัญญาณหลัก';
-    $('candle-continuation').textContent=candleMetricText(view.metrics.continuation);
-    $('candle-exhaustion').textContent=candleMetricText(view.metrics.exhaustion);
-    $('candle-reversal').textContent=candleMetricText(view.metrics.reversalPressure);
-    const ul=$('candle-reason-list');ul.replaceChildren();
-    const rows=[...view.reasons.slice(0,2),...view.warnings.slice(0,2).map(x=>'ระวัง: '+x)];
-    for(const text of (rows.length?rows:['แท่งยังไม่มีพฤติกรรมเด่นพอ'])){const li=document.createElement('li');li.textContent=text;ul.append(li);}
+    const top=view.patterns?.[0]?.name;
+    $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label+' · ชื่อแพตเทิร์นใช้แท่งที่ปิดแล้ว ส่วนคะแนนยังอัปเดตจากแท่งสด';
+    renderPatterns(view.patterns);
+    $('candle-meaning').textContent=view.plainMeaning||view.label;
+    $('candle-change-text').textContent=view.changeTrigger||'รอแท่งถัดไปยืนยันหรือทำลายรูปแบบปัจจุบัน';
    }
    const pending=candlePending(),latest=candleState.signals.at(-1),lock=$('candle-lock');
    if(pending){
     lock.classList.add('active');
     const remain=Math.max(0,pending.targetTime-(state.quote?.ts||0)*1000);
+    const pattern=pending.snapshot?.patterns?.[0]?.name;
     $('candle-lock-title').textContent='CANDLE '+directionThai(pending.direction)+' · ล็อก '+money(pending.entryPrice);
-    $('candle-lock-meta').textContent='ความชัด '+pending.confidence+'% · ตัดสินเวลา '+clockMs(pending.targetTime)+' · เหลือ '+Math.ceil(remain/60000)+' นาที';
+    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'ความชัด '+pending.confidence+'% · ตัดสิน '+clockMs(pending.targetTime)+' · เหลือ '+Math.ceil(remain/60000)+' นาที';
    }else if(latest){
     lock.classList.remove('active');
+    const pattern=latest.snapshot?.patterns?.[0]?.name;
     $('candle-lock-title').textContent='ล่าสุด '+directionThai(latest.direction)+' · '+resultThai(latest.result);
-    $('candle-lock-meta').textContent='เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → ตัดสิน '+money(latest.exitPrice):'')+' · '+clockMs(latest.entryTime);
+    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → ตัดสิน '+money(latest.exitPrice):'')+' · '+clockMs(latest.entryTime);
    }else{
     lock.classList.remove('active');
     $('candle-lock-title').textContent='ยังไม่มีสัญญาณล็อก';
-    $('candle-lock-meta').textContent='จะล็อกเมื่อความชัดถึงเกณฑ์ และมีได้ทีละ 1 ไม้เพื่อไม่ให้ผลทับกัน';
+    $('candle-lock-meta').textContent='จะล็อกเมื่อความชัดถึงเกณฑ์ และตัดสินผลอิสระหลัง 10 นาที';
    }
    const st=candleStats();
    $('candle-stats').textContent=st.done.length
@@ -2200,11 +2335,14 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const mainWarnings=[...($('setup-warning-list')?.querySelectorAll('li')||[])].map(x=>x.textContent.trim()).filter(Boolean);
    const supports=[];
    if(mainDir&&candleDir&&mainDir===candleDir)supports.push('ระบบหลักและ Candle Behavior เห็นตรงกันฝั่ง'+directionThai(mainDir));
-   if(candle?.reasons?.length)supports.push(...candle.reasons.slice(0,2));
+   if(candle?.patterns?.[0])supports.push('แท่งเทียนพบ '+candle.patterns[0].name);
+   if(candle?.reasons?.length)supports.push(...candle.reasons.slice(0,1));
    supports.push(...mainSupports.slice(0,1));
    const warnings=[];
    if(mainDir&&candleDir&&mainDir!==candleDir)warnings.push('สองระบบขัดกัน: หลัก '+directionThai(mainDir)+' แต่แท่ง '+directionThai(candleDir));
-   if(candle?.warnings?.length)warnings.push(...candle.warnings.slice(0,2));
+   if(candle?.plainMeaning&&candle?.patternBias&&candleDir&&((candle.patternBias>0&&candleDir==='LOW')||(candle.patternBias<0&&candleDir==='HIGH')))
+    warnings.push('แพตเทิร์นชื่อชัดกำลังสวนกับคะแนนแท่งรวม · '+candle.plainMeaning);
+   if(candle?.warnings?.length)warnings.push(...candle.warnings.slice(0,1));
    warnings.push(...mainWarnings.slice(0,1));
    toList('setup-compact-support',supports.slice(0,3),'ยังไม่มีแรงหนุนเด่น');
    toList('setup-compact-warning',warnings.slice(0,3),'ยังไม่พบจุดเตือนเด่น');
