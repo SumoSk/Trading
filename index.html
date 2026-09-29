@@ -316,9 +316,9 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .compact-brief-box li:before{content:'';position:absolute;left:0;top:.52em;width:4px;height:4px;border-radius:50%;background:#617690}
 .compact-brief-box.support li:before{background:#58cda8}
 .compact-brief-box.warning li:before{background:#e6a15e}
-.compact-next{margin-top:6px;padding-top:6px;border-top:1px solid #233247}
-.compact-next>span{display:block;font-size:7.5px;color:#71869f;margin-bottom:2px}
-.compact-next>p{font-size:9px;line-height:1.45;color:#b7c6d8;margin:0}.compact-next>p.up{color:#69e9c5}.compact-next>p.down{color:#ff8da1}.compact-next>p.warning{color:#e8c77f}.compact-next>p.neutral{color:#b7c6d8}
+.compact-next{margin:0 0 8px;padding:9px 10px;border:1px solid #2b3d55;border-radius:8px;background:#0b141f}
+.compact-next>span{display:block;font-size:8.5px;color:#7f93ad;margin-bottom:3px}
+.compact-next>p{font-size:14px;line-height:1.4;font-weight:650;color:#dce7f5;margin:0}.compact-next>p.up{color:#69e9c5}.compact-next>p.down{color:#ff8da1}.compact-next>p.warning{color:#e8c77f}.compact-next>p.neutral{color:#dce7f5}
 .setup-profile-compact.side-high h3,.setup-profile-compact.side-high .compact-brief-status{color:#61e3bc}
 .setup-profile-compact.side-high .compact-brief-status{border-color:#2c866c;background:#102922}
 .setup-profile-compact.side-low h3,.setup-profile-compact.side-low .compact-brief-status{color:#ff8da1}
@@ -583,6 +583,11 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </section>
 
 <section class="setup-profile-compact" id="setup-profile-compact" aria-live="polite">
+  <div class="compact-next">
+    <span>ภาพรวมตอนนี้</span>
+    <p id="setup-compact-next">กำลังอ่านภาพรวมตลาด</p>
+  </div>
+
   <div class="compact-brief-head">
     <div>
       <span class="compact-brief-kicker" id="realtime-analysis-kicker">สรุปสำคัญ · REALTIME · วิเคราะห์ 1m</span>
@@ -608,11 +613,6 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
       <h4>อะไรที่ต้องระวัง</h4>
       <ul id="setup-compact-warning"><li>รอข้อมูลตลาดสด</li></ul>
     </section>
-  </div>
-
-  <div class="compact-next">
-    <span>ภาพรวมตอนนี้</span>
-    <p id="setup-compact-next">กำลังอ่านภาพรวมตลาด</p>
   </div>
 
   <small class="setup-compact-health warning" id="setup-compact-health">รอ Futures สด</small>
