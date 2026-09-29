@@ -493,7 +493,12 @@ main{padding-top:10px}
  .signal-panel>.signal-card-candle,
  .signal-panel>.setup-profile-compact{grid-column:auto!important}
 }
+/* Reduce chart height by about one-third to keep signals visible without scrolling. */
+.chart-wrap{height:420px!important}
+@media(min-width:1500px){.chart-wrap{height:470px!important}}
+@media(max-width:900px){.chart-wrap{height:360px!important}}
 @media(max-width:560px){
+ .chart-wrap{height:315px!important}
  main{padding-left:5px!important;padding-right:5px!important;padding-top:6px!important}
  .signal-panel{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important;padding:5px!important}
  .signal-panel>.signal-card-main,
