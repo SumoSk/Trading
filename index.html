@@ -1571,7 +1571,14 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   let versionSettings=rememberVersionSettings();
   let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;}
-  const engine=new Engine(saved);let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null;
+  const engine=new Engine(saved);const analysisContextEngines=new Map();
+  function analysisEngine(tf=state.analysisTf){
+   if(tf==='1m')return engine;
+   if(!analysisContextEngines.has(tf))analysisContextEngines.set(tf,new Engine({}));
+   return analysisContextEngines.get(tf);
+  }
+  function resetContextEngine(tf){if(tf!=='1m')analysisContextEngines.set(tf,new Engine({}));}
+  let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null;
   const CANDLE_VERSION='0.2.0',CANDLE_STORE='btc-candle-behavior-v1';
   let candleSaved={};try{candleSaved=JSON.parse(localStorage.getItem(CANDLE_STORE)||'{}')||{};}catch{}
   const candleState={
@@ -2852,17 +2859,44 @@ function openReport(){
   async function ensureTimeframe(tf){
    if((state.bars[tf]||[]).length>=20)return state.bars[tf];
    if(tf==='10m')state.bars[tf]=await loadTenMinuteHistory();
-   else if(['1h','4h','1d','1w'].includes(tf))state.bars[tf]=await loadHistory(tf);
+   else if(['1m','5m','15m','1h','4h','1d','1w'].includes(tf))state.bars[tf]=await loadHistory(tf);
    return state.bars[tf]||[];
   }
-  function updateViewedLazyBar(price,ts){
-   const tf=state.selectedTf,seconds=LAZY_TF_SECONDS[tf];
-   if(!seconds)return;
-   const arr=state.bars[tf];if(!arr?.length)return;
-   const last=arr.at(-1);
-   if(ts<last.time||ts>=last.time+seconds)return;
-   last.high=Math.max(last.high,price);last.low=Math.min(last.low,price);last.close=price;last.closed=false;
-   if(state.chartReady)updateChartBar(last);
+  function updateLazyBars(price,ts,qty=0){
+   const targets=new Set([state.selectedTf,state.analysisTf]);
+   for(const tf of targets){
+    const seconds=LAZY_TF_SECONDS[tf];
+    if(!seconds)continue;
+    const arr=state.bars[tf];if(!arr?.length)continue;
+    const bucket=Math.floor(ts/seconds)*seconds;
+    let last=arr.at(-1);
+    if(last&&bucket>last.time){
+     last.closed=true;
+     last={time:bucket,open:last.close,high:price,low:price,close:price,volume:Math.max(0,qty),closed:false};
+     arr.push(last);if(arr.length>1000)arr.splice(0,arr.length-1000);
+    }else if(last&&bucket===last.time){
+     last.high=Math.max(last.high,price);last.low=Math.min(last.low,price);last.close=price;last.volume=(last.volume||0)+Math.max(0,qty);last.closed=false;
+    }
+    if(tf===state.selectedTf&&last&&state.chartReady)updateChartBar(last);
+   }
+  }
+  function analysisCurrentBar(tf=state.analysisTf){
+   const arr=state.bars[tf]||[],raw=arr.at(-1);
+   if(!raw||!state.quote)return raw||null;
+   if(tf==='1m')return raw;
+   const seconds=TF_SECONDS[tf]||60,elapsed=clip(state.quote.ts-raw.time,1,seconds),frac=clip(elapsed/seconds,.03,1);
+   return {...raw,volume:(raw.volume||0)/frac,high:Math.max(raw.high,state.quote.price),low:Math.min(raw.low,state.quote.price),close:state.quote.price};
+  }
+  function analysisDataReady(tf=state.analysisTf){
+   const bars=state.bars[tf]||[],seconds=TF_SECONDS[tf]||60,recent=bars.slice(-36);
+   const continuous=recent.length>=35&&recent.every((b,i)=>i===0||b.time-recent[i-1].time===seconds);
+   const current=bars.at(-1),q=state.quote;
+   const fresh=!state.historyFallback&&!document.hidden&&state.socket?.readyState===1&&q&&Date.now()-q.ts*1000<3000&&Date.now()-state.lastMessageAt<3000&&continuous&&current&&q.ts-current.time<seconds+75;
+   return {bars,current:analysisCurrentBar(tf),continuous,fresh,seconds};
+  }
+  function tfHumanText(value){
+   const label=TF_LABELS[state.analysisTf]||state.analysisTf;
+   return humanText(value).replaceAll('1 นาที',label).replaceAll('1m',state.analysisTf);
   }
   async function boot(){
     // Load 1m first: an unavailable optional timeframe must never hide the main iPad chart.
@@ -2893,7 +2927,7 @@ function openReport(){
   function ingest(data){
     const e=data.e,nowSec=Date.now()/1000;
     if(e==='aggTrade'){
-      const price=+data.p,qty=+data.q,ts=Number(data.T)/1000;if(!(price>0&&qty>0))return;if(state.quote&&Number(data.a)<=state.quote.id)return;state.quote={price,ts,id:Number(data.a)};updateViewedLazyBar(price,ts);if(engine.settle({ts:ts*1000,price})) {persist(true);drawHistory();}if(candleSettle(ts*1000,price))renderCandleBehavior(state.candleView);
+      const price=+data.p,qty=+data.q,ts=Number(data.T)/1000;if(!(price>0&&qty>0))return;if(state.quote&&Number(data.a)<=state.quote.id)return;state.quote={price,ts,id:Number(data.a)};updateLazyBars(price,ts,qty);if(engine.settle({ts:ts*1000,price})) {persist(true);drawHistory();}if(candleSettle(ts*1000,price))renderCandleBehavior(state.candleView);
       const notional=price*qty,signed=data.m?-notional:notional;state.tradeTape.push({ts,signed,notional});const cutoff=ts-300;while(state.tradeTape.length&&state.tradeTape[0].ts<cutoff)state.tradeTape.shift();
       $('last-price').textContent=money(price);$('connection-time').textContent='ซื้อขายล่าสุด '+clockMs(Number(data.T));analyseNow();return;
     }
@@ -3090,6 +3124,39 @@ function openReport(){
     renderChart(false);
    }finally{btn.disabled=false;btn.textContent=originalText;}
   }));
+  const analysisTfSelect=$('analysis-tf-select'),analysisTfConfirm=$('analysis-tf-confirm'),analysisTfControl=analysisTfSelect?.closest('.analysis-tf-control');
+  if(analysisTfSelect&&analysisTfConfirm){
+   analysisTfSelect.value=state.analysisTf;
+   analysisTfSelect.addEventListener('change',()=>{
+    state.pendingAnalysisTf=analysisTfSelect.value;
+    const changed=state.pendingAnalysisTf!==state.analysisTf;
+    analysisTfConfirm.disabled=!changed||state.analysisSwitching;
+    analysisTfControl?.classList.toggle('pending',changed);
+    analysisTfConfirm.textContent=changed?'ยืนยัน':'ใช้อยู่';
+   });
+   analysisTfConfirm.addEventListener('click',async()=>{
+    const next=state.pendingAnalysisTf;
+    if(!next||next===state.analysisTf||state.analysisSwitching)return;
+    state.analysisSwitching=true;analysisTfConfirm.disabled=true;analysisTfConfirm.textContent='กำลังโหลด…';
+    try{
+     await ensureTimeframe(next);
+     if((state.bars[next]||[]).filter(b=>b.closed).length<35)throw new Error('ข้อมูล '+next+' ยังไม่พอสำหรับวิเคราะห์');
+     state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;
+     resetContextEngine(next);
+     refreshAnalysisLabels();
+     analysisTfControl?.classList.remove('pending');
+     analysisTfConfirm.textContent='ใช้อยู่';
+     analyseNow(true);
+    }catch(err){
+     console.warn('เปลี่ยนไทม์เฟรมวิเคราะห์ไม่สำเร็จ',err);
+     state.pendingAnalysisTf=state.analysisTf;analysisTfSelect.value=state.analysisTf;
+     analysisTfControl?.classList.remove('pending');
+     analysisTfConfirm.textContent='ลองใหม่';
+    }finally{
+     state.analysisSwitching=false;analysisTfConfirm.disabled=state.pendingAnalysisTf===state.analysisTf;
+    }
+   });
+  }
   $('ema-toggle').addEventListener('click',()=>{state.emaVisible=!state.emaVisible;state.emaFast.applyOptions({visible:state.emaVisible});state.emaSlow.applyOptions({visible:state.emaVisible});$('ema-toggle').setAttribute('aria-pressed',String(state.emaVisible));});
   $('indicator-toggle').addEventListener('click',()=>setIndicatorsExpanded(!state.indicatorsExpanded));
   const engineVersionSelect=$('engine-version-select');
@@ -3118,6 +3185,7 @@ function openReport(){
   setInterval(()=>fallbackPoll(),2500);
   setInterval(()=>{updateSetupHealth();analyseNow(true);},1500);
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,candleState,candleBehaviorAssess,candleMaybeIssue,candleSettle,ingest,analyseNow};
+  refreshAnalysisLabels();
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
   $('main-version-inline').textContent=CFG.version;
   state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
