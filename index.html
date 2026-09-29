@@ -458,7 +458,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-profile-compact.side-conflict .compact-brief-status{border-color:#8d6b35;background:#2a2115}
 
 
-.chart-toolbar-slot{min-height:42px;border-bottom:1px solid var(--border);position:relative}
+.chart-toolbar-slot{min-height:38px;border-bottom:0;position:relative;background:transparent}
 .chart-toolbar{min-height:42px!important;padding:4px 6px!important;gap:5px!important;border-bottom:0!important;background:#0d1520ee;backdrop-filter:blur(12px)}
 .analysis-tf-control{display:flex;align-items:center;gap:4px;white-space:nowrap;color:#8799b1;font-size:8px}
 .analysis-tf-control>span{font-size:8px}
@@ -477,7 +477,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .toolbar-more-popover .engine-version-picker select{width:100%;height:32px;background:#0d1622;color:#d2deed;border:1px solid #2b3b50;border-radius:7px;padding:0 8px}
 body.toolbar-floating .chart-toolbar{position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:120;width:min(720px,calc(100vw - 12px));border:1px solid #2b3b50!important;border-radius:11px!important;box-shadow:0 10px 28px #0008}
 @media(max-width:900px){.analysis-tf-control{order:0;max-width:none;overflow:visible}.chart-toolbar{flex-wrap:nowrap!important}.toolbar-more-popover{min-width:180px}}
-@media(max-width:560px){.chart-toolbar-slot{min-height:38px}.chart-toolbar{min-height:38px!important;padding:3px 4px!important;gap:3px!important}.analysis-tf-control>span{font-size:7px}.analysis-tf-control select{height:28px;min-height:28px;padding-left:5px;padding-right:17px;font-size:9px}.analysis-tf-control button{height:28px;min-height:28px!important;padding:0 6px}.toolbar-more>summary{width:29px;height:28px}.toolbar-more-popover{position:fixed;top:42px;right:6px;left:auto;width:min(220px,calc(100vw - 12px))}}
+@media(max-width:560px){.chart-toolbar-slot{min-height:34px}.chart-toolbar{min-height:38px!important;padding:3px 4px!important;gap:3px!important}.analysis-tf-control>span{font-size:7px}.analysis-tf-control select{height:28px;min-height:28px;padding-left:5px;padding-right:17px;font-size:9px}.analysis-tf-control button{height:28px;min-height:28px!important;padding:0 6px}.toolbar-more>summary{width:29px;height:28px}.toolbar-more-popover{position:fixed;top:42px;right:6px;left:auto;width:min(220px,calc(100vw - 12px))}}
 
 .main-signal-head,.probability-head,.candle-kicker,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
@@ -545,7 +545,7 @@ main{padding-top:10px}
 }
 </style>
 </head>
-<body data-feed="syncing">
+<body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
   <div class="brand"><span class="brand-icon">E<span>↗</span></span><span>EVENT<span class="brand-sub">ระบบวิเคราะห์ BTC</span></span></div>
     <div class="mode" id="mode">ข้อมูลจริง · กำลังโหลด</div>
@@ -3524,15 +3524,8 @@ function openReport(){
   }
 
   const chartToolbar=$('chart-toolbar'),chartToolbarSlot=$('chart-toolbar-slot'),toolbarMore=$('toolbar-more');
-  const syncFloatingToolbar=()=>{
-   if(!chartToolbar||!chartToolbarSlot)return;
-   const shouldFloat=chartToolbarSlot.getBoundingClientRect().top<=6;
-   document.body.classList.toggle('toolbar-floating',shouldFloat);
-  };
-  window.addEventListener('scroll',syncFloatingToolbar,{passive:true});
-  window.addEventListener('resize',syncFloatingToolbar);
+  document.body.classList.add('toolbar-floating');
   document.addEventListener('click',ev=>{if(toolbarMore?.open&&!toolbarMore.contains(ev.target))toolbarMore.open=false;});
-  requestAnimationFrame(syncFloatingToolbar);
 
   const chartTfSelect=$('chart-tf-select'),chartTfConfirm=$('chart-tf-confirm'),chartTfControl=chartTfSelect?.closest('.chart-tf-control');
   if(chartTfSelect&&chartTfConfirm){
