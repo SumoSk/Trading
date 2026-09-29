@@ -1302,6 +1302,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     lastMessageAt: 0,
     lastAnalysisAt: 0,
     lastProfileAt: 0,
+    shadowCache: null,
     selectedTf: '1m',
     chart: null,
     candleSeries: null,
@@ -1452,6 +1453,60 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function setupDoneSignals(version=CFG.version){
    return engine.signals.filter(s=>s.version===version&&['correct','incorrect'].includes(s.result)&&s.dataset?.entry);
   }
+
+  /* Read-only T+10 candle observation study. Never saved as real issued trades. */
+  function setupShadowHistory(){
+   if(state.historyFallback)return [];
+   const bars=(state.bars['1m']||[]).filter(b=>b.closed).slice(-350);
+   if(bars.length<55)return [];
+   const tail=bars.at(-1),cache=state.shadowCache;
+   if(cache&&cache.lastTime===tail.time&&cache.lastClose===tail.close&&cache.length===bars.length)return cache.rows;
+   const close=bars.map(b=>b.close),ema8=ema(close,8),ema21=ema(close,21),rows=[];
+   for(let i=40;i+10<bars.length;i++){
+    let complete=true;
+    for(let j=i-34;j<=i+10;j++)if(bars[j].time-bars[j-1].time!==60){complete=false;break;}
+    if(!complete)continue;
+    let tr=0;
+    for(let j=i-13;j<=i;j++){
+     const b=bars[j],prev=bars[j-1].close;
+     tr+=Math.max(b.high-b.low,Math.abs(b.high-prev),Math.abs(b.low-prev));
+    }
+    const atr=Math.max(tr/14,close[i]*.00008,1e-9);
+    const trend=setupClamp((ema8[i]-ema21[i])/atr,-1,1),momentum=(close[i]-close[i-3])/atr;
+    const recent=bars.slice(i-11,i+1),high=Math.max(...recent.map(b=>b.high)),low=Math.min(...recent.map(b=>b.low));
+    const rangePosition=setupClamp((close[i]-low)/Math.max(high-low,atr*.1),0,1);
+    const volume=bars.slice(i-23,i).map(b=>b.volume).filter(x=>x>0);
+    const relVol=bars[i].volume/Math.max(median(volume)||1,1e-9);
+    const dir=Math.abs(trend)>=.15?Math.sign(trend):Math.abs(momentum)>=.25?Math.sign(momentum):Math.sign(bars[i].close-bars[i].open);
+    const extension=dir*(close[i]-ema21[i])/atr;
+    if(close[i+10]===close[i])continue;
+    rows.push({time:bars[i].time,trend,momentum,rangePosition,relVol,extension,highWin:close[i+10]>close[i]});
+   }
+   state.shadowCache={lastTime:tail.time,lastClose:tail.close,length:bars.length,rows};
+   return rows;
+  }
+  function setupShadowCompare(snap){
+   const empty={n:0,highWins:0,lowWins:0,highRate:null,lowRate:null,meanSimilarity:null};
+   if(!snap)return empty;
+   const similarity=row=>{
+    const factors=[[snap.trend,row.trend,1.25,1.6],[snap.momentum,row.momentum,3,.9],
+     [snap.rangePosition,row.rangePosition,.65,1.4],[snap.relVol,row.relVol,3,.9],
+     [snap.extension,row.extension,4,1]];
+    let score=0,total=0;
+    for(const [a,b,scale,weight] of factors){if(!Number.isFinite(a)||!Number.isFinite(b))continue;total+=weight;score+=weight*setupClamp(1-Math.abs(a-b)/scale,0,1);}
+    return total?score/total:0;
+   };
+   const ranked=setupShadowHistory().map(row=>({row,score:similarity(row)})).sort((a,b)=>b.score-a.score);
+   const selected=[];
+   for(const item of ranked){
+    if(item.score<.43)break;
+    if(selected.some(x=>Math.abs(x.row.time-item.row.time)<600))continue;
+    selected.push(item);if(selected.length>=12)break;
+   }
+   const n=selected.length,highWins=selected.filter(x=>x.row.highWin).length;
+   return {n,highWins,lowWins:n-highWins,highRate:n?highWins/n:null,lowRate:n?(n-highWins)/n:null,
+     meanSimilarity:n?selected.reduce((sum,x)=>sum+x.score,0)/n:null};
+  }
   function setupStats(rows){
    const n=rows.length,wins=rows.filter(s=>s.result==='correct').length;
    return {n,wins,losses:n-wins,rate:n?wins/n:null};
@@ -1551,19 +1606,23 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const version=usePrevious?'7.1.0':CFG.version;
    const high=setupComparison(snaps.HIGH,source),low=setupComparison(snaps.LOW,source);
    const h=high.similar,l=low.similar;
-   const credible=(x)=>x.similar.n>=3&&x.meanSimilarity>=.42&&x.basis!=='ฝั่งเดียวกัน (กลุ่มกว้าง)';
-   let leading=null;
-   if(credible(high)&&credible(low)&&Math.abs(h.rate-l.rate)>=.10)leading=h.rate>l.rate?'HIGH':'LOW';
-   // Keep the live signal visible when history is insufficient; never manufacture a winner.
-   const issued=v.signal?.direction,watch=v.event?.d>0?'HIGH':v.event?.d<0?'LOW':null;
-   const direction=leading||(['HIGH','LOW'].includes(issued)?issued:null)||watch||
-     (directionView.direction!=='BALANCED'?directionView.direction:'HIGH');
+   const credible=(x)=>x.similar.n>=4&&x.meanSimilarity>=.48&&x.basis!=='ฝั่งเดียวกัน (กลุ่มกว้าง)';
+   const actualReady=credible(high)&&credible(low);
+   const shadow=actualReady?null:setupShadowCompare(snaps.HIGH);
+   const chartBasis=!!shadow&&shadow.n>=5&&shadow.meanSimilarity>=.48;
+   let leading=null,leadingSource=null;
+   if(actualReady&&Math.abs(h.rate-l.rate)>=.12){leading=h.rate>l.rate?'HIGH':'LOW';leadingSource='signals';}
+   else if(chartBasis&&Math.abs(shadow.highRate-shadow.lowRate)>=.16){
+    leading=shadow.highRate>shadow.lowRate?'HIGH':'LOW';leadingSource='candles';
+   }
    const marketLeading=directionView.high>=55?'HIGH':directionView.low>=55?'LOW':null;
-   const displayLeading=leading||marketLeading;
-   const displaySource=leading?'history':marketLeading?'model':'balanced';
-   const selected=displayLeading||direction;
-   return {snap:snaps[selected],leading,marketLeading,displayLeading,displaySource,
-    high,low,version,isReference:usePrevious,model:{HIGH:directionView.high,LOW:directionView.low}};
+   const displayLeading=leading||marketLeading,displaySource=leading?'history':marketLeading?'model':'balanced';
+   const issued=v.signal?.direction,watch=v.event?.d>0?'HIGH':v.event?.d<0?'LOW':null;
+   const selected=displayLeading||(['HIGH','LOW'].includes(issued)?issued:null)||watch||
+    (['HIGH','LOW'].includes(directionView.direction)?directionView.direction:'HIGH');
+   return {snap:snaps[selected],leading,leadingSource,marketLeading,displayLeading,displaySource,
+    high,low,shadow:chartBasis?shadow:null,chartBasis,version,isReference:usePrevious,
+    model:{HIGH:directionView.high,LOW:directionView.low}};
   }
   function setupName(snap){
    const base={
