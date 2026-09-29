@@ -318,7 +318,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .compact-brief-box.warning li:before{background:#e6a15e}
 .compact-next{margin-top:6px;padding-top:6px;border-top:1px solid #233247}
 .compact-next>span{display:block;font-size:7.5px;color:#71869f;margin-bottom:2px}
-.compact-next>p{font-size:8.5px;line-height:1.4;color:#b7c6d8;margin:0}
+.compact-next>p{font-size:9px;line-height:1.45;color:#b7c6d8;margin:0}.compact-next>p.up{color:#69e9c5}.compact-next>p.down{color:#ff8da1}.compact-next>p.warning{color:#e8c77f}.compact-next>p.neutral{color:#b7c6d8}
 .setup-profile-compact.side-high h3,.setup-profile-compact.side-high .compact-brief-status{color:#61e3bc}
 .setup-profile-compact.side-high .compact-brief-status{border-color:#2c866c;background:#102922}
 .setup-profile-compact.side-low h3,.setup-profile-compact.side-low .compact-brief-status{color:#ff8da1}
@@ -611,8 +611,8 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </div>
 
   <div class="compact-next">
-    <span>ระบบกำลังรออะไรต่อ</span>
-    <p id="setup-compact-next">รอข้อมูลตลาด</p>
+    <span>ภาพรวมตอนนี้</span>
+    <p id="setup-compact-next">กำลังอ่านภาพรวมตลาด</p>
   </div>
 
   <small class="setup-compact-health warning" id="setup-compact-health">รอ Futures สด</small>
@@ -1646,6 +1646,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     lastProfileAt: 0,
     lastCandleAt: 0,
     candleView: null,
+    marketOverviewState: null,
     shadowCache: null,
     selectedTf: '1m',
     analysisTf: '1m',
@@ -2500,7 +2501,55 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     · Candle ${tf} แยกสถิติจาก TF อื่น`;
   }
 
-  function renderCompactSetupProfile(){
+  function classifyMarketOverview(v,directionView,micro={}){
+   if(!v?.f||!v?.phase||!state.quote)return null;
+   const f=v.f,ph=v.phase,reg=v.regime||{},flow=Number(micro.flow)||0,book=Number(micro.book)||0,bookValid=!!micro.bookValid;
+   const relVol=Math.max(Number(f.relVolume)||0,Number(f.volume3Ratio)||0,Number(ph.liveVolumePace)||0);
+   const liveRange=Math.max(Number(ph.liveRangeAtr)||0,Number(f.rangeAtr)||0);
+   const liveBody=Math.max(Number(ph.liveBodyAtr)||0,Number(f.bodyAtr)||0);
+   const accel=Math.abs(Number(f.momAccel)||0);
+   const sellVotes=[f.trend<=-.18,f.mom<=-.25,flow<=-.10,bookValid&&book<=-.12,(ph.priorDir||ph.dir)<0].filter(Boolean).length;
+   const buyVotes=[f.trend>=.18,f.mom>=.25,flow>=.10,bookValid&&book>=.12,(ph.priorDir||ph.dir)>0].filter(Boolean).length;
+   const hot=relVol>=CFG.impulseRelVol||liveBody>=CFG.impulseBodyAtr||liveRange>=CFG.impulseRangeAtr;
+   const wild=liveRange>=1.0||accel>=.55||(hot&&Math.abs(flow)>=.22);
+   const priorDir=ph.priorDir||ph.dir||0;
+   if(ph.phase==='REVERSAL'){
+    if(priorDir<0)return {key:'rebound_after_sell',title:'เด้งกลับหลังร่วงแรง',desc:'แรงซื้อสวนกลับชัด หลังจากฝั่งขายกดราคาลงมาก่อน',tone:'high',severity:3};
+    if(priorDir>0)return {key:'pullback_after_buy',title:'ถูกขายสวนหลังพุ่งแรง',desc:'แรงขายสวนกลับชัด หลังจากฝั่งซื้อดันราคาขึ้นมาก่อน',tone:'low',severity:3};
+   }
+   if(ph.phase==='EXHAUSTION'){
+    if(priorDir<0)return {key:'sell_exhaustion',title:'ลงแรงแต่เริ่มหมดแรง',desc:'แรงขายยังคุมอยู่ แต่โมเมนตัมเริ่มอ่อนและมีโอกาสเด้งสวน',tone:'low',severity:2};
+    if(priorDir>0)return {key:'buy_exhaustion',title:'ขึ้นแรงแต่เริ่มหมดแรง',desc:'แรงซื้อยังคุมอยู่ แต่โมเมนตัมเริ่มอ่อนและมีโอกาสย่อสวน',tone:'high',severity:2};
+   }
+   if(sellVotes>=4&&hot&&wild)return {key:'heavy_sell_swing',title:'ร่วงแรง + สวิงสูง',desc:'แรงขายคุมภาพรวม แต่มีการเด้งสวนเร็วเป็นช่วง ๆ',tone:'low',severity:4};
+   if(buyVotes>=4&&hot&&wild)return {key:'heavy_buy_swing',title:'พุ่งแรง + สวิงสูง',desc:'แรงซื้อคุมภาพรวม แต่มีแรงขายสวนเร็วเป็นช่วง ๆ',tone:'high',severity:4};
+   if(sellVotes>=4&&hot)return {key:'heavy_sell',title:'เทขายหนัก',desc:'แรงขายต่อเนื่องและปริมาณซื้อขายสูงกว่าปกติ',tone:'low',severity:4};
+   if(buyVotes>=4&&hot)return {key:'heavy_buy',title:'ซื้อหนัก',desc:'แรงซื้อต่อเนื่องและปริมาณซื้อขายสูงกว่าปกติ',tone:'high',severity:4};
+   if(['IMPULSE','MATURE_IMPULSE'].includes(ph.phase)&&ph.dir<0)return {key:'fast_drop',title:'ราคาร่วงแรง',desc:'โมเมนตัมลงเด่นและราคากำลังเคลื่อนตัวเร็วทางฝั่งขาย',tone:'low',severity:3};
+   if(['IMPULSE','MATURE_IMPULSE'].includes(ph.phase)&&ph.dir>0)return {key:'fast_rise',title:'ราคาพุ่งแรง',desc:'โมเมนตัมขึ้นเด่นและราคากำลังเคลื่อนตัวเร็วทางฝั่งซื้อ',tone:'high',severity:3};
+   if(wild&&Math.abs(buyVotes-sellVotes)<=1)return {key:'two_way_swing',title:'สวิงแรงสองฝั่ง',desc:'ราคาแกว่งเร็วทั้งขึ้นและลง ยังไม่มีฝั่งคุมต่อเนื่อง',tone:'conflict',severity:3};
+   if((reg.mode==='RANGE'||ph.phase==='RANGE')&&Math.abs(flow)<.12&&Math.abs(f.mom)<.30)return {key:'sideway',title:'ไซด์เวย์',desc:'ราคาแกว่งอยู่ในกรอบ แรงซื้อและแรงขายยังไม่ชนะกันชัด',tone:'neutral',severity:1};
+   if(sellVotes>=3)return {key:'sell_pressure',title:'แรงขายเด่น',desc:'ฝั่งขายคุมจังหวะระยะสั้น แต่ยังไม่ถึงระดับเทขายหนัก',tone:'low',severity:2};
+   if(buyVotes>=3)return {key:'buy_pressure',title:'แรงซื้อเด่น',desc:'ฝั่งซื้อคุมจังหวะระยะสั้น แต่ยังไม่ถึงระดับซื้อหนัก',tone:'high',severity:2};
+   return {key:'balanced',title:'แกว่งรอทิศ',desc:'แรงซื้อและแรงขายยังใกล้เคียงกัน ภาพรวมยังไม่เร่งไปฝั่งใด',tone:'neutral',severity:1};
+  }
+  function stableMarketOverview(raw,now=Date.now()){
+   let st=state.marketOverviewState;
+   if(!raw)return st?.current||null;
+   if(!st){state.marketOverviewState={current:raw,candidate:null,candidateSince:0,candidateCount:0,lastChanged:now};return raw;}
+   if(st.current?.key===raw.key){st.candidate=null;st.candidateSince=0;st.candidateCount=0;return st.current;}
+   if(st.candidate?.key!==raw.key){st.candidate=raw;st.candidateSince=now;st.candidateCount=1;}
+   else st.candidateCount++;
+   const strong=raw.severity>=3;
+   const oppositeStrong=st.current?.severity>=3&&raw.severity>=3&&st.current?.tone!==raw.tone;
+   const minMs=oppositeStrong?5000:strong?3000:8000;
+   const minCount=oppositeStrong?4:strong?3:5;
+   if(now-st.candidateSince>=minMs&&st.candidateCount>=minCount){
+    st.current=raw;st.candidate=null;st.candidateSince=0;st.candidateCount=0;st.lastChanged=now;
+   }
+   return st.current;
+  }
+  function renderCompactSetupProfile(v=null,directionView=null,micro={}){
    const target=$('setup-profile-compact');if(!target)return;
    const primary=state.analysisTf==='1m',tf=state.analysisTf,main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
    const mainDir=main&&['HIGH','LOW'].includes(main.direction)?main.direction:null;
@@ -2556,13 +2605,13 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    toList('setup-compact-support',supports.slice(0,3),'ยังไม่มีแรงหนุนเด่น');
    toList('setup-compact-warning',warnings.slice(0,3),'ยังไม่พบจุดเตือนเด่น');
 
-   let next=signalReason;
-   if(mainDir&&candleDir&&mainDir!==candleDir)next=primary?'รอให้สัญญาณหลักกับพฤติกรรมแท่งเริ่มสอดคล้องกัน หรือให้จุดเข้าหลักยืนยันชัดกว่านี้':'รอให้มุมมอง '+tf+' กับพฤติกรรมแท่งเริ่มสอดคล้องกัน';
-   else if(mainDir&&candleDir&&mainDir===candleDir&&signalTitle.includes('รอ'))next=primary?'สองระบบเห็นตรงกันแล้ว แต่ยังรอจุดเข้าหลักผ่านเงื่อนไข':'สองระบบเห็นตรงกันใน '+tf+' · รอดูแท่งถัดไปยืนยันต่อ';
-   else if(candle?.direction==='WAIT')next='รอแท่งใหม่ให้โครงสร้าง Body / Close / Wick ชัดขึ้น';
-   else if(primary&&signalTitle.includes('เข้าได้ตอนนี้'))next='จุดเข้าหลักผ่านแล้ว · ใช้ Candle Behavior เป็นข้อมูลประกอบก่อนตัดสินใจ';
-   else if(!primary)next='ใช้เป็นบริบทจากกราฟ '+tf+' ประกอบกับสัญญาณ 1m โดยยังไม่บันทึกเป็นไม้จริง';
-   $('setup-compact-next').textContent=next||'ติดตามตลาดสดต่อ';
+   const rawOverview=classifyMarketOverview(v,directionView||main,micro);
+   const overview=stableMarketOverview(rawOverview);
+   const overviewEl=$('setup-compact-next');
+   if(overviewEl){
+    overviewEl.textContent=overview?overview.title+' · '+overview.desc:'กำลังอ่านภาพรวมตลาด';
+    overviewEl.className=overview?.tone==='high'?'up':overview?.tone==='low'?'down':overview?.tone==='conflict'?'warning':'neutral';
+   }
   }
 
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
@@ -3017,7 +3066,7 @@ function openReport(){
     state.lastProfileAt=profileNow;
     renderSetupProfile(v,directionView,{flow,book,bookValid:valid});
     renderCandleBehavior(state.candleView);
-    renderCompactSetupProfile();
+    renderCompactSetupProfile(v,directionView,{flow,book,bookValid:valid});
     updateSetupHealth();
    }
    // Only the original 1m engine is persisted/training data. Other TF engines are read-only session context.
@@ -3407,7 +3456,7 @@ function openReport(){
      await ensureTimeframe(next,true);
      if(state.selectedTf===next)renderChart(false);
      if((state.bars[next]||[]).filter(b=>b.closed).length<35)throw new Error('ข้อมูล '+next+' ยังไม่พอสำหรับวิเคราะห์');
-     state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;
+     state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.marketOverviewState=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;
      resetContextEngine(next);
      refreshAnalysisLabels();
      analysisTfControl?.classList.remove('pending');
