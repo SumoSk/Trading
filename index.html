@@ -359,6 +359,12 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-compact-why{color:#b6c9de!important}
 @media(min-width:701px) and (max-width:1200px){.chart-toolbar{align-content:start}}
 
+
+.setup-data-health,.setup-compact-health{display:block;margin-top:6px;font-size:9px;line-height:1.4;color:#e6b878}
+.setup-compact-health{font-size:8px}
+.setup-data-health.live,.setup-compact-health.live{color:#72daba}
+.setup-data-health.warning,.setup-compact-health.warning{color:#e6b878}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -427,6 +433,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div class="setup-compact-side low" id="setup-compact-low"><span>ต่ำกว่า</span><b id="setup-compact-low-rate">—</b></div>
   </div>
   <div class="setup-compact-why" id="setup-compact-why">น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง</div>
+  <small class="setup-compact-health warning" id="setup-compact-health">รอ Futures สด</small>
   <div class="setup-compact-exact">
     <div><span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-compact-exact-rate">—</b></div>
     <small id="setup-compact-exact-record">ยังไม่มีท่าปัจจุบัน</small>
@@ -498,7 +505,8 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </section>
   </div>
 
-  <div class="setup-profile-foot" id="setup-profile-foot">คำนวณจากไม้ที่จบผลแล้วของเวอร์ชันปัจจุบันในเบราว์เซอร์นี้ · ไม่เปลี่ยนสูตรหรือบล็อกสัญญาณจุดเข้า</div>
+  <div class="setup-profile-foot" id="setup-profile-foot">น้ำหนักโมเดลสดแยกจากผลย้อนหลัง และไม่เปลี่ยนสูตรจุดเข้า</div>
+  <div class="setup-data-health warning" id="setup-data-health">รอ Futures สด</div>
 </aside>
 
 </div>
@@ -1643,13 +1651,32 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const sim=Number.isFinite(meanSimilarity)?` · ความคล้าย ${Math.round(meanSimilarity*100)}%`:'';
    return n>=8?'ตัวอย่างค่อนข้างพอ'+sim:n>=5?'ตัวอย่างปานกลาง'+sim:n>=3?'ตัวอย่างยังน้อย'+sim:'ข้อมูลยังน้อยมาก'+sim;
   }
+
+  function setupFeedHealth(){
+   const q=state.quote,age=q?(Date.now()-q.ts*1000)/1000:Infinity;
+   const closed=(state.bars['1m']||[]).filter(b=>b.closed).length;
+   if(state.historyFallback)return {kind:'warning',label:'Spot สำรอง · กำลังรอ Futures จริงเพื่อวิเคราะห์สด'};
+   if(!q)return {kind:'warning',label:'รอราคา Binance Futures · แท่งปิด '+closed+' แท่ง'};
+   if(state.socket?.readyState!==1)return {kind:'warning',label:'Futures ขาดการเชื่อมต่อ · ราคาล่าสุด '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
+   if(age>4||Date.now()-state.lastMessageAt>4500)
+    return {kind:'warning',label:'Futures ล่าช้า '+Math.max(0,Math.round(age))+' วินาที · ไม่ใช้ราคาเก่าเป็นสัญญาณใหม่'};
+   if(closed<35)return {kind:'warning',label:'กำลังสะสมแท่ง 1 นาที · มี '+closed+' แท่ง'};
+   return {kind:'live',label:'● Futures สด · อัปเดต '+Math.max(0,Math.round(age))+' วินาทีที่แล้ว'};
+  }
+  function updateSetupHealth(){
+   const h=setupFeedHealth();
+   for(const id of ['setup-data-health','setup-compact-health']){
+    const el=$(id);
+    if(el){el.textContent=h.label;el.className=(id==='setup-data-health'?'setup-data-health':'setup-compact-health')+' '+h.kind;}
+   }
+  }
   function renderSetupProfile(v,directionView,micro={}){
    const live=setupPickLive(v,directionView,micro),snap=live?.snap||null,status=$('setup-profile-status'),rateBox=$('setup-profile-rate');
    const panel=$('setup-profile-panel');panel.classList.remove('side-high','side-low');
    if(!snap){
     status.className='setup-profile-status learning';status.textContent='รอจังหวะ';
     $('setup-profile-name').textContent='กำลังรอจุดเข้า';
-    $('setup-profile-desc').textContent='กำลังรอราคา Futures สดที่ต่อเนื่อง · ข้อมูลไม่พร้อมจะแสดง — แทน 0%';
+    $('setup-profile-desc').textContent=setupFeedHealth().label+' · ข้อมูลยังไม่พร้อมจะแสดง — แทน 0%';
     $('setup-similar-rate').textContent='—';$('setup-history-lean').textContent='รอข้อมูล';$('setup-rate-bar').style.width='0%';
     $('setup-similar-record').textContent='—';$('setup-sample-quality').textContent='—';$('setup-exact-rate').textContent='—';$('setup-exact-record').textContent='ยังไม่มีท่าปัจจุบัน';
     for(const id of ['setup-live-direction','setup-live-extension','setup-live-room','setup-live-volume'])$(id).textContent='—';
@@ -2177,6 +2204,7 @@ function openReport(){
     state.lastProfileAt=profileNow;
     renderSetupProfile(v,directionView,{flow,book,bookValid:valid});
     renderCompactSetupProfile();
+    updateSetupHealth();
    }
    if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
   }
@@ -2194,7 +2222,7 @@ function openReport(){
         if(!r.ok)throw new Error(`HTTP ${r.status}`);
         const rows=await r.json();
         if(!Array.isArray(rows)||rows.length<30)throw new Error('ข้อมูลแท่งไม่ครบ');
-        if(src.name!=='Futures'&&interval==='1m')state.historyFallback=true;
+        if(interval==='1m')state.historyFallback=src.name!=='Futures';
         return rows.map(normalizeKline);
       }catch(err){lastError=err;console.warn('history source failed',src.name,interval,err);}
     }
@@ -2257,7 +2285,7 @@ function openReport(){
     bookWS.onclose=()=>{if(state.bookSocket===bookWS)state.book=null;};
     ws.onopen=async()=>{
      if(state.socket!==ws)return;
-     state.historyFallback=false;
+     state.historyFallback=true; // Pause scoring until the new Futures 1m snapshot succeeds.
      engine.reset('เชื่อมต่อใหม่',Date.now());
      state.tradeTape=[];state.book=null;state.liquidationTape=[];
      state.reconnectCount=0;
@@ -2433,10 +2461,10 @@ function openReport(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-state.lastMessageAt>5000)connect();});
   setInterval(()=>{if(!document.hidden&&state.lastMessageAt&&Date.now()-state.lastMessageAt>12000){statusView('stale','ไม่ได้รับข้อมูลใหม่เกิน 12 วินาที กำลังเชื่อมต่อใหม่');connect();}},3000);
   setInterval(()=>fallbackPoll(),2500);
-  setInterval(()=>analyseNow(true),1500);
+  setInterval(()=>{updateSetupHealth();analyseNow(true);},1500);
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,ingest,analyseNow};
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
-  renderSetupProfile(null,null,{});renderCompactSetupProfile();
+  renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
   setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();},1000);
   window.addEventListener('pagehide',()=>persist(true));
