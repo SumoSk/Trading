@@ -1547,7 +1547,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    return null;
   }
   function setupLiveSnapshot(v,directionView,micro={},side='HIGH'){
-   if(!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
+   if(state.historyFallback||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
    const e=v.event,f=v.f,ph=v.phase;
    const nowMs=state.quote.ts*1000;
    const recentIssued=[...engine.signals].reverse().find(s=>s.version===CFG.version&&s.direction===side&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=180000);
@@ -1605,7 +1605,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     meanSimilarity:selected.length?selected.reduce((a,x)=>a+x.score,0)/selected.length:null};
   }
   function setupPickLive(v,directionView,micro={}){
-   if(!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
+   if(state.historyFallback||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
    const snaps={HIGH:setupLiveSnapshot(v,directionView,micro,'HIGH'),LOW:setupLiveSnapshot(v,directionView,micro,'LOW')};
    const own=setupDoneSignals(),previous=CFG.version==='7.1.0'?[]:setupDoneSignals('7.1.0');
    const ownEnough=['HIGH','LOW'].every(d=>own.filter(s=>s.direction===d).length>=3);
@@ -1665,6 +1665,11 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function updateSetupHealth(){
    const h=setupFeedHealth();
+   const age=state.quote?(Date.now()-state.quote.ts*1000)/1000:Infinity;
+   const unsafe=state.historyFallback||!state.quote||state.socket?.readyState!==1||age>4||Date.now()-state.lastMessageAt>4500;
+   if(unsafe&&$('setup-similar-rate')?.textContent!=='—'){
+    renderSetupProfile(null,null,{});renderCompactSetupProfile();
+   }
    for(const id of ['setup-data-health','setup-compact-health']){
     const el=$(id);
     if(el){el.textContent=h.label;el.className=(id==='setup-data-health'?'setup-data-health':'setup-compact-health')+' '+h.kind;}
@@ -1681,6 +1686,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('setup-similar-record').textContent='—';$('setup-sample-quality').textContent='—';$('setup-exact-rate').textContent='—';$('setup-exact-record').textContent='ยังไม่มีท่าปัจจุบัน';
     for(const id of ['setup-live-direction','setup-live-extension','setup-live-room','setup-live-volume'])$(id).textContent='—';
     rateBox.className='setup-profile-rate';
+    $('setup-profile-foot').textContent='พักประเมินจนข้อมูล Binance Futures สดกลับมาพร้อม · ไม่ใช้สถิติหรือราคาที่ล่าช้าเป็นสัญญาณ';
     for(const side of ['high','low']){$('setup-full-'+side+'-rate').textContent='—';$('setup-full-'+side+'-count').textContent='รอข้อมูล';$('setup-full-'+side).className='setup-side '+side;}
     setupList('setup-support-list',[],'รอราคา Futures สดและแท่ง 1 นาทีที่ต่อเนื่อง');
     setupList('setup-warning-list',[],'เมื่อข้อมูลครบ จะแสดงทั้ง HIGH และ LOW โดยไม่ต้องรอสัญญาณ');
