@@ -676,7 +676,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 </aside>
 
 </div>
-<section class="prediction-log"><div class="prediction-log-head"><div><h2>ผลสัญญาณ +10 นาที</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">เวอร์ชัน <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">สรุปรีพอร์ตทั้งหมด</button><button id="export-training-csv">ข้อมูลเทรน CSV</button><button id="export-history">ข้อมูลเทรน JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เวลาเข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบ 10 นาที</th><th>ราคาตัดสิน</th><th>ผล / เหลือเวลา</th><th>โอกาสชนะตอนนี้</th><th>บทเรียน</th><th>เวอร์ชัน</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+<section class="prediction-log"><div class="prediction-log-head"><div><h2>ผลสัญญาณจริง 1m · +10 นาที</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">เวอร์ชัน <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">สรุปรีพอร์ตทั้งหมด</button><button id="export-training-csv">ข้อมูลเทรน CSV</button><button id="export-history">ข้อมูลเทรน JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เวลาเข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบ 10 นาที</th><th>ราคาตัดสิน</th><th>ผล / เหลือเวลา</th><th>โอกาสชนะตอนนี้</th><th>บทเรียน</th><th>เวอร์ชัน</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
 <dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">ทบทวนหลังจบไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
 <dialog id="report-dialog" class="review-dialog report-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปข้อมูลเพื่อพัฒนาระบบ</span><h2>สรุปบทเรียนทั้งหมด</h2><p id="report-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="report-dialog" aria-label="ปิด">×</button></div><div id="report-body" class="review-body"></div><div class="review-foot"><button type="button" id="report-export-json">ข้อมูลเทรน JSON</button><button type="button" id="report-export-csv">ข้อมูลเทรน CSV</button><button type="button" data-close-dialog="report-dialog">ปิด</button></div></div></dialog>
 </main>
@@ -2225,7 +2225,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('setup-full-'+side+'-rate').textContent=Math.round(live.model[s])+'%';
     $('setup-full-'+side+'-count').textContent=live.chartBasis
       ?'กราฟจริง '+horizon+' · '+(s==='HIGH'?live.shadow.highWins:live.shadow.lowWins)+'/'+live.shadow.n+' ครั้ง'
-      :row.n?'ไม้จริง '+row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis):'ไม้จริงยังไม่พอ';
+      :row.n?(primary?'ไม้จริง '+row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis):'กราฟย้อนหลัง '+row.wins+'/'+row.n+' ครั้ง')
+       :(primary?'ไม้จริงยังไม่พอ':'สถิติกราฟ '+tf+' ยังไม่พอ');
     box.className='setup-side '+side+(live.displayLeading===s?' active':'');
    }
    if(live.displayLeading)panel.classList.add(live.displayLeading==='HIGH'?'side-high':'side-low');
@@ -2244,10 +2245,10 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const observedRate=live.chartBasis?(snap.direction==='HIGH'?live.shadow.highRate:live.shadow.lowRate):null;
    $('setup-similar-record').textContent=live.chartBasis
       ?'กราฟจริง '+horizon+' · '+observedWins+'/'+live.shadow.n+' ครั้ง ('+Math.round(observedRate*100)+'%)'
-      :sim.n?'ไม้จริง V'+live.version+' · '+sim.wins+' ชนะ / '+sim.losses+' แพ้ ('+Math.round(sim.rate*100)+'%)'
-       :'ข้อมูลไม้จริงยังไม่พอ · แสดงน้ำหนักตลาดสด';
+      :sim.n?(primary?'ไม้จริง V'+live.version+' · '+sim.wins+' ชนะ / '+sim.losses+' แพ้ ('+Math.round(sim.rate*100)+'%)':'กราฟย้อนหลัง '+tf+' · '+sim.wins+'/'+sim.n+' ครั้ง ('+Math.round(sim.rate*100)+'%)')
+       :(primary?'ข้อมูลไม้จริงยังไม่พอ · แสดงน้ำหนักตลาดสด':'สถิติกราฟ '+tf+' ยังไม่พอ · แสดงน้ำหนักตลาดสด');
    $('setup-sample-quality').textContent=live.chartBasis?'จำลองจากแท่งปิด ไม่ใช่ผลไม้จริง'
-      :sim.n?setupSampleLabel(sim.n,cmp.meanSimilarity):'รอเก็บไม้จริง';
+      :sim.n?setupSampleLabel(sim.n,cmp.meanSimilarity):(primary?'รอเก็บไม้จริง':'รอข้อมูลย้อนหลังของ '+tf);
    rateBox.className='setup-profile-rate '+(live.displayLeading==='HIGH'?'good':live.displayLeading==='LOW'?'bad':'');
    $('setup-exact-rate').textContent=Number.isFinite(exact.rate)?Math.round(exact.rate*100)+'%':'—';
    $('setup-exact-record').textContent=exact.n?`${exact.wins} ชนะ / ${exact.losses} แพ้ จาก ${exact.n} ไม้ตรงท่า`:'ยังไม่มีไม้ที่ตรงทั้งท่า ฝั่ง และช่วงตลาด';
@@ -2333,18 +2334,18 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 
   function renderCompactSetupProfile(){
    const target=$('setup-profile-compact');if(!target)return;
-   const main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
+   const primary=state.analysisTf==='1m',tf=state.analysisTf,main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
    const mainDir=main&&['HIGH','LOW'].includes(main.direction)?main.direction:null;
    const candleDir=candle&&['HIGH','LOW'].includes(candle.direction)?candle.direction:null;
    target.classList.remove('side-high','side-low','side-conflict');
    let title='กำลังอ่านตลาด',status='รอข้อมูล',desc='รอข้อมูล Futures สด';
    if(mainDir&&candleDir&&mainDir===candleDir){
     title='สองระบบเห็นตรงกัน · '+directionThai(mainDir);
-    status='เห็นตรงกัน';desc='สัญญาณหลักเอน '+directionThai(mainDir)+' และพฤติกรรมแท่งเทียนยืนยันทางเดียวกัน';
+    status='เห็นตรงกัน';desc=(primary?'สัญญาณหลัก':'มุมมอง '+tf)+' เอน '+directionThai(mainDir)+' และพฤติกรรมแท่งเทียนยืนยันทางเดียวกัน';
     target.classList.add(mainDir==='HIGH'?'side-high':'side-low');
    }else if(mainDir&&candleDir&&mainDir!==candleDir){
     title='สัญญาณขัดกัน · หลัก '+directionThai(mainDir)+' / แท่ง '+directionThai(candleDir);
-    status='ขัดกัน';desc='ระบบหลักกับ Candle Behavior มองคนละทาง · ใช้เป็นเหตุผลให้รอหลักฐานเพิ่ม';
+    status='ขัดกัน';desc=(primary?'ระบบหลัก':'มุมมองจากกราฟ '+tf)+' กับ Candle Behavior มองคนละทาง · ใช้เป็นเหตุผลให้รอหลักฐานเพิ่ม';
     target.classList.add('side-conflict');
    }else if(mainDir&&candle){
     title='สัญญาณหลัก '+directionThai(mainDir)+' · แท่งเทียนยังรอ';
@@ -2388,10 +2389,11 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    toList('setup-compact-warning',warnings.slice(0,3),'ยังไม่พบจุดเตือนเด่น');
 
    let next=signalReason;
-   if(mainDir&&candleDir&&mainDir!==candleDir)next='รอให้สัญญาณหลักกับพฤติกรรมแท่งเริ่มสอดคล้องกัน หรือให้จุดเข้าหลักยืนยันชัดกว่านี้';
-   else if(mainDir&&candleDir&&mainDir===candleDir&&signalTitle.includes('รอ'))next='สองระบบเห็นตรงกันแล้ว แต่ยังรอจุดเข้าหลักผ่านเงื่อนไข';
+   if(mainDir&&candleDir&&mainDir!==candleDir)next=primary?'รอให้สัญญาณหลักกับพฤติกรรมแท่งเริ่มสอดคล้องกัน หรือให้จุดเข้าหลักยืนยันชัดกว่านี้':'รอให้มุมมอง '+tf+' กับพฤติกรรมแท่งเริ่มสอดคล้องกัน';
+   else if(mainDir&&candleDir&&mainDir===candleDir&&signalTitle.includes('รอ'))next=primary?'สองระบบเห็นตรงกันแล้ว แต่ยังรอจุดเข้าหลักผ่านเงื่อนไข':'สองระบบเห็นตรงกันใน '+tf+' · รอดูแท่งถัดไปยืนยันต่อ';
    else if(candle?.direction==='WAIT')next='รอแท่งใหม่ให้โครงสร้าง Body / Close / Wick ชัดขึ้น';
-   else if(signalTitle.includes('เข้าได้ตอนนี้'))next='จุดเข้าหลักผ่านแล้ว · ใช้ Candle Behavior เป็นข้อมูลประกอบก่อนตัดสินใจ';
+   else if(primary&&signalTitle.includes('เข้าได้ตอนนี้'))next='จุดเข้าหลักผ่านแล้ว · ใช้ Candle Behavior เป็นข้อมูลประกอบก่อนตัดสินใจ';
+   else if(!primary)next='ใช้เป็นบริบทจากกราฟ '+tf+' ประกอบกับสัญญาณ 1m โดยยังไม่บันทึกเป็นไม้จริง';
    $('setup-compact-next').textContent=next||'ติดตามตลาดสดต่อ';
   }
 
