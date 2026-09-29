@@ -905,16 +905,16 @@ const V720_CONFIG=Object.freeze({...V711_CONFIG,
 });
 const ARIS_V1_CONFIG=Object.freeze({...V720_CONFIG,
  version:'ARIS-1.0.0',
- watchMinScore:25,watchReadyScore:35,watchCooldownMs:180000,
- arisBiasWatch:.25,arisBiasReady:.35,arisBiasEnter:.40,
- arisTimingReady:60,arisTimingEnter:72,arisFlowCoverageSec:8,
- arisEarlyImpulseMaxExtension:1.40,
- arisPullbackMin:.20,arisPullbackMax:.80,arisPullbackMaxExtension:1.30,
- arisRangeEdge:.18,arisRangeRoom:.50,
- arisSoftLateExtension:1.60,arisHardLateExtension:2.20,arisMaxTriggerProgress:.40,
- arisSoftHeat:1.80,arisSoftRoom:.35,arisSoftRetreat:.20,
+ watchMinScore:18,watchReadyScore:25,watchCooldownMs:180000,
+ arisBiasWatch:.18,arisBiasReady:.25,arisBiasEnter:.32,
+ arisTimingReady:54,arisTimingEnter:64,arisFlowCoverageSec:6,
+ arisEarlyImpulseMaxExtension:1.35,
+ arisPullbackMin:.18,arisPullbackMax:.85,arisPullbackMaxExtension:1.40,
+ arisRangeEdge:.20,arisRangeRoom:.45,
+ arisSoftLateExtension:1.85,arisHardLateExtension:2.40,arisMaxTriggerProgress:.46,
+ arisSoftHeat:1.95,arisSoftRoom:.30,arisSoftRetreat:.24,
  arisAllowAddOn:true,
- minEvidenceMs:500,minEvidenceTicks:2
+ minEvidenceMs:400,minEvidenceTicks:2
 });
 const CFG=SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:ARIS_V1_CONFIG;
 const V70_PROFILE=Object.freeze({
@@ -985,12 +985,12 @@ const V720_PROFILE=Object.freeze({
 const ARIS_V1_PROFILE=Object.freeze({
  name:'ARIS V1 · T+10 Edge Engine',
  basis:'สูตรใหม่แยกจาก V7.2: Direction → Setup → Timing; ลดกฎซ้ำและไม่เรียก market bias ว่า calibrated win probability',
- source:Object.freeze({version:'independent-v1',observation:'V7.2 forward sample ราว 40 ไม้อยู่ใกล้ 50% จึงไม่จูน threshold ต่อบนสูตรเดิม แต่แยกเครื่องใหม่เพื่อทดสอบแบบ freeze'}),
+ source:Object.freeze({version:'independent-v1',observation:'V7.2 forward sample ราว 40 ไม้อยู่ใกล้ 50%; หลังเริ่มใช้ ARIS V1 พบ live behavior ว่า WATCH มาช้าแล้วชน late guard จึงปรับ threshold ภายใน V1 ให้จับต้นขาเร็วขึ้น โดยคง Direction→Setup→Timing เดิม'}),
  change:Object.freeze({
   direction:'Bias 5 ตัว: EMA trend 30% + EMA21 slope 20% + momentum 20% + acceleration 15% + live flow 15%; order book เป็น tie-breaker ไม่เกิน 4%',
   setup:'เหลือ 4 setup: Early Impulse, Pullback Reclaim, Range Rejection, Confirmed Reversal',
-  timing:'Timing 0–100 = Fresh 30 + Room 20 + Flow 20 + Retreat 15 + Candle 15; READY ≥60, ENTER ≥72',
-  late:'Hard late 2.20 ATR หรือพ้น trigger 0.40 ATR; soft late เริ่ม 1.60 ATR เมื่อ volume/room/retreat เสี่ยง',
+  timing:'Timing 0–100 = Fresh 30 + Room 20 + Flow 20 + Retreat 15 + Candle 15; ปรับ V1 ให้จับเร็วขึ้น: READY ≥54, ENTER ≥64',
+  late:'แก้ WATCH → TOO LATE เร็วเกิน: soft late เริ่ม 1.85 ATR, hard late 2.40 ATR หรือพ้น trigger 0.46 ATR',
   learning:'freeze สูตรและเก็บ Bias/Timing/components/WATCH/entry/outcome รวมถึงลำดับไม้เติมใน movement เดียวกัน เพื่อประเมินอย่างน้อย 100 ไม้ก่อนจูน',
   addOn:'ไม่จำกัด 1 ไม้ต่อทิศ ถ้าเกิด setup/trigger ใหม่จริงและผ่าน Bias + Timing + Entry Gate เต็มอีกครั้ง สามารถเติมได้'
  })
