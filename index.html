@@ -423,7 +423,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <h3 id="setup-compact-name">กำลังรอจุดเข้า</h3>
   <p id="setup-compact-desc">เมื่อมีจังหวะหรือเพิ่งมีสัญญาณ ช่องนี้จะเทียบกับไม้ย้อนหลังและอัปเดตจากราคาตอนนี้แบบเรียลไทม์</p>
   <div class="setup-compact-rate" id="setup-compact-rate">
-    <span>น้ำหนักฝั่งที่เด่นตอนนี้ · ตลาดสด +10 นาที</span>
+    <span>น้ำหนักตลาดสดของฝั่งที่แสดง · +10 นาที</span>
     <div class="setup-compact-rate-head"><strong id="setup-compact-similar-rate">—</strong><b id="setup-compact-history-lean">รอข้อมูล</b></div>
     <div class="setup-compact-track"><div id="setup-compact-rate-bar"></div></div>
     <div class="setup-compact-meta"><span id="setup-compact-similar-record">—</span><span id="setup-compact-sample-quality">—</span></div>
@@ -474,7 +474,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </section>
   <section class="setup-profile-rate" id="setup-profile-rate">
     <div class="setup-rate-main">
-      <div><span>น้ำหนักฝั่งที่เด่นตอนนี้ · ตลาดสด +10 นาที</span><strong id="setup-similar-rate">—</strong></div>
+      <div><span>น้ำหนักตลาดสดของฝั่งที่แสดง · +10 นาที</span><strong id="setup-similar-rate">—</strong></div>
       <b id="setup-history-lean">รอข้อมูล</b>
     </div>
     <div class="setup-rate-track"><div id="setup-rate-bar"></div></div>
@@ -1824,8 +1824,9 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('setup-compact-'+side+'-rate').textContent=$('setup-full-'+side+'-rate').textContent;
     small.className='setup-compact-side '+side+(full.classList.contains('active')?' active':'');
    }
-   $('setup-compact-why').textContent=$('setup-support-list').firstElementChild?.textContent
-     ||'น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง';
+   const conflicting=$('setup-warning-list').firstElementChild?.textContent||'';
+   $('setup-compact-why').textContent=conflicting.startsWith('ข้อมูลขัดกัน')?conflicting:
+     $('setup-support-list').firstElementChild?.textContent||'น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง';
   }
 
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
