@@ -1644,61 +1644,56 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 
   function setupClamp(v,a,b){return Math.max(a,Math.min(b,v));}
   function setupDoneSignals(version=CFG.version){
+   if(state.analysisTf!=='1m')return [];
    return engine.signals.filter(s=>s.version===version&&['correct','incorrect'].includes(s.result)&&s.dataset?.entry);
   }
 
   /* Read-only T+10 candle observation study. Never saved as real issued trades. */
   function setupShadowHistory(){
    if(state.historyFallback)return [];
-   const bars=(state.bars['1m']||[]).filter(b=>b.closed).slice(-350);
-   if(bars.length<55)return [];
+   const tf=state.analysisTf,seconds=TF_SECONDS[tf]||60,ahead=ANALYSIS_HORIZON_BARS[tf]||1;
+   const bars=(state.bars[tf]||[]).filter(b=>b.closed).slice(-350);
+   if(bars.length<45+ahead)return [];
    const tail=bars.at(-1),cache=state.shadowCache;
-   if(cache&&cache.lastTime===tail.time&&cache.lastClose===tail.close&&cache.length===bars.length)return cache.rows;
+   if(cache&&cache.tf===tf&&cache.ahead===ahead&&cache.lastTime===tail.time&&cache.lastClose===tail.close&&cache.length===bars.length)return cache.rows;
    const close=bars.map(b=>b.close),ema8=ema(close,8),ema21=ema(close,21),rows=[];
-   for(let i=40;i+10<bars.length;i++){
+   for(let i=40;i+ahead<bars.length;i++){
     let complete=true;
-    for(let j=i-34;j<=i+10;j++)if(bars[j].time-bars[j-1].time!==60){complete=false;break;}
+    for(let j=i-34;j<=i+ahead;j++)if(bars[j].time-bars[j-1].time!==seconds){complete=false;break;}
     if(!complete)continue;
     let tr=0;
-    for(let j=i-13;j<=i;j++){
-     const b=bars[j],prev=bars[j-1].close;
-     tr+=Math.max(b.high-b.low,Math.abs(b.high-prev),Math.abs(b.low-prev));
-    }
+    for(let j=i-13;j<=i;j++){const b=bars[j],prev=bars[j-1].close;tr+=Math.max(b.high-b.low,Math.abs(b.high-prev),Math.abs(b.low-prev));}
     const atr=Math.max(tr/14,close[i]*.00008,1e-9);
     const trend=setupClamp((ema8[i]-ema21[i])/atr,-1,1),momentum=(close[i]-close[i-3])/atr;
     const recent=bars.slice(i-11,i+1),high=Math.max(...recent.map(b=>b.high)),low=Math.min(...recent.map(b=>b.low));
     const rangePosition=setupClamp((close[i]-low)/Math.max(high-low,atr*.1),0,1);
-    const volume=bars.slice(i-23,i).map(b=>b.volume).filter(x=>x>0);
-    const relVol=bars[i].volume/Math.max(median(volume)||1,1e-9);
+    const volume=bars.slice(i-23,i).map(b=>b.volume).filter(x=>x>0),relVol=bars[i].volume/Math.max(median(volume)||1,1e-9);
     const dir=Math.abs(trend)>=.15?Math.sign(trend):Math.abs(momentum)>=.25?Math.sign(momentum):Math.sign(bars[i].close-bars[i].open);
     const extension=dir*(close[i]-ema21[i])/atr;
-    if(close[i+10]===close[i])continue;
-    rows.push({time:bars[i].time,trend,momentum,rangePosition,relVol,extension,highWin:close[i+10]>close[i]});
+    if(close[i+ahead]===close[i])continue;
+    rows.push({time:bars[i].time,trend,momentum,rangePosition,relVol,extension,highWin:close[i+ahead]>close[i]});
    }
-   state.shadowCache={lastTime:tail.time,lastClose:tail.close,length:bars.length,rows};
+   state.shadowCache={tf,ahead,lastTime:tail.time,lastClose:tail.close,length:bars.length,rows};
    return rows;
   }
   function setupShadowCompare(snap){
    const empty={n:0,highWins:0,lowWins:0,highRate:null,lowRate:null,meanSimilarity:null};
    if(!snap)return empty;
    const similarity=row=>{
-    const factors=[[snap.trend,row.trend,1.25,1.6],[snap.momentum,row.momentum,3,.9],
-     [snap.rangePosition,row.rangePosition,.65,1.4],[snap.relVol,row.relVol,3,.9],
-     [snap.extension,row.extension,4,1]];
+    const factors=[[snap.trend,row.trend,1.25,1.6],[snap.momentum,row.momentum,3,.9],[snap.rangePosition,row.rangePosition,.65,1.4],[snap.relVol,row.relVol,3,.9],[snap.extension,row.extension,4,1]];
     let score=0,total=0;
     for(const [a,b,scale,weight] of factors){if(!Number.isFinite(a)||!Number.isFinite(b))continue;total+=weight;score+=weight*setupClamp(1-Math.abs(a-b)/scale,0,1);}
     return total?score/total:0;
    };
-   const ranked=setupShadowHistory().map(row=>({row,score:similarity(row)})).sort((a,b)=>b.score-a.score);
-   const selected=[];
+   const ranked=setupShadowHistory().map(row=>({row,score:similarity(row)})).sort((a,b)=>b.score-a.score),selected=[];
+   const spacing=analysisHorizonMs(state.analysisTf)/1000;
    for(const item of ranked){
     if(item.score<.43)break;
-    if(selected.some(x=>Math.abs(x.row.time-item.row.time)<600))continue;
+    if(selected.some(x=>Math.abs(x.row.time-item.row.time)<spacing))continue;
     selected.push(item);if(selected.length>=12)break;
    }
    const n=selected.length,highWins=selected.filter(x=>x.row.highWin).length;
-   return {n,highWins,lowWins:n-highWins,highRate:n?highWins/n:null,lowRate:n?(n-highWins)/n:null,
-     meanSimilarity:n?selected.reduce((sum,x)=>sum+x.score,0)/n:null};
+   return {n,highWins,lowWins:n-highWins,highRate:n?highWins/n:null,lowRate:n?(n-highWins)/n:null,meanSimilarity:n?selected.reduce((sum,x)=>sum+x.score,0)/n:null};
   }
   function setupStats(rows){
    const n=rows.length,wins=rows.filter(s=>s.result==='correct').length;
@@ -1734,8 +1729,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function setupLiveSnapshot(v,directionView,micro={},side='HIGH'){
    if(state.historyFallback||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
    const e=v.event,f=v.f,ph=v.phase;
-   const nowMs=state.quote.ts*1000;
-   const recentIssued=[...engine.signals].reverse().find(s=>s.version===CFG.version&&s.direction===side&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=180000);
+   const nowMs=state.quote.ts*1000,aEngine=analysisEngine(state.analysisTf),recentWindow=Math.max(180000,Math.min(900000,analysisHorizonMs(state.analysisTf)));
+   const recentIssued=[...aEngine.signals].reverse().find(s=>s.version===CFG.version&&s.direction===side&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=recentWindow);
    const d=side==='HIGH'?1:-1;
    const relVol=Math.max(f.relVolume||0,f.volume3Ratio||0,ph.liveVolumePace||0);
    const extension=Number.isFinite(ph.extensionAtr)?ph.extensionAtr:(ph.priorDir||ph.dir||d)*(state.quote.price-f.ema21)/f.atr;
@@ -1792,9 +1787,9 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function setupPickLive(v,directionView,micro={}){
    if(state.historyFallback||!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
    const snaps={HIGH:setupLiveSnapshot(v,directionView,micro,'HIGH'),LOW:setupLiveSnapshot(v,directionView,micro,'LOW')};
-   const own=setupDoneSignals(),previous=CFG.version==='7.1.0'?[]:setupDoneSignals('7.1.0');
+   const primary=state.analysisTf==='1m',own=primary?setupDoneSignals():[],previous=primary&&CFG.version!=='7.1.0'?setupDoneSignals('7.1.0'):[];
    const ownEnough=['HIGH','LOW'].every(d=>own.filter(s=>s.direction===d).length>=3);
-   const usePrevious=!ownEnough&&previous.length>=6;
+   const usePrevious=primary&&!ownEnough&&previous.length>=6;
    const source=usePrevious?previous:own;
    const version=usePrevious?'7.1.0':CFG.version;
    const high=setupComparison(snaps.HIGH,source),low=setupComparison(snaps.LOW,source);
@@ -1813,7 +1808,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const issued=v.signal?.direction,watch=v.event?.d>0?'HIGH':v.event?.d<0?'LOW':null;
    const selected=displayLeading||(['HIGH','LOW'].includes(issued)?issued:null)||watch||
     (['HIGH','LOW'].includes(directionView.direction)?directionView.direction:'HIGH');
-   return {snap:snaps[selected],leading,leadingSource,marketLeading,displayLeading,displaySource,
+   return {snap:snaps[selected],leading,leadingSource,marketLeading,displayLeading,displaySource,analysisTf:state.analysisTf,
     high,low,shadow:chartBasis?shadow:null,chartBasis,version,isReference:usePrevious,
     model:{HIGH:directionView.high,LOW:directionView.low}};
   }
