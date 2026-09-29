@@ -396,6 +396,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .signal-card-main .entry-watch-head strong{font-size:10px!important}
 .signal-card-main .signal-description{font-size:9px!important}
 .signal-card-main #event-detail{font-size:8px!important}
+.signal-card-main #risk-reason,.signal-card-main #direction-reference{display:none!important}
 
 .signal-card-candle{display:flex;flex-direction:column;min-width:0}
 .candle-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid var(--card-border)}
@@ -412,6 +413,13 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .signal-card-candle.low .candle-hero strong,.signal-card-candle.low .candle-confidence b{color:#ff8da1}
 .candle-confidence{text-align:right}
 .candle-confidence b{font:700 20px/1 'Segoe UI',sans-serif;color:#dbe7f5}
+.candle-status-summary{margin:3px 0 7px;padding:8px 9px;border:1px solid #304258;border-radius:8px;background:#0b141f}
+.candle-status-summary>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:2px}
+.candle-status-summary>b{display:block;font-size:12px;line-height:1.3;color:#dbe7f5}
+.candle-status-summary>small{display:block;margin-top:3px;font-size:8px;line-height:1.4;color:#9fb1c6}
+.candle-status-summary.high{border-color:#2d6f5d;background:#0d1d19}.candle-status-summary.high>b{color:#61e3bc}
+.candle-status-summary.low{border-color:#7d3d50;background:#22141b}.candle-status-summary.low>b{color:#ff8da1}
+.candle-status-summary.wait{border-color:#35475d}
 .candle-summary{font-size:8.5px;line-height:1.45;color:#9cafc5;margin:0 0 6px}
 .candle-patterns{margin-top:2px;padding:7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
 .candle-patterns>span,.candle-reading>span,.candle-change>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:5px}
@@ -501,6 +509,7 @@ main{padding-top:10px}
  .entry-gate-detail ul{padding-left:12px!important;font-size:7.5px!important}
  .candle-hero{gap:4px!important}
  .candle-hero strong,.candle-confidence b{font-size:12px!important}
+ .candle-status-summary{padding:6px!important}.candle-status-summary>b{font-size:10px!important}.candle-status-summary>small{font-size:7px!important}
  .candle-summary,.candle-reading p,.candle-change p,.candle-lock small{font-size:7.5px!important}
  .compact-next>p{font-size:10px!important}
  .compact-entry-line>b{font-size:8.5px!important}
@@ -607,6 +616,12 @@ main{padding-top:10px}
         <strong id="candle-direction">รอข้อมูล</strong>
       </div>
       <div class="candle-confidence"><span>ความชัด</span><b id="candle-confidence">—</b></div>
+    </div>
+
+    <div class="candle-status-summary wait" id="candle-status-summary">
+      <span>สรุปแท่งเทียนตอนนี้</span>
+      <b id="candle-status-title">ยังไม่ชัด</b>
+      <small id="candle-status-text">กำลังรอข้อมูลแท่งเทียน</small>
     </div>
 
     <p class="candle-summary" id="candle-summary">รอข้อมูล</p>
@@ -2357,10 +2372,12 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
      span.textContent=p.name;patternBox.append(span);
     }
    };
+   const summaryBox=$('candle-status-summary'),summaryTitle=$('candle-status-title'),summaryText=$('candle-status-text');
    if(!view?.available){
     card.classList.add('wait');stateEl.textContent='WAIT';
     $('candle-direction').textContent='รอข้อมูล';
     $('candle-confidence').textContent='—';
+    if(summaryBox){summaryBox.className='candle-status-summary wait';summaryTitle.textContent='ยังไม่ชัด';summaryText.textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';}
     $('candle-summary').textContent=view?.reason||'รอข้อมูล Futures สด';
     renderPatterns([]);
     $('candle-meaning').textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';
@@ -2371,6 +2388,12 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('candle-direction').textContent=view.direction==='WAIT'?'รอก่อน':directionThai(view.direction);
     $('candle-confidence').textContent=view.confidence+'%';
     const top=view.patterns?.[0]?.name;
+    if(summaryBox){
+     summaryBox.className='candle-status-summary '+cls;
+     const strength=view.confidence>=72?'ชัด':view.confidence>=60?'เริ่มชัด':'ยังไม่นิ่ง';
+     summaryTitle.textContent=view.direction==='HIGH'?'แรงซื้อเด่น · '+strength:view.direction==='LOW'?'แรงขายเด่น · '+strength:'แท่งยังสูสี';
+     summaryText.textContent=top?'พบ '+top+' · '+(view.plainMeaning||view.label):(view.plainMeaning||view.label);
+    }
     $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label;
     renderPatterns(view.patterns);
     $('candle-meaning').textContent=view.plainMeaning||view.label;
