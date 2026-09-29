@@ -458,15 +458,26 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-profile-compact.side-conflict .compact-brief-status{border-color:#8d6b35;background:#2a2115}
 
 
-.analysis-tf-control{display:flex;align-items:center;gap:5px;white-space:nowrap;color:#8799b1;font-size:9px}
-.analysis-tf-control>span{font-size:9px}
-.analysis-tf-control select{height:32px;min-height:32px;padding:0 24px 0 8px;border:1px solid #2b3b50;border-radius:7px;background:#0d1622;color:#d2deed;font:600 11px 'Segoe UI',sans-serif;outline:none}
-.analysis-tf-control button{height:32px;padding:0 9px;border:1px solid #3b536f;border-radius:7px;background:#152235;color:#cfe0f3;font-size:9px}
+.chart-toolbar-slot{min-height:42px;border-bottom:1px solid var(--border);position:relative}
+.chart-toolbar{min-height:42px!important;padding:4px 6px!important;gap:5px!important;border-bottom:0!important;background:#0d1520ee;backdrop-filter:blur(12px)}
+.analysis-tf-control{display:flex;align-items:center;gap:4px;white-space:nowrap;color:#8799b1;font-size:8px}
+.analysis-tf-control>span{font-size:8px}
+.analysis-tf-control select{height:30px;min-height:30px;padding:0 21px 0 7px;border:1px solid #2b3b50;border-radius:7px;background:#0d1622;color:#d2deed;font:600 10px 'Segoe UI',sans-serif;outline:none}
+.analysis-tf-control button{height:30px;min-height:30px!important;padding:0 8px;border:1px solid #3b536f;border-radius:7px;background:#152235;color:#cfe0f3;font-size:8px}
 .analysis-tf-control button:not(:disabled){border-color:#3f8871;background:#123026;color:#6ce0bc;cursor:pointer}
-.analysis-tf-control button:disabled{opacity:.38;cursor:default}
-.analysis-tf-control small{padding:3px 6px;border:1px solid #2a394d;border-radius:999px;color:#8ea2bb;font-size:8px}
-.analysis-tf-control.pending small{border-color:#81632e;color:#e2bd74}
-@media(max-width:900px){.analysis-tf-control{order:2;max-width:100%;overflow-x:auto}.analysis-tf-control small{display:none}}
+.analysis-tf-control button:disabled{display:none!important}
+.analysis-tf-control small{display:none!important}
+.toolbar-more{position:relative;margin-left:auto}
+.toolbar-more>summary{list-style:none;width:32px;height:30px;display:grid;place-items:center;border:1px solid #2b3b50;border-radius:7px;background:#111c2a;color:#aebed2;cursor:pointer;font:700 14px/1 'Segoe UI',sans-serif}
+.toolbar-more>summary::-webkit-details-marker{display:none}
+.toolbar-more-popover{position:absolute;right:0;top:36px;z-index:130;display:grid;gap:6px;min-width:190px;padding:8px;border:1px solid #314159;border-radius:10px;background:#0c1420;box-shadow:0 14px 40px #0009}
+.toolbar-more-popover button{width:100%;min-height:32px!important;padding:6px 9px;text-align:left}
+.toolbar-more-popover .engine-version-picker{display:grid!important;gap:4px;margin:0}
+.toolbar-more-popover .engine-version-picker>span{display:block!important;float:none;color:#7f93ad;font-size:8px}
+.toolbar-more-popover .engine-version-picker select{width:100%;height:32px;background:#0d1622;color:#d2deed;border:1px solid #2b3b50;border-radius:7px;padding:0 8px}
+body.toolbar-floating .chart-toolbar{position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:120;width:min(720px,calc(100vw - 12px));border:1px solid #2b3b50!important;border-radius:11px!important;box-shadow:0 10px 28px #0008}
+@media(max-width:900px){.analysis-tf-control{order:0;max-width:none;overflow:visible}.chart-toolbar{flex-wrap:nowrap!important}.toolbar-more-popover{min-width:180px}}
+@media(max-width:560px){.chart-toolbar-slot{min-height:38px}.chart-toolbar{min-height:38px!important;padding:3px 4px!important;gap:3px!important}.analysis-tf-control>span{font-size:7px}.analysis-tf-control select{height:28px;min-height:28px;padding-left:5px;padding-right:17px;font-size:9px}.analysis-tf-control button{height:28px;min-height:28px!important;padding:0 6px}.toolbar-more>summary{width:29px;height:28px}.toolbar-more-popover{position:fixed;top:42px;right:6px;left:auto;width:min(220px,calc(100vw - 12px))}}
 
 .main-signal-head,.probability-head,.candle-kicker,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
@@ -529,8 +540,8 @@ main{padding-top:10px}
  .compact-entry-line>b{font-size:8.5px!important}
  .compact-brief-columns{grid-template-columns:1fr!important}
  .compact-brief-box li{font-size:7px!important}
- .chart-toolbar{flex-wrap:wrap!important}
- .chart-tf-control,.analysis-tf-control{max-width:100%;overflow-x:auto}
+ .chart-toolbar{flex-wrap:nowrap!important}
+ .chart-tf-control,.analysis-tf-control{max-width:none;overflow:visible}
 }
 </style>
 </head>
@@ -550,29 +561,37 @@ main{padding-top:10px}
 <div id="fatal" class="fatal" hidden></div>
 <div class="work-area" id="work-area">
 <section class="chart-card">
-  <div class="chart-toolbar">
-    <div class="timeframes" aria-label="ช่วงแท่งเทียน"><button data-tf="1m" aria-pressed="true">1m</button><button data-tf="5m" aria-pressed="false">5m</button><button data-tf="10m" aria-pressed="false">10m</button><button data-tf="15m" aria-pressed="false">15m</button><button data-tf="1h" aria-pressed="false">1h</button><button data-tf="4h" aria-pressed="false">4h</button><button data-tf="1d" aria-pressed="false">1D</button><button data-tf="1w" aria-pressed="false">1W</button></div>
-    <div class="analysis-tf-control chart-tf-control" title="เลือกไทม์เฟรมของกราฟ">
-      <span>กราฟ</span>
-      <select id="chart-tf-select" aria-label="เลือกไทม์เฟรมของกราฟ">
-        <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
-        <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
-      </select>
-      <button id="chart-tf-confirm" type="button" disabled>ยืนยัน</button>
-      <small id="chart-tf-active">กราฟ 1m</small>
+  <div class="chart-toolbar-slot" id="chart-toolbar-slot">
+    <div class="chart-toolbar" id="chart-toolbar">
+      <div class="timeframes" aria-label="ช่วงแท่งเทียน"><button data-tf="1m" aria-pressed="true">1m</button><button data-tf="5m" aria-pressed="false">5m</button><button data-tf="10m" aria-pressed="false">10m</button><button data-tf="15m" aria-pressed="false">15m</button><button data-tf="1h" aria-pressed="false">1h</button><button data-tf="4h" aria-pressed="false">4h</button><button data-tf="1d" aria-pressed="false">1D</button><button data-tf="1w" aria-pressed="false">1W</button></div>
+      <div class="analysis-tf-control chart-tf-control" title="เลือกไทม์เฟรมของกราฟ">
+        <span>กราฟ</span>
+        <select id="chart-tf-select" aria-label="เลือกไทม์เฟรมของกราฟ">
+          <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
+          <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
+        </select>
+        <button id="chart-tf-confirm" type="button" disabled>ยืนยัน</button>
+        <small id="chart-tf-active">กราฟ 1m</small>
+      </div>
+      <div class="analysis-tf-control" title="กราฟที่ดูเปลี่ยนได้อิสระ การวิเคราะห์จะเปลี่ยนเมื่อกดยืนยันเท่านั้น">
+        <span>วิเคราะห์</span>
+        <select id="analysis-tf-select" aria-label="เลือกไทม์เฟรมสำหรับการวิเคราะห์">
+          <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
+          <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
+        </select>
+        <button id="analysis-tf-confirm" type="button" disabled>ยืนยัน</button>
+        <small id="analysis-tf-active">ใช้อยู่ 1m</small>
+      </div>
+      <details class="toolbar-more" id="toolbar-more">
+        <summary aria-label="เครื่องมือเพิ่มเติม" title="เครื่องมือเพิ่มเติม">•••</summary>
+        <div class="toolbar-more-popover">
+          <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
+          <button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
+          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option></select></label>
+          <button id="latest" class="quiet">กลับล่าสุด</button>
+        </div>
+      </details>
     </div>
-    <span class="toolbar-divider"></span>
-    <div class="analysis-tf-control" title="กราฟที่ดูเปลี่ยนได้อิสระ การวิเคราะห์จะเปลี่ยนเมื่อกดยืนยันเท่านั้น">
-      <span>วิเคราะห์จาก</span>
-      <select id="analysis-tf-select" aria-label="เลือกไทม์เฟรมสำหรับการวิเคราะห์">
-        <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
-        <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
-      </select>
-      <button id="analysis-tf-confirm" type="button" disabled>ยืนยัน</button>
-      <small id="analysis-tf-active">ใช้อยู่ 1m</small>
-    </div>
-    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button><label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option></select></label>
-    <div class="chart-actions"><button id="latest" class="quiet">กลับล่าสุด</button></div>
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
@@ -3503,6 +3522,17 @@ function openReport(){
    if(state.indicatorsExpanded)createIndicatorPanes();
    else removeIndicatorPanes();
   }
+
+  const chartToolbar=$('chart-toolbar'),chartToolbarSlot=$('chart-toolbar-slot'),toolbarMore=$('toolbar-more');
+  const syncFloatingToolbar=()=>{
+   if(!chartToolbar||!chartToolbarSlot)return;
+   const shouldFloat=chartToolbarSlot.getBoundingClientRect().top<=6;
+   document.body.classList.toggle('toolbar-floating',shouldFloat);
+  };
+  window.addEventListener('scroll',syncFloatingToolbar,{passive:true});
+  window.addEventListener('resize',syncFloatingToolbar);
+  document.addEventListener('click',ev=>{if(toolbarMore?.open&&!toolbarMore.contains(ev.target))toolbarMore.open=false;});
+  requestAnimationFrame(syncFloatingToolbar);
 
   const chartTfSelect=$('chart-tf-select'),chartTfConfirm=$('chart-tf-confirm'),chartTfControl=chartTfSelect?.closest('.chart-tf-control');
   if(chartTfSelect&&chartTfConfirm){
