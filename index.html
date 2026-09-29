@@ -813,9 +813,9 @@ function atrOf(b,n=14){
  const tr=b.slice(1).map((x,i)=>Math.max(x.high-x.low,Math.abs(x.high-b[i].close),Math.abs(x.low-b[i].close)));
  return avg(tr.slice(-n));
 }
-function horizon10Stats(b){
+function horizon10Stats(b,ahead=10){
  const start=Math.max(28,b.length-110),upper={n:0,wins:0,moves:[]},lower={n:0,wins:0,moves:[]};
- for(let i=start;i+10<b.length;i++){
+ for(let i=start;i+ahead<b.length;i++){
   const prior=b.slice(i-14,i);if(prior.length<14)continue;
   const recent=prior.slice(-12),cl=prior.map(x=>x.close),path=cl.slice(-11).slice(1).reduce((s,x,j)=>s+Math.abs(x-cl.slice(-11)[j]),0);
   const eff=path?Math.abs(cl.at(-1)-cl.at(-11))/path:0;
@@ -825,7 +825,7 @@ function horizon10Stats(b){
   if(width<atr*.9||width>atr*5)continue;
   const pos=(b[i].close-lo)/width;
   if(b[i].close>hi+atr*.08||b[i].close<lo-atr*.08)continue;
-  const move=(b[i+10].close-b[i].close)/atr;
+  const move=(b[i+ahead].close-b[i].close)/atr;
   if(pos>=.76){upper.n++;upper.moves.push(move);if(move<0)upper.wins++;}
   else if(pos<=.24){lower.n++;lower.moves.push(move);if(move>0)lower.wins++;}
  }
@@ -836,7 +836,7 @@ function horizon10Stats(b){
  }
  return {upper,lower};
 }
-function features(bars,p){
+function features(bars,p,horizonBars=10){
  const b=bars.filter(x=>x.closed).slice(-160);if(b.length<35)return null;
  const c=b.map(x=>x.close),e8=ema(c,8),e21=ema(c,21);
  const atr=Math.max(atrOf(b.slice(-20),14),p*.00008,1e-9),r=b.slice(-CFG.rangeBars);
@@ -872,7 +872,7 @@ function features(bars,p){
   if(cur.high>ph+atr*.05&&(cur.close<=ph||next.close<=ph))upperRejects++;
   if(cur.low<pl-atr*.05&&(cur.close>=pl||next.close>=pl))lowerRejects++;
  }
- const h10=horizon10Stats(b);
+ const h10=horizon10Stats(b,horizonBars);
  return {b,atr,high,low,fair,ema8:e8.at(-1),ema21:e21.at(-1),trend,mom,momPrev,momAccel,eff,
   emaSepAtr,emaSlopeAtr,sideCrosses,falseBreaks:upperRejects+lowerRejects,upperRejects,lowerRejects,
   rangeWidthAtr:(high-low)/atr,rangePosition:clamp((p-low)/width,0,1),h10,
@@ -1145,7 +1145,7 @@ class Engine{
   return {score,accepted,acceptedClosed:!!acceptedClosed,structureAccepted,requiresClosedAcceptance,body,rejects,why};
  }
  step(x){
-  const f=features(x.bars,x.price);if(!f)return {status:'warmup',reason:'รอแท่ง 1 นาทีที่สมบูรณ์',signal:null};
+  const f=features(x.bars,x.price,x.horizonBars||10);if(!f)return {status:'warmup',reason:'รอแท่ง 1 นาทีที่สมบูรณ์',signal:null};
   const z=zones(x.bars||[],f.atr),regime=this.trackRegime(f,x.price),phase=marketPhase(f,x,regime);x.phase=phase;const base={f,z,regime,phase,signal:null,event:null,continuation:0,reversal:0};
   if(!x.fresh){this.reset('ข้อมูลไม่พร้อม',x.ts);return {...base,status:'offline',reason:'พักสัญญาณจนข้อมูลสดและต่อเนื่อง'};}
   if(x.id===this.lastId)return {...(this.lastView||base),status:this.lastView?.status==='new'?'issued':this.lastView?.status,signal:null};
@@ -2191,7 +2191,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function updateSetupHealth(){
    const h=setupFeedHealth();
    const age=state.quote?(Date.now()-state.quote.ts*1000)/1000:Infinity;
-   const unsafe=state.historyFallback||!state.quote||state.socket?.readyState!==1||age>4||Date.now()-state.lastMessageAt>4500;
+   const unsafe=analysisUsesSpot(state.analysisTf)||!state.quote||state.socket?.readyState!==1||age>4||Date.now()-state.lastMessageAt>4500;
    if(unsafe&&$('setup-similar-rate')?.textContent!=='—'){
     renderSetupProfile(null,null,{});renderCompactSetupProfile();
    }
@@ -2782,7 +2782,7 @@ function openReport(){
    const book=valid?.76*depth.imbalance+.24*depth.micropriceBias:0;
    const fresh=data.fresh;
    const aEngine=analysisEngine(tf),before=aEngine.audit.length;
-   const v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh,current});
+   const v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh,current,horizonBars:ANALYSIS_HORIZON_BARS[tf]||1});
    if(data.sourceFallback)v.reason='แสดงแท่ง Spot สำรองของ '+tf+' เท่านั้น — พักการประเมินจนโหลด Futures ได้ครบ';
    lastView=v;
    const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});
@@ -2938,8 +2938,10 @@ function openReport(){
    return {bars,current:analysisCurrentBar(tf),continuous,fresh,seconds,sourceFallback};
   }
   function tfHumanText(value){
-   const label=TF_LABELS[state.analysisTf]||state.analysisTf;
-   return humanText(value).replaceAll('1 นาที',label).replaceAll('1m',state.analysisTf);
+   const tf=state.analysisTf,label=TF_LABELS[tf]||tf,horizon=analysisHorizonLabel(tf),horizonText=horizon.replace(/^\+/,'');
+   let out=humanText(value).replaceAll('1 นาที',label).replaceAll('1m',tf);
+   if(tf!=='1m')out=out.replaceAll('อีก 10 นาที','เป้าหมาย '+horizon).replaceAll('+10 นาที',horizon).replaceAll('ครบ 10 นาที','ครบ '+horizonText);
+   return out;
   }
   async function boot(){
     // Load 1m first: an unavailable optional timeframe must never hide the main iPad chart.
