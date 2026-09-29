@@ -1980,13 +1980,13 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   function candleLevel(v){
    return v>=.68?'สูง':v>=.42?'กลาง':'ต่ำ';
   }
-  function candleBehaviorAssess(fresh=true){
+  function candleBehaviorAssess(fresh=true,tf=state.analysisTf){
    if(!fresh||state.historyFallback||!state.quote)return {available:false,direction:'WAIT',reason:'รอข้อมูล Futures สด'};
-   const source=(state.bars['1m']||[]).slice(-32);
+   const source=(state.bars[tf]||[]).slice(-32),seconds=TF_SECONDS[tf]||60,tfLabel=TF_LABELS[tf]||tf;
    const closed=source.filter(b=>b.closed);
    const atr=candleAtr(source);
-   if(closed.length<20||!(atr>0))return {available:false,direction:'WAIT',reason:'รอแท่ง 1 นาทีต่อเนื่องให้พอ'};
-   const minute=Math.floor(state.quote.ts/60)*60;
+   if(closed.length<20||!(atr>0))return {available:false,direction:'WAIT',reason:'รอแท่ง '+tfLabel+' ต่อเนื่องให้พอ',analysisTf:tf};
+   const baseLast=source.at(-1),minute=baseLast?(state.quote.ts<baseLast.time+seconds?baseLast.time:baseLast.time+Math.floor((state.quote.ts-baseLast.time)/seconds)*seconds):Math.floor(state.quote.ts/seconds)*seconds;
    let work=source.slice(-7).map(b=>({...b}));
    let last=work.at(-1);
    if(!last||last.time<minute){
@@ -2026,7 +2026,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const ranges=m.slice(-4).map(x=>x.rangeAtr),compression=(ranges[0]>ranges[1]&&ranges[1]>ranges[2])?1:0;
    const expansion=compression&&ranges[3]>=Math.max(.20,ranges[2]*1.25)?cur.dir:0;
    const prevVol=closed.slice(-24,-1).map(x=>x.volume).filter(x=>x>0),volMed=Math.max(median(prevVol)||1,1e-9);
-   const relVol=(work.at(-1).volume||0)/volMed;
+   const liveForVolume=work.at(-1),elapsed=clip(state.quote.ts-liveForVolume.time,1,seconds),volumePace=tf==='1m'?(liveForVolume.volume||0):(liveForVolume.closed?(liveForVolume.volume||0):(liveForVolume.volume||0)/clip(elapsed/seconds,.03,1));
+   const relVol=volumePace/volMed;
    const volumeBias=relVol>=1.05?cur.dir*clip((relVol-1)/1.5,0,1):0;
    const preliminary=24*progression+18*bodyBias+16*closeBias+12*wickBias+12*breakout+8*cleanliness*Math.sign(progression+bodyBias+closeBias)+5*volumeBias+5*expansion;
    const dominant=Math.sign(preliminary)||cur.dir||1;
@@ -2077,37 +2078,38 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    else if(reversalPressure>.58)label='เริ่มมีแรงกลับตัว · ยังไม่ชัดพอ';
    const patternRead=candlePatternRead(m,atr);
    return {
-    available:true,direction,confidence,score,label,
+    available:true,direction,confidence,score,label,analysisTf:tf,
     patterns:patternRead.patterns,patternBias:patternRead.bias,plainMeaning:patternRead.meaning,changeTrigger:patternRead.change,
     reasons:reasons.slice(0,4),warnings:warnings.slice(0,4),
     metrics:{continuation,exhaustion,reversalPressure,progression,bodyBias,closeBias,wickBias,overlap,cleanliness,breakout,pullbackQuality,bodyDecay,failedContinuation,relVol},
-    snapshot:{bars:m.map(x=>({time:x.time,open:x.open,high:x.high,low:x.low,close:x.close,volume:x.volume,bodyAtr:x.bodyAtr,closeLocation:x.closeLocation,upperWick:x.upperWick,lowerWick:x.lowerWick})),atr}
+    snapshot:{analysisTf:tf,horizonMs:analysisHorizonMs(tf),bars:m.map(x=>({time:x.time,open:x.open,high:x.high,low:x.low,close:x.close,volume:x.volume,bodyAtr:x.bodyAtr,closeLocation:x.closeLocation,upperWick:x.upperWick,lowerWick:x.lowerWick})),atr}
    };
   }
-  function candleStats(){
-   const done=candleState.signals.filter(s=>['correct','incorrect'].includes(s.result)),wins=done.filter(s=>s.result==='correct').length,losses=done.length-wins;
+  function candleSignalTf(s){return s?.analysisTf||'1m';}
+  function candleStats(tf=state.analysisTf){
+   const done=candleState.signals.filter(s=>candleSignalTf(s)===tf&&['correct','incorrect'].includes(s.result)),wins=done.filter(s=>s.result==='correct').length,losses=done.length-wins;
    return {done,wins,losses,rate:done.length?wins/done.length:null};
   }
-  function candlePending(){
-   return [...candleState.signals].reverse().find(s=>s.result==='pending')||null;
+  function candlePending(tf=state.analysisTf){
+   return [...candleState.signals].reverse().find(s=>candleSignalTf(s)===tf&&s.result==='pending')||null;
   }
-  function candleMaybeIssue(view,ts,price){
-   if(!view?.available||!['HIGH','LOW'].includes(view.direction)||view.confidence<64||candlePending())return null;
-   const now=ts,signal={
-    id:'CANDLE-'+now+'-'+view.direction,engine:'candle-behavior',version:CANDLE_VERSION,
-    entryTime:now,targetTime:now+600000,entryPrice:price,direction:view.direction,
+  function candleMaybeIssue(view,ts,price,tf=state.analysisTf){
+   if(!view?.available||!['HIGH','LOW'].includes(view.direction)||view.confidence<64||candlePending(tf))return null;
+   const now=ts,horizonMs=analysisHorizonMs(tf),signal={
+    id:'CANDLE-'+tf+'-'+now+'-'+view.direction,engine:'candle-behavior',version:CANDLE_VERSION,analysisTf:tf,horizonMs,
+    entryTime:now,targetTime:now+horizonMs,entryPrice:price,direction:view.direction,
     confidence:view.confidence,score:view.score,label:view.label,result:'pending',
-    snapshot:{metrics:view.metrics,patterns:view.patterns,plainMeaning:view.plainMeaning,changeTrigger:view.changeTrigger,reasons:view.reasons,warnings:view.warnings,bars:view.snapshot?.bars,atr:view.snapshot?.atr}
+    snapshot:{analysisTf:tf,metrics:view.metrics,patterns:view.patterns,plainMeaning:view.plainMeaning,changeTrigger:view.changeTrigger,reasons:view.reasons,warnings:view.warnings,bars:view.snapshot?.bars,atr:view.snapshot?.atr}
    };
-   candleState.signals.push(signal);if(candleState.signals.length>500)candleState.signals.splice(0,candleState.signals.length-500);
+   candleState.signals.push(signal);if(candleState.signals.length>800)candleState.signals.splice(0,candleState.signals.length-800);
    candleState.lastIssuedAt=now;candlePersist();return signal;
   }
   function candleSettle(ts,price){
    let changed=false;
    for(const s of candleState.signals){
     if(s.result!=='pending'||ts<s.targetTime)continue;
-    const delay=ts-s.targetTime;
-    if(delay>90000){s.result='missing';s.settledAt=ts;changed=true;continue;}
+    const delay=ts-s.targetTime,tolerance=Math.max(90000,Math.min(3600000,(s.horizonMs||600000)*.05));
+    if(delay>tolerance){s.result='missing';s.settledAt=ts;changed=true;continue;}
     s.exitPrice=price;s.settledAt=ts;
     const delta=price-s.entryPrice;
     s.result=Math.abs(delta)<1e-9?'equal':((s.direction==='HIGH'&&delta>0)||(s.direction==='LOW'&&delta<0))?'correct':'incorrect';
@@ -2116,8 +2118,16 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(changed)candlePersist();
    return changed;
   }
+  function candleRemaining(ms){
+   if(ms<=0)return 'ถึงเวลาตัดสิน';
+   const min=Math.ceil(ms/60000);
+   if(min<60)return 'เหลือ '+min+' นาที';
+   const h=Math.ceil(min/60);
+   if(h<48)return 'เหลือประมาณ '+h+' ชั่วโมง';
+   return 'เหลือประมาณ '+Math.ceil(h/24)+' วัน';
+  }
   function renderCandleBehavior(view){
-   const card=$('candle-signal-card'),stateEl=$('candle-state');
+   const card=$('candle-signal-card'),stateEl=$('candle-state'),tf=state.analysisTf,tfLabel=TF_LABELS[tf]||tf,horizon=analysisHorizonLabel(tf);
    if(!card||!stateEl)return;
    card.classList.remove('high','low','wait');stateEl.className='candle-state wait';
    const patternBox=$('candle-pattern-list');
@@ -2137,39 +2147,38 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('candle-summary').textContent=view?.reason||'รอข้อมูล Futures สด';
     renderPatterns([]);
     $('candle-meaning').textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';
-    $('candle-change-text').textContent='รอแท่ง Futures 1 นาทีที่ปิดครบก่อน';
+    $('candle-change-text').textContent='รอแท่ง Futures '+tfLabel+' ที่ปิดครบก่อน';
    }else{
     const cls=view.direction==='HIGH'?'high':view.direction==='LOW'?'low':'wait';
     card.classList.add(cls);stateEl.className='candle-state '+cls;stateEl.textContent=view.direction;
     $('candle-direction').textContent=view.direction==='WAIT'?'รอก่อน':directionThai(view.direction);
     $('candle-confidence').textContent=view.confidence+'%';
     const top=view.patterns?.[0]?.name;
-    $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label+' · ชื่อแพตเทิร์นใช้แท่งที่ปิดแล้ว ส่วนคะแนนยังอัปเดตจากแท่งสด';
+    $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label+' · อ่านจากแท่ง '+tfLabel+' · ชื่อแพตเทิร์นใช้แท่งที่ปิดแล้ว';
     renderPatterns(view.patterns);
     $('candle-meaning').textContent=view.plainMeaning||view.label;
     $('candle-change-text').textContent=view.changeTrigger||'รอแท่งถัดไปยืนยันหรือทำลายรูปแบบปัจจุบัน';
    }
-   const pending=candlePending(),latest=candleState.signals.at(-1),lock=$('candle-lock');
+   const pending=candlePending(tf),latest=[...candleState.signals].reverse().find(s=>candleSignalTf(s)===tf)||null,lock=$('candle-lock');
    if(pending){
     lock.classList.add('active');
-    const remain=Math.max(0,pending.targetTime-(state.quote?.ts||0)*1000);
-    const pattern=pending.snapshot?.patterns?.[0]?.name;
+    const remain=Math.max(0,pending.targetTime-(state.quote?.ts||0)*1000),pattern=pending.snapshot?.patterns?.[0]?.name;
     $('candle-lock-title').textContent='CANDLE '+directionThai(pending.direction)+' · ล็อก '+money(pending.entryPrice);
-    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'ความชัด '+pending.confidence+'% · ตัดสิน '+clockMs(pending.targetTime)+' · เหลือ '+Math.ceil(remain/60000)+' นาที';
+    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'ความชัด '+pending.confidence+'% · เป้าหมาย '+horizon+' · '+candleRemaining(remain);
    }else if(latest){
     lock.classList.remove('active');
     const pattern=latest.snapshot?.patterns?.[0]?.name;
     $('candle-lock-title').textContent='ล่าสุด '+directionThai(latest.direction)+' · '+resultThai(latest.result);
-    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → ตัดสิน '+money(latest.exitPrice):'')+' · '+clockMs(latest.entryTime);
+    $('candle-lock-meta').textContent=(pattern?pattern+' · ':'')+'เข้า '+money(latest.entryPrice)+(Number.isFinite(latest.exitPrice)?' → ตัดสิน '+money(latest.exitPrice):'')+' · '+tf+' · เป้าหมาย '+horizon;
    }else{
     lock.classList.remove('active');
     $('candle-lock-title').textContent='ยังไม่มีสัญญาณล็อก';
-    $('candle-lock-meta').textContent='จะล็อกเมื่อความชัดถึงเกณฑ์ และตัดสินผลอิสระหลัง 10 นาที';
+    $('candle-lock-meta').textContent='จะล็อกเมื่อความชัดถึงเกณฑ์ · แยกสถิติ '+tf+' · เป้าหมาย '+horizon;
    }
-   const st=candleStats();
+   const st=candleStats(tf);
    $('candle-stats').textContent=st.done.length
-    ?'Candle Engine '+st.done.length+' ไม้ · '+st.wins+' ชนะ / '+st.losses+' แพ้ · '+(st.rate*100).toFixed(1)+'%'
-    :'Candle Engine · ยังไม่มีผลที่จบครบ 10 นาที';
+    ?'Candle Engine '+tf+' · '+st.done.length+' ไม้ · '+st.wins+' ชนะ / '+st.losses+' แพ้ · '+(st.rate*100).toFixed(1)+'%'
+    :'Candle Engine '+tf+' · ยังไม่มีผลที่จบตามเป้าหมาย '+horizon;
   }
 
   function setupFeedHealth(){
@@ -2883,8 +2892,8 @@ function openReport(){
     const seconds=LAZY_TF_SECONDS[tf];
     if(!seconds)continue;
     const arr=state.bars[tf];if(!arr?.length)continue;
-    const bucket=Math.floor(ts/seconds)*seconds;
     let last=arr.at(-1);
+    const bucket=last?(ts<last.time+seconds?last.time:last.time+Math.floor((ts-last.time)/seconds)*seconds):Math.floor(ts/seconds)*seconds;
     if(last&&bucket>last.time){
      last.closed=true;
      last={time:bucket,open:last.close,high:price,low:price,close:price,volume:Math.max(0,qty),closed:false};
