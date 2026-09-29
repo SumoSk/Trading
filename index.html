@@ -1292,6 +1292,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     reconnectCount: 0,
     lastMessageAt: 0,
     lastAnalysisAt: 0,
+    lastProfileAt: 0,
     selectedTf: '1m',
     chart: null,
     candleSeries: null,
@@ -1475,10 +1476,12 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function setupLiveSnapshot(v,directionView,micro={},side='HIGH'){
    if(!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
-   const e=v.event,stored=v.signal?.dataset?.entry||{},f=v.f,ph=v.phase;
+   const e=v.event,f=v.f,ph=v.phase;
+   const nowMs=state.quote.ts*1000;
+   const recentIssued=[...engine.signals].reverse().find(s=>s.version===CFG.version&&s.direction===side&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=180000);
    const d=side==='HIGH'?1:-1;
    const relVol=Math.max(f.relVolume||0,f.volume3Ratio||0,ph.liveVolumePace||0);
-   const extension=d*(state.quote.price-f.ema21)/f.atr;
+   const extension=Number.isFinite(ph.extensionAtr)?ph.extensionAtr:(ph.priorDir||ph.dir||d)*(state.quote.price-f.ema21)/f.atr;
    const levels=[...(v.z||[]).map(z=>z.price),f.high,f.low];
    const ahead=levels.filter(price=>d*(price-state.quote.price)>0).map(price=>d*(price-state.quote.price)/f.atr);
    const room=ahead.length?Math.min(...ahead):null;
@@ -1491,8 +1494,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     book:Number.isFinite(micro.book)?micro.book:null,bookValid:!!micro.bookValid,
     evidenceScore:e&&Math.sign(e.d)===d&&Number.isFinite(e.evidenceScore)?e.evidenceScore:null,
     episodeSequence:v.signal?.dataset?.episodeSequence||1,
-    isLiveEvent:!!e&&Math.sign(e.d)===d,isRecentSignal:!!v.signal&&v.signal.direction===side,
-    hasConfirmedEntry:!!v.signal&&v.signal.direction===side,
+    isLiveEvent:!!e&&Math.sign(e.d)===d,isRecentSignal:!!recentIssued,
+    hasConfirmedEntry:(!!v.signal&&v.signal.direction===side)||!!recentIssued,
     reason:directionView.reason||''
    };
   }
@@ -2071,7 +2074,14 @@ function openReport(){
    if(v.f)engine.observeContext({ts:q.ts*1000,price:q.price,flow,coverage,book,bookValid:valid,regime:v.regime?.mode||null,phase:v.phase?.phase||null,trend:v.f.trend,momentum:v.f.mom,rangePosition:v.f.rangePosition,room:directionView.room});
    if(v.signal?.dataset?.entry){const liq=liquidationSnapshot(q.ts);v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};}
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
-   renderEvent(v);renderSetupProfile(v,directionView,{flow,book,bookValid:valid});renderCompactSetupProfile();if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
+   renderEvent(v);
+   const profileNow=performance.now();
+   if(v.signal||profileNow-state.lastProfileAt>=750){
+    state.lastProfileAt=profileNow;
+    renderSetupProfile(v,directionView,{flow,book,bookValid:valid});
+    renderCompactSetupProfile();
+   }
+   if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
   }
 
   function normalizeKline(row){return {time:Math.floor(Number(row[0])/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4],volume:+row[5],closed:Number(row[6])<Date.now()};}
@@ -2087,17 +2097,32 @@ function openReport(){
         if(!r.ok)throw new Error(`HTTP ${r.status}`);
         const rows=await r.json();
         if(!Array.isArray(rows)||rows.length<30)throw new Error('ข้อมูลแท่งไม่ครบ');
-        if(src.name!=='Futures')state.historyFallback=true;
+        if(src.name!=='Futures'&&interval==='1m')state.historyFallback=true;
         return rows.map(normalizeKline);
       }catch(err){lastError=err;console.warn('history source failed',src.name,interval,err);}
     }
     throw new Error(`โหลด ${interval} ไม่สำเร็จ: ${lastError?.message||'unknown error'}`);
   }
   async function boot(){
-    statusView('syncing','กำลังโหลดแท่ง 1m / 5m / 15m จาก Binance Futures');
+    // Load 1m first: an unavailable optional timeframe must never hide the main iPad chart.
+    statusView('syncing','กำลังโหลดกราฟ 1 นาทีจาก Binance Futures');
+    for(const tf of ['5m','15m']){const btn=document.querySelector('[data-tf="'+tf+'"]');if(btn)btn.disabled=true;}
     try{
-      const [m1,m5,m15]=await Promise.all(['1m','5m','15m'].map(loadHistory));state.bars['1m']=m1;state.bars['5m']=m5;state.bars['15m']=m15;state.booted=true;renderChart(true);connect();
-    }catch(err){console.error(err);statusView('offline',err.message+' · ถ้าเปิดจากไฟล์ในเครื่อง ลองอัปขึ้น GitHub Pages แล้วเปิดผ่าน https');$('fatal').hidden=false;$('fatal').textContent=err.message;}
+      state.bars['1m']=await loadHistory('1m');
+      state.booted=true;
+      renderChart(true);
+      connect();
+      for(const tf of ['5m','15m']){
+       loadHistory(tf).then(bars=>{
+        state.bars[tf]=bars;
+        const btn=document.querySelector('[data-tf="'+tf+'"]');if(btn)btn.disabled=false;
+        if(state.selectedTf===tf)renderChart(true);
+       }).catch(err=>console.warn('โหลดกราฟเสริม '+tf+' ไม่สำเร็จ แต่กราฟ 1 นาทีใช้งานได้',err));
+      }
+    }catch(err){
+      console.error(err);statusView('offline',err.message+' · ถ้าเปิดจากไฟล์ในเครื่อง ลองอัปขึ้น GitHub Pages แล้วเปิดผ่าน https');
+      $('fatal').hidden=false;$('fatal').textContent=err.message;
+    }
   }
   function upsertBar(interval,k){
     const arr=state.bars[interval];const b={time:Math.floor(Number(k.t)/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v,closed:!!k.x};
