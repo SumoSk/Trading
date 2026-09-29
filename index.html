@@ -483,9 +483,9 @@ body.toolbar-floating .chart-toolbar{position:fixed;top:6px;left:50%;transform:t
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
 .panel-heading{justify-content:flex-end}
 .chart-meta{min-height:34px;padding-block:6px}
-.chart-history-toggle{position:absolute;top:8px;right:8px;z-index:12;min-height:29px!important;padding:4px 9px;border-radius:8px;border:1px solid #325a50;background:#0f241fdd;color:#78d6b4;font:600 10px 'Segoe UI',sans-serif;white-space:nowrap;box-shadow:0 5px 18px #0007;backdrop-filter:blur(8px)}
-.chart-history-toggle[aria-pressed=false]{border-color:#354258;background:#141b27dd;color:#94a3b8}
-@media(max-width:560px){.chart-history-toggle{top:6px;right:6px;min-height:26px!important;padding:3px 7px;font-size:9px}}
+.chart-history-toggle{flex:0 0 auto;min-height:30px!important;height:30px;padding:0 8px;border-radius:7px;border:1px solid #325a50;background:#0f241f;color:#78d6b4;font:600 9px 'Segoe UI',sans-serif;white-space:nowrap}
+.chart-history-toggle[aria-pressed=false]{border-color:#354258;background:#141b27;color:#94a3b8}
+@media(max-width:560px){.chart-history-toggle{min-height:28px!important;height:28px;padding:0 6px;font-size:8px}}
 .signal-card-main .signal-description{margin-bottom:10px}
 .prediction-log-head p:empty{display:none}
 .signal-card-market .signal-card-title{display:none!important}
@@ -585,6 +585,7 @@ main{padding-top:10px}
         
         <small id="analysis-tf-active">ใช้อยู่ 1m</small>
       </div>
+      <button id="chart-history-toggle" class="chart-history-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ">แพ้/ชนะ: เปิด</button>
       <details class="toolbar-more" id="toolbar-more">
         <summary aria-label="เครื่องมือเพิ่มเติม" title="เครื่องมือเพิ่มเติม">•••</summary>
         <div class="toolbar-more-popover">
@@ -598,7 +599,7 @@ main{padding-top:10px}
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
-  <div class="chart-wrap"><div id="chart"></div><button id="chart-history-toggle" class="chart-history-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ">ประวัติแพ้/ชนะ: เปิด</button><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
+  <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
@@ -3558,7 +3559,7 @@ function openReport(){
   chartHistoryToggle?.addEventListener('click',()=>{
    showChartOutcomes=!showChartOutcomes;
    chartHistoryToggle.setAttribute('aria-pressed',String(showChartOutcomes));
-   chartHistoryToggle.textContent=showChartOutcomes?'ประวัติแพ้/ชนะ: เปิด':'ประวัติแพ้/ชนะ: ปิด';
+   chartHistoryToggle.textContent=showChartOutcomes?'แพ้/ชนะ: เปิด':'แพ้/ชนะ: ปิด';
    drawHistory();
   });
 
