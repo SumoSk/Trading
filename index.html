@@ -371,6 +371,74 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-data-health.live,.setup-compact-health.live{color:#72daba}
 .setup-data-health.warning,.setup-compact-health.warning{color:#e6b878}
 
+
+/* Three independent top blocks: main | candle behavior | realtime briefing */
+.signal-panel>.signal-card-main,
+.signal-panel>.signal-card-candle,
+.signal-panel>.setup-profile-compact{grid-column:span 4!important}
+.signal-card-main{display:flex;flex-direction:column;gap:0}
+.main-signal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:7px;margin-bottom:7px;border-bottom:1px solid var(--card-border);font-size:8px;color:#8295ae}
+.main-signal-head>span{font-weight:650;letter-spacing:.55px;color:#a9bacd}
+.main-signal-head small{font-size:8px;color:#70849e}
+.main-signal-section{min-width:0}
+.main-signal-divider{height:1px;background:var(--card-border);margin:8px 0}
+.signal-card-main .signal-card-direction,
+.signal-card-main .signal-card-entry{grid-column:auto!important}
+.signal-card-main .signal-card-title{font-size:11px!important;margin-bottom:6px!important}
+.signal-card-main .signal-card-direction .probability-values strong{font-size:18px}
+.signal-card-main .signal-card-direction .direction-detail{margin-top:6px!important}
+.signal-card-main .signal-card-entry .signal-hero{padding:7px 8px!important}
+.signal-card-main .signal-card-entry .direction-icon{width:31px;height:31px;font-size:18px}
+.signal-card-main .signal-card-entry .signal-hero strong{font-size:14px!important}
+.signal-card-main .entry-watch{padding:7px 8px;margin-top:5px}
+.signal-card-main .entry-watch-head strong{font-size:10px!important}
+.signal-card-main .signal-description{font-size:9px!important}
+.signal-card-main #event-detail{font-size:8px!important}
+
+.signal-card-candle{display:flex;flex-direction:column;min-width:0}
+.candle-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid var(--card-border)}
+.candle-kicker{display:block;font-size:7px;letter-spacing:.75px;color:#7388a3;margin-bottom:2px}
+.candle-card-head h3{font-size:12px;line-height:1.25;margin:0;color:#dce8f7}
+.candle-state{flex:0 0 auto;padding:3px 7px;border:1px solid #34455d;border-radius:999px;font-size:8px;font-weight:650;color:#aab8c9}
+.candle-state.high{border-color:#2d876d;background:#102922;color:#61e3bc}
+.candle-state.low{border-color:#a3485f;background:#301b26;color:#ff8da1}
+.candle-state.wait{border-color:#40516a;background:#141e2c;color:#aab9cc}
+.candle-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;padding:8px 0 6px}
+.candle-hero>div:first-child>span,.candle-confidence>span{display:block;font-size:7.5px;color:#768ba6;margin-bottom:2px}
+.candle-hero strong{font-size:18px;line-height:1.15;color:#cfdbea}
+.signal-card-candle.high .candle-hero strong,.signal-card-candle.high .candle-confidence b{color:#61e3bc}
+.signal-card-candle.low .candle-hero strong,.signal-card-candle.low .candle-confidence b{color:#ff8da1}
+.candle-confidence{text-align:right}
+.candle-confidence b{font:700 20px/1 'Segoe UI',sans-serif;color:#dbe7f5}
+.candle-summary{font-size:8.5px;line-height:1.45;color:#9cafc5;margin:0 0 6px}
+.candle-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.candle-metrics>div{padding:5px 6px;border:1px solid #24344a;border-radius:6px;background:#0b141f}
+.candle-metrics span{display:block;font-size:7px;color:#71869f;margin-bottom:2px}
+.candle-metrics b{font-size:9px;color:#c3d0df}
+.candle-reasons{margin-top:6px;padding:6px 7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
+.candle-reasons>span{display:block;font-size:7.5px;color:#7f93ad;margin-bottom:4px}
+.candle-reasons ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.candle-reasons li{position:relative;padding-left:9px;font-size:8px;line-height:1.35;color:#aebed0}
+.candle-reasons li:before{content:'';position:absolute;left:0;top:.5em;width:4px;height:4px;border-radius:50%;background:#657991}
+.signal-card-candle.high .candle-reasons li:first-child:before{background:#58cda8}
+.signal-card-candle.low .candle-reasons li:first-child:before{background:#e06f89}
+.candle-lock{margin-top:6px;padding:6px 7px;border-top:1px solid #24344a}
+.candle-lock>span{display:block;font-size:7px;color:#70849d;margin-bottom:2px}
+.candle-lock b{display:block;font-size:9px;color:#c5d2e2}
+.candle-lock small{display:block;margin-top:2px;font-size:7.5px;line-height:1.35;color:#7f92aa}
+.candle-lock.active{border:1px solid #374b65;border-radius:7px;background:#0c1623}
+.signal-card-candle.high .candle-lock.active{border-color:#2d6f5d}
+.signal-card-candle.low .candle-lock.active{border-color:#7d3d50}
+.candle-stats{margin-top:auto;padding-top:5px;border-top:1px solid #202d3e;font-size:7.5px;color:#7388a2}
+
+@media(max-width:900px){
+ .signal-panel>.signal-card-main,.signal-panel>.signal-card-candle{grid-column:span 3!important}
+ .signal-panel>.setup-profile-compact{grid-column:1/-1!important}
+}
+@media(max-width:560px){
+ .signal-panel>.signal-card-main,.signal-panel>.signal-card-candle,.signal-panel>.setup-profile-compact{grid-column:1/-1!important}
+}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -402,27 +470,72 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 <aside class="signal-panel wait" id="signal-panel">
   <div class="panel-heading"><span>ระบบสัญญาณ</span><span class="small-tag" id="signal-tag">สัญญาณ V7.1.0</span></div>
 
-  <section class="signal-card signal-card-direction">
-    <div class="signal-card-title"><span>แนวโน้ม +10 นาที</span></div>
-    <div class="probability-block">
-      <div class="probability-head"><span>อีก 10 นาที</span></div>
-      <div class="probability-values"><span class="prob-up">สูงกว่า <strong id="prob-high">—</strong></span><span class="prob-down">ต่ำกว่า <strong id="prob-low">—</strong></span></div>
-      <div class="probability-track"><div id="prob-high-bar"></div></div>
+  <section class="signal-card signal-card-main" id="main-signal-card">
+    <div class="main-signal-head">
+      <span>สัญญาณหลัก · V<span id="main-version-inline">7.1.1</span></span>
+      <small>แนวโน้ม + จุดเข้า</small>
     </div>
-    <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
+
+    <div class="main-signal-section signal-card-direction">
+      <div class="signal-card-title"><span>แนวโน้ม +10 นาที</span></div>
+      <div class="probability-block">
+        <div class="probability-head"><span>อีก 10 นาที</span></div>
+        <div class="probability-values"><span class="prob-up">สูงกว่า <strong id="prob-high">—</strong></span><span class="prob-down">ต่ำกว่า <strong id="prob-low">—</strong></span></div>
+        <div class="probability-track"><div id="prob-high-bar"></div></div>
+      </div>
+      <div class="direction-detail"><strong id="direction-now"></strong><b id="risk-now"></b><p id="risk-reason"></p><small id="direction-reference"></small></div>
+    </div>
+
+    <div class="main-signal-divider"></div>
+
+    <div class="main-signal-section signal-card-entry">
+      <div class="signal-card-title"><span>จุดเข้า</span></div>
+      <div class="entry-top">
+        <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
+      </div>
+      <div class="strong-banner" id="strong-banner" hidden><span>สัญญาณใหม่</span><strong>พบจุดเข้าใหม่</strong></div>
+      <div class="entry-watch">
+        <div class="entry-watch-head"><strong id="entry-state">รอข้อมูลตลาด</strong><small id="signal-updated">รอข้อมูลตลาด</small></div>
+        <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
+        <p id="event-detail"></p>
+      </div>
+    </div>
   </section>
 
-  <section class="signal-card signal-card-entry">
-    <div class="signal-card-title"><span>จุดเข้า</span></div>
-    <div class="entry-top">
-      <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
+  <section class="signal-card signal-card-candle wait" id="candle-signal-card" aria-live="polite">
+    <div class="candle-card-head">
+      <div><span class="candle-kicker">CANDLE BEHAVIOR · ทดลองอิสระ</span><h3>พฤติกรรมแท่งเทียน · +10 นาที</h3></div>
+      <span class="candle-state wait" id="candle-state">WAIT</span>
     </div>
-    <div class="strong-banner" id="strong-banner" hidden><span>สัญญาณใหม่</span><strong>พบจุดเข้าใหม่</strong></div>
-    <div class="entry-watch">
-      <div class="entry-watch-head"><strong id="entry-state">รอข้อมูลตลาด</strong><small id="signal-updated">รอข้อมูลตลาด</small></div>
-      <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
-      <p id="event-detail"></p>
+
+    <div class="candle-hero">
+      <div>
+        <span>มุมมองจากแท่งเทียน</span>
+        <strong id="candle-direction">รอข้อมูล</strong>
+      </div>
+      <div class="candle-confidence"><span>ความชัด</span><b id="candle-confidence">—</b></div>
     </div>
+
+    <p class="candle-summary" id="candle-summary">อ่านพฤติกรรมหลายแท่งจาก OHLCV 1 นาที โดยไม่ใช้คำตอบจาก V7.1.1</p>
+
+    <div class="candle-metrics">
+      <div><span>ไปต่อ</span><b id="candle-continuation">—</b></div>
+      <div><span>หมดแรง</span><b id="candle-exhaustion">—</b></div>
+      <div><span>แรงกลับตัว</span><b id="candle-reversal">—</b></div>
+    </div>
+
+    <div class="candle-reasons">
+      <span>สิ่งที่แท่งกำลังบอก</span>
+      <ul id="candle-reason-list"><li>รอแท่ง Futures 1 นาที</li></ul>
+    </div>
+
+    <div class="candle-lock" id="candle-lock">
+      <span>สัญญาณทดลอง</span>
+      <b id="candle-lock-title">ยังไม่มีสัญญาณล็อก</b>
+      <small id="candle-lock-meta">จะล็อกเมื่อพฤติกรรมแท่งมีความชัดพอ และตัดสินผลหลัง 10 นาที</small>
+    </div>
+
+    <div class="candle-stats" id="candle-stats">Candle Engine · ยังไม่มีผลที่จบครบ 10 นาที</div>
   </section>
 
 <section class="setup-profile-compact" id="setup-profile-compact" aria-live="polite">
