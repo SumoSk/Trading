@@ -465,6 +465,50 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .chart-meta{min-height:34px;padding-block:6px}
 .signal-card-main .signal-description{margin-bottom:10px}
 .prediction-log-head p:empty{display:none}
+.app-header,.market-strip{display:none!important}
+main{padding-top:10px}
+.timeframes{display:none!important}
+#setup-profile-panel{display:none!important}
+
+/* Fixed 3-block signal row on every screen size. */
+.signal-panel{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.signal-panel>.panel-heading{grid-column:1/-1!important}
+.signal-panel>.signal-card-main,
+.signal-panel>.signal-card-candle,
+.signal-panel>.setup-profile-compact{grid-column:auto!important;min-width:0!important}
+.signal-panel>.signal-card-market,
+.signal-panel>.last-entry{grid-column:1/-1!important}
+
+@media(max-width:900px){
+ .signal-panel{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .signal-panel>.signal-card-main,
+ .signal-panel>.signal-card-candle,
+ .signal-panel>.setup-profile-compact{grid-column:auto!important}
+}
+@media(max-width:560px){
+ main{padding-left:5px!important;padding-right:5px!important;padding-top:6px!important}
+ .signal-panel{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important;padding:5px!important}
+ .signal-panel>.signal-card-main,
+ .signal-panel>.signal-card-candle,
+ .signal-panel>.setup-profile-compact{grid-column:auto!important;padding:6px!important;border-radius:8px!important}
+ .signal-panel .panel-heading{grid-column:1/-1!important}
+ .signal-card-main .signal-card-title,.candle-card-head h3,.setup-profile-compact h3{font-size:9px!important}
+ .signal-card-main .signal-card-direction .probability-values strong{font-size:14px!important}
+ .signal-card-main .signal-card-entry .signal-hero strong{font-size:11px!important}
+ .signal-card-main .signal-card-entry .direction-icon{width:25px!important;height:25px!important;font-size:15px!important}
+ .signal-card-main .entry-watch{padding:5px!important}
+ .entry-gate-detail{padding:6px!important}
+ .entry-gate-detail ul{padding-left:12px!important;font-size:7.5px!important}
+ .candle-hero{gap:4px!important}
+ .candle-hero strong,.candle-confidence b{font-size:12px!important}
+ .candle-summary,.candle-reading p,.candle-change p,.candle-lock small{font-size:7.5px!important}
+ .compact-next>p{font-size:10px!important}
+ .compact-entry-line>b{font-size:8.5px!important}
+ .compact-brief-columns{grid-template-columns:1fr!important}
+ .compact-brief-box li{font-size:7px!important}
+ .chart-toolbar{flex-wrap:wrap!important}
+ .chart-tf-control,.analysis-tf-control{max-width:100%;overflow-x:auto}
+}
 </style>
 </head>
 <body data-feed="syncing">
@@ -485,6 +529,15 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 <section class="chart-card">
   <div class="chart-toolbar">
     <div class="timeframes" aria-label="ช่วงแท่งเทียน"><button data-tf="1m" aria-pressed="true">1m</button><button data-tf="5m" aria-pressed="false">5m</button><button data-tf="10m" aria-pressed="false">10m</button><button data-tf="15m" aria-pressed="false">15m</button><button data-tf="1h" aria-pressed="false">1h</button><button data-tf="4h" aria-pressed="false">4h</button><button data-tf="1d" aria-pressed="false">1D</button><button data-tf="1w" aria-pressed="false">1W</button></div>
+    <div class="analysis-tf-control chart-tf-control" title="เลือกไทม์เฟรมของกราฟ">
+      <span>กราฟ</span>
+      <select id="chart-tf-select" aria-label="เลือกไทม์เฟรมของกราฟ">
+        <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
+        <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
+      </select>
+      <button id="chart-tf-confirm" type="button" disabled>ยืนยัน</button>
+      <small id="chart-tf-active">กราฟ 1m</small>
+    </div>
     <span class="toolbar-divider"></span>
     <div class="analysis-tf-control" title="กราฟที่ดูเปลี่ยนได้อิสระ การวิเคราะห์จะเปลี่ยนเมื่อกดยืนยันเท่านั้น">
       <span>วิเคราะห์จาก</span>
@@ -495,7 +548,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
       <button id="analysis-tf-confirm" type="button" disabled>ยืนยัน</button>
       <small id="analysis-tf-active">ใช้อยู่ 1m</small>
     </div>
-    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="true" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▾</button><label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option></select></label>
+    <span class="toolbar-divider"></span><button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button><button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button><label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option></select></label>
     <div class="chart-actions"><button id="latest" class="quiet">กลับล่าสุด</button></div>
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
@@ -1664,7 +1717,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     emaFast: null,
     emaSlow: null,
     emaVisible: true,
-    indicatorsExpanded: true,
+    indicatorsExpanded: false,
     chartReady: false,
     booted: false,
   };
@@ -3416,6 +3469,41 @@ function openReport(){
    if(!state.chartReady)return;
    if(state.indicatorsExpanded)createIndicatorPanes();
    else removeIndicatorPanes();
+  }
+
+  const chartTfSelect=$('chart-tf-select'),chartTfConfirm=$('chart-tf-confirm'),chartTfControl=chartTfSelect?.closest('.chart-tf-control');
+  if(chartTfSelect&&chartTfConfirm){
+   chartTfSelect.value=state.selectedTf;
+   chartTfSelect.addEventListener('change',()=>{
+    const changed=chartTfSelect.value!==state.selectedTf;
+    chartTfConfirm.disabled=!changed;
+    chartTfControl?.classList.toggle('pending',changed);
+    chartTfConfirm.textContent=changed?'ยืนยัน':'ใช้อยู่';
+   });
+   chartTfConfirm.addEventListener('click',async()=>{
+    const tf=chartTfSelect.value,previous=state.selectedTf;
+    if(tf===previous){chartTfConfirm.disabled=true;chartTfControl?.classList.remove('pending');chartTfConfirm.textContent='ใช้อยู่';state.chart?.timeScale().fitContent();return;}
+    chartTfConfirm.disabled=true;chartTfConfirm.textContent='กำลังโหลด…';
+    try{
+     await ensureTimeframe(tf);
+     if(!state.bars[tf]?.length)throw new Error('ไม่มีข้อมูลกราฟ '+tf);
+     state.selectedTf=tf;
+     document.querySelectorAll('[data-tf]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tf===tf)));
+     $('tf-label').textContent=TF_LABELS[tf]||tf;
+     $('chart-tf-active').textContent='กราฟ '+tf;
+     renderChart(true);drawHistory();
+     chartTfControl?.classList.remove('pending');
+    }catch(err){
+     console.warn('เปลี่ยนกราฟ '+tf+' ไม่สำเร็จ',err);
+     state.selectedTf=previous;chartTfSelect.value=previous;
+     $('tf-label').textContent=TF_LABELS[previous]||previous;
+     $('chart-tf-active').textContent='กราฟ '+previous;
+     renderChart(false);
+    }finally{
+     chartTfConfirm.textContent=chartTfSelect.value===state.selectedTf?'ใช้อยู่':'ยืนยัน';
+     chartTfConfirm.disabled=chartTfSelect.value===state.selectedTf;
+    }
+   });
   }
 
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',async()=>{
