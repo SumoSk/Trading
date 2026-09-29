@@ -3666,9 +3666,15 @@ function openReport(){
    const counterThreshold=threshold+5,counterOK=confirmations>=3&&counter>=counterThreshold;
    const followOK=follow>=threshold;
    let mode=null,direction=null,score=0,reasons=[];
+   let forcedAtFinalBar=false;
    if(counterOK&&(counter>=follow+3||v.phase?.phase==='REVERSAL')){mode='counter';direction=counterDirection;score=counter;reasons=counterReasons;}
    else if(followOK){mode='follow';direction=nativeD>0?'HIGH':'LOW';score=follow;reasons=['น้ำหนักเดิมยังไปต่อ','ผ่านเกณฑ์เร่งของแท่ง '+barIndex];}
-   return {active:true,barIndex,threshold,followScore:follow,counterScore:counter,counterConfirmations:confirmations,mode,direction,score,reasons,room:Number.isFinite(mode==='counter'?counterRoom:room)?(mode==='counter'?counterRoom:room):null,nativeDirection:native,phase:v.phase?.phase||null};
+   else if(barIndex===5){
+    forcedAtFinalBar=true;
+    if(confirmations>=3&&counter>=follow+3){mode='counter';direction=counterDirection;score=counter;reasons=[...counterReasons,'แท่งที่ 5 · เลือก best-effort จาก rejection ที่มีหลักฐานหลายด้าน'];}
+    else{mode='follow';direction=nativeD>0?'HIGH':'LOW';score=follow;reasons=['แท่งที่ 5 · เลือก best-effort ตามน้ำหนักหลักของเวอร์ชัน','ไม่ได้รอ Entry Gate เต็มเพราะผู้ใช้สั่งเร่งภายใน 5 แท่ง'];}
+   }
+   return {active:true,barIndex,threshold,followScore:follow,counterScore:counter,counterConfirmations:confirmations,mode,direction,score,reasons,forcedAtFinalBar,room:Number.isFinite(mode==='counter'?counterRoom:room)?(mode==='counter'?counterRoom:room):null,nativeDirection:native,phase:v.phase?.phase||null};
   }
   function expediteSignal(v,directionView,candleView,micro,decision){
    const req=state.expediteFive;if(!req?.active||!decision?.mode||!decision.direction||!v?.f)return null;
@@ -3679,7 +3685,7 @@ function openReport(){
     marketPhase:v.phase?.phase||null,phaseDir:v.phase?.dir||0,phaseScore:v.phase?.score||0,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,liveVolumePace:v.phase?.liveVolumePace??null,phaseExtensionAtr:v.phase?.extensionAtr??null,exhaustionScore:v.phase?.exhaustionScore??null,
     level:price,entryLow:price-f.atr*.03,entryHigh:price+f.atr*.03,atr:f.atr,trend:f.trend,momentum:f.mom,momentumAccel:f.momAccel,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,regime:v.regime?.mode||null,stableMode:v.regime?.stableMode||null,
     flow:micro?.flow??null,coverage:micro?.coverage||0,book:micro?.book??null,bookValid:!!micro?.bookValid,room:decision.room,progress:null,drift:null,retreat:null,
-    expediteFive:{schema:'btc-expedite-five-v1',requestId:req.id,requested:true,forcedByWrapper:true,versionAtRequest:req.version,armedAt:req.armedAt,startBarTime:req.startBarTime,deadlineBarTime:req.deadlineBarTime,barIndex:decision.barIndex,issueMode:decision.mode,followScore:decision.followScore,counterScore:decision.counterScore,counterConfirmations:decision.counterConfirmations,threshold:decision.threshold,nativeDirection:decision.nativeDirection,reasons:[...(decision.reasons||[])]},
+    expediteFive:{schema:'btc-expedite-five-v1',requestId:req.id,requested:true,forcedByWrapper:true,versionAtRequest:req.version,armedAt:req.armedAt,startBarTime:req.startBarTime,deadlineBarTime:req.deadlineBarTime,barIndex:decision.barIndex,issueMode:decision.mode,followScore:decision.followScore,counterScore:decision.counterScore,counterConfirmations:decision.counterConfirmations,threshold:decision.threshold,forcedAtFinalBar:!!decision.forcedAtFinalBar,nativeDirection:decision.nativeDirection,reasons:[...(decision.reasons||[])]},
     zones:{nearestSupport:null,nearestResistance:null},candleSequence:[]
    };
    const nearest=(kind)=>{const rows=z.filter(y=>y.kind===kind).map(y=>({...y,distanceAtr:Math.abs(y.price-price)/f.atr})).sort((a,b)=>a.distanceAtr-b.distanceAtr);return rows[0]?{price:rows[0].price,distanceAtr:rows[0].distanceAtr,touches:rows[0].touches,confirmedAt:rows[0].confirmedAt}:null;};
@@ -3689,7 +3695,7 @@ function openReport(){
     dataset:{schema:DATASET_SCHEMA,episodeId:'EXP5:'+req.id,episodeSequence:1,path1m:[],context1m:[],entry},
     reason:'เร่งออกภายใน 5 แท่ง · '+(decision.mode==='counter'?'COUNTER เมื่อรีเจค':'FOLLOW')+' · '+decision.direction+' · score '+decision.score+'/'+decision.threshold};
    engine.signals.push(signal);engine.log('issued',now,{id,type,direction:signal.direction,modelDirection:signal.modelDirection,price,expediteRequestId:req.id,expediteMode:decision.mode,expediteBarIndex:decision.barIndex,followScore:decision.followScore,counterScore:decision.counterScore});
-   expediteUpdateHistory(req.id,{status:'issued',issuedAt:now,signalId:id,direction:decision.direction,issueMode:decision.mode,barIndex:decision.barIndex,followScore:decision.followScore,counterScore:decision.counterScore,counterConfirmations:decision.counterConfirmations,threshold:decision.threshold,nativeDirection:decision.nativeDirection,reasons:[...(decision.reasons||[])]});
+   expediteUpdateHistory(req.id,{status:'issued',issuedAt:now,signalId:id,direction:decision.direction,issueMode:decision.mode,barIndex:decision.barIndex,followScore:decision.followScore,counterScore:decision.counterScore,counterConfirmations:decision.counterConfirmations,threshold:decision.threshold,forcedAtFinalBar:!!decision.forcedAtFinalBar,nativeDirection:decision.nativeDirection,reasons:[...(decision.reasons||[])]});
    state.expediteFive={active:false,lastStatus:'ออกแล้ว · '+(decision.mode==='counter'?'สวน':'ตาม')+' '+decision.direction};expediteRender();
    return signal;
   }
