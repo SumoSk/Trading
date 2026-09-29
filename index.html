@@ -274,9 +274,10 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-profile-section.support li:before,.setup-profile-section.warning li:before{content:'';position:absolute;left:1px;top:.52em;width:5px;height:5px;border-radius:50%}
 .setup-profile-section.support li:before{background:#58c9aa}.setup-profile-section.warning li:before{background:#d8a45f}
 .setup-profile-foot{margin-top:11px;padding-top:9px;border-top:1px solid #223047;font-size:8.5px;line-height:1.45;color:#6f829c}
-@media(min-width:1301px){.work-area{grid-template-columns:minmax(0,1fr) 300px 330px}}
-@media(max-width:1300px) and (min-width:851px){.work-area{grid-template-columns:minmax(0,1fr) 300px}.setup-profile-panel{grid-column:2}}
-@media(max-width:850px){.work-area{grid-template-columns:1fr}.setup-profile-panel{grid-column:auto;padding:14px 16px}.setup-profile-section li{font-size:10px}}
+/* All screens: chart first, full-width; never create an implicit second grid column on iPad. */
+.work-area{grid-template-columns:minmax(0,1fr)!important;min-width:0}
+.work-area>.chart-card,.work-area>.signal-panel,.work-area>.setup-profile-panel{grid-column:1/-1!important;min-width:0;width:100%}
+@media(max-width:850px){.setup-profile-panel{padding:14px 16px}.setup-profile-section li{font-size:10px}}
 @media(max-width:480px){.setup-live-grid{grid-template-columns:1fr 1fr}.setup-profile-head h2{font-size:17px}.setup-rate-main strong{font-size:29px}}
 
 
@@ -325,6 +326,29 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 @media(max-width:560px){
  .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry,.signal-panel>.setup-profile-compact{grid-column:1/-1!important}
 }
+
+
+/* iPad Safari: never let a wide toolbar collapse the chart canvas. */
+.chart-card{min-width:0;max-width:100%}
+.chart-wrap,#chart{min-width:0;max-width:100%}
+@media(max-width:1200px){.chart-toolbar{flex-wrap:wrap;row-gap:5px}.chart-actions{margin-left:auto}}
+.setup-side-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;margin:8px 0}
+.setup-side{border:1px solid #27384c;border-radius:8px;background:#101a28;padding:8px;min-width:0}
+.setup-side span{display:block;font-size:9px;color:#8c9fb8}
+.setup-side b{display:block;font:700 20px/1.15 'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;margin:3px 0}
+.setup-side small{display:block;color:#8295ae;font-size:8px;line-height:1.45}
+.setup-side.active.high{border-color:#2c866c;background:#102922}.setup-side.active.high span,.setup-side.active.high b{color:#61e3bc}
+.setup-side.active.low{border-color:#a3485f;background:#301b26}.setup-side.active.low span,.setup-side.active.low b{color:#ff8da1}
+.setup-profile-panel.side-high .setup-profile-hero h3,.setup-profile-panel.side-high .setup-profile-rate .setup-rate-main strong,.setup-profile-compact.side-high h3,.setup-profile-compact.side-high .setup-compact-rate-head strong{color:#61e3bc!important}
+.setup-profile-panel.side-low .setup-profile-hero h3,.setup-profile-panel.side-low .setup-profile-rate .setup-rate-main strong,.setup-profile-compact.side-low h3,.setup-profile-compact.side-low .setup-compact-rate-head strong{color:#ff8da1!important}
+.setup-profile-panel.side-high .setup-profile-status{border-color:#2c866c;background:#102922;color:#61e3bc}
+.setup-profile-panel.side-low .setup-profile-status{border-color:#a3485f;background:#301b26;color:#ff8da1}
+.setup-compact-sides{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:5px 0}
+.setup-compact-side{display:flex;justify-content:space-between;align-items:center;gap:4px;min-width:0;padding:5px 6px;border:1px solid #29394e;border-radius:6px;font-size:9px;color:#95a6bb}
+.setup-compact-side b{font:700 12px 'Segoe UI',sans-serif}
+.setup-compact-side.active.high{border-color:#2c866c;color:#61e3bc;background:#102922}
+.setup-compact-side.active.low{border-color:#a3485f;color:#ff8da1;background:#301b26}
+.setup-compact-why{font-size:9px;line-height:1.4;color:#a4b5c9;margin-top:5px}
 
 </style>
 </head>
@@ -389,6 +413,11 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div class="setup-compact-track"><div id="setup-compact-rate-bar"></div></div>
     <div class="setup-compact-meta"><span id="setup-compact-similar-record">—</span><span id="setup-compact-sample-quality">—</span></div>
   </div>
+  <div class="setup-compact-sides" id="setup-compact-sides">
+    <div class="setup-compact-side high" id="setup-compact-high"><span>สูงกว่า</span><b id="setup-compact-high-rate">—</b></div>
+    <div class="setup-compact-side low" id="setup-compact-low"><span>ต่ำกว่า</span><b id="setup-compact-low-rate">—</b></div>
+  </div>
+  <div class="setup-compact-why" id="setup-compact-why">รอเหตุผลสนับสนุนจากตลาดสด</div>
   <div class="setup-compact-exact">
     <div><span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-compact-exact-rate">—</b></div>
     <small id="setup-compact-exact-record">ยังไม่มีท่าปัจจุบัน</small>
@@ -435,6 +464,10 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div class="setup-rate-track"><div id="setup-rate-bar"></div></div>
     <div class="setup-rate-meta"><span id="setup-similar-record">—</span><span id="setup-sample-quality">—</span></div>
   </section>
+  <div class="setup-side-compare" id="setup-side-compare">
+    <div class="setup-side high" id="setup-full-high"><span>สูงกว่า · ประวัติท่าคล้ายกัน</span><b id="setup-full-high-rate">—</b><small id="setup-full-high-count">รอข้อมูล</small></div>
+    <div class="setup-side low" id="setup-full-low"><span>ต่ำกว่า · ประวัติท่าคล้ายกัน</span><b id="setup-full-low-rate">—</b><small id="setup-full-low-count">รอข้อมูล</small></div>
+  </div>
   <div class="setup-exact-row">
     <span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-exact-rate">—</b>
     <small id="setup-exact-record">ยังไม่มีข้อมูล</small>
@@ -1406,49 +1439,68 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 }
 
   function setupClamp(v,a,b){return Math.max(a,Math.min(b,v));}
-  function setupDoneSignals(){
-   return engine.signals.filter(s=>s.version===CFG.version&&['correct','incorrect'].includes(s.result)&&s.dataset?.entry);
+  function setupDoneSignals(version=CFG.version){
+   return engine.signals.filter(s=>s.version===version&&['correct','incorrect'].includes(s.result)&&s.dataset?.entry);
   }
   function setupStats(rows){
    const n=rows.length,wins=rows.filter(s=>s.result==='correct').length;
    return {n,wins,losses:n-wins,rate:n?wins/n:null};
   }
-  function setupLiveSnapshot(v,directionView,micro={}){
-   const nowMs=(state.quote?.ts||Date.now()/1000)*1000;
-   const recentSignal=[...engine.signals].reverse().find(s=>s.version===CFG.version&&s.result==='pending'&&nowMs>=s.entryTime&&nowMs-s.entryTime<=180000);
-   const e=v?.event||null,modelD=e?.d||0;
-   const preview=e&&v?.f&&v?.phase?selectOutputDecision(e.type,modelD,v.f,v.phase):null;
-   let direction=v?.signal?.direction||preview?.direction||recentSignal?.direction||null;
-   if(!direction&&directionView?.available&&directionView.direction!=='BALANCED')direction=directionView.direction;
-   const type=e?.type||recentSignal?.type||null;
-   if(!type||!['HIGH','LOW'].includes(direction))return null;
-   const stored=v?.signal?.dataset?.entry||recentSignal?.dataset?.entry||{};
-   const phase=v?.phase?.phase||stored.marketPhase||null,regime=v?.regime?.mode||stored.regime||null;
-   const relVol=Math.max(Number(v?.f?.relVolume)||0,Number(v?.phase?.liveVolumePace)||0,Number(stored.relativeVolume)||0,Number(stored.liveVolumePace)||0);
-   const extension=Number.isFinite(v?.phase?.extensionAtr)?v.phase.extensionAtr:(Number.isFinite(stored.phaseExtensionAtr)?stored.phaseExtensionAtr:null);
-   const room=Number.isFinite(directionView?.room)?directionView.room:(Number.isFinite(stored.room)?stored.room:null);
-   const risk=directionView?.available?directionView.risk:(stored.microstructure?.continuousRisk||null);
-   const probability=directionView?.available?(direction==='HIGH'?directionView.high:directionView.low):(direction==='HIGH'?stored.microstructure?.continuousHigh:stored.microstructure?.continuousLow);
-   const trend=Number.isFinite(v?.f?.trend)?v.f.trend:stored.trend,momentum=Number.isFinite(v?.f?.mom)?v.f.mom:stored.momentum;
-   const rangePosition=Number.isFinite(v?.f?.rangePosition)?v.f.rangePosition:stored.rangePosition;
+  // Read-only live research view. It never feeds the event engine or triggers an entry.
+  function setupContextType(v,side){
+   const e=v?.event,phase=v?.phase||{},f=v?.f||{},d=side==='HIGH'?1:-1;
+   if(e&&Math.sign(e.d)===d)return e.type;
+   const pd=phase.dir||Math.sign(f.trend||0),pos=f.rangePosition;
+   if(phase.phase==='RANGE'){
+    if((side==='HIGH'&&pos<=.35)||(side==='LOW'&&pos>=.65))return 'range_reversal';
+    return null; // Mid-range has no confirmed setup.
+   }
+   if(phase.phase==='EXHAUSTION'){
+    if(pd&&d===-pd)return 'exhaustion_reversal';
+    return null;
+   }
+   if(phase.phase==='REVERSAL')return pd===d?'exhaustion_reversal':null;
+   if(['IMPULSE','MATURE_IMPULSE','TREND'].includes(phase.phase)){
+    if(pd===d){
+     if((d>0&&pos>=.80)||(d<0&&pos<=.20))return 'breakout';
+     return 'trend_continuation';
+    }
+    return Number.isFinite(phase.extensionAtr)&&phase.extensionAtr>=CFG.climaxExtensionAtr?'exhaustion_reversal':null;
+   }
+   if(phase.phase==='TRANSITION'){
+    if((d>0&&pos>=.80)||(d<0&&pos<=.20))return 'breakout';
+    if((d>0&&pos<=.24)||(d<0&&pos>=.76))return 'range_reversal';
+   }
+   return null;
+  }
+  function setupLiveSnapshot(v,directionView,micro={},side='HIGH'){
+   if(!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
+   const e=v.event,stored=v.signal?.dataset?.entry||{},f=v.f,ph=v.phase;
+   const d=side==='HIGH'?1:-1;
+   const relVol=Math.max(f.relVolume||0,f.volume3Ratio||0,ph.liveVolumePace||0);
+   const extension=d*(state.quote.price-f.ema21)/f.atr;
+   const levels=[...(v.z||[]).map(z=>z.price),f.high,f.low];
+   const ahead=levels.filter(price=>d*(price-state.quote.price)>0).map(price=>d*(price-state.quote.price)/f.atr);
+   const room=ahead.length?Math.min(...ahead):null;
    return {
-    type,direction,phase,regime,relVol,extension,room,risk,probability,
-    trend:Number.isFinite(trend)?trend:null,momentum:Number.isFinite(momentum)?momentum:null,
-    rangePosition:Number.isFinite(rangePosition)?rangePosition:null,
-    flow:Number.isFinite(micro.flow)?micro.flow:(Number.isFinite(stored.flow)?stored.flow:null),
-    book:Number.isFinite(micro.book)?micro.book:(Number.isFinite(stored.book)?stored.book:null),
-    bookValid:micro.bookValid!==undefined?!!micro.bookValid:!!stored.bookValid,
-    evidenceScore:Number.isFinite(e?.evidenceScore)?e.evidenceScore:(Number.isFinite(stored.evidenceScore)?stored.evidenceScore:null),
-    episodeSequence:v?.signal?.dataset?.episodeSequence||recentSignal?.dataset?.episodeSequence||1,
-    isLiveEvent:!!e,isRecentSignal:!e&&!!recentSignal,
-    reason:directionView?.reason||stored.microstructure?.continuousReason||''
+    type:setupContextType(v,side),direction:side,phase:ph.phase,regime:v.regime?.mode||null,
+    relVol,extension,room,risk:directionView.risk,
+    probability:side==='HIGH'?directionView.high:directionView.low,
+    trend:f.trend,momentum:f.mom,rangePosition:f.rangePosition,
+    flow:Number.isFinite(micro.flow)?micro.flow:null,
+    book:Number.isFinite(micro.book)?micro.book:null,bookValid:!!micro.bookValid,
+    evidenceScore:e&&Math.sign(e.d)===d&&Number.isFinite(e.evidenceScore)?e.evidenceScore:null,
+    episodeSequence:v.signal?.dataset?.episodeSequence||1,
+    isLiveEvent:!!e&&Math.sign(e.d)===d,isRecentSignal:!!v.signal&&v.signal.direction===side,
+    hasConfirmedEntry:!!v.signal&&v.signal.direction===side,
+    reason:directionView.reason||''
    };
   }
   function setupSimilarityScore(snap,s){
    const e=s.dataset?.entry||{};let score=0,weight=0;
    const cat=(same,w)=>{weight+=w;if(same)score+=w;};
    const num=(a,b,scale,w)=>{if(!Number.isFinite(a)||!Number.isFinite(b))return;weight+=w;score+=w*setupClamp(1-Math.abs(a-b)/scale,0,1);};
-   cat(s.type===snap.type,4);cat(s.direction===snap.direction,3);
+   if(snap.type)cat(s.type===snap.type,4);cat(s.direction===snap.direction,3);
    if(snap.phase&&e.marketPhase)cat(e.marketPhase===snap.phase,3);
    if(snap.regime&&e.regime)cat(e.regime===snap.regime,1.4);
    const histRisk=e.microstructure?.continuousRisk||null;if(snap.risk&&histRisk)cat(histRisk===snap.risk,1.2);
@@ -1462,17 +1514,39 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    num(snap.probability,histProb,35,1.2);
    return weight?score/weight:0;
   }
-  function setupComparison(snap){
-   const done=setupDoneSignals();
-   const exact=done.filter(s=>s.type===snap.type&&s.direction===snap.direction&&s.dataset?.entry?.marketPhase===snap.phase);
-   let pool=done.filter(s=>s.type===snap.type),basis='ท่าเดียวกัน';
-   if(pool.length<3){pool=done.filter(s=>s.direction===snap.direction&&s.dataset?.entry?.marketPhase===snap.phase);basis='ช่วงตลาดและฝั่งเดียวกัน';}
-   if(pool.length<3){pool=done.filter(s=>s.direction===snap.direction);basis='ฝั่งเดียวกัน';}
+  function setupComparison(snap,done=setupDoneSignals()){
+   if(!snap)return {exact:setupStats([]),similar:setupStats([]),basis:'ไม่มีข้อมูล',meanSimilarity:null};
+   const exact=snap.type?done.filter(s=>s.type===snap.type&&s.direction===snap.direction&&s.dataset?.entry?.marketPhase===snap.phase):[];
+   const bySide=done.filter(s=>s.direction===snap.direction);
+   const typed=snap.type?bySide.filter(s=>s.type===snap.type):[];
+   const samePhase=bySide.filter(s=>s.dataset?.entry?.marketPhase===snap.phase);
+   // Keep comparison groups genuinely related where possible; label broader fallbacks.
+   let pool=typed.length>=3?typed:samePhase.length>=3?samePhase:bySide;
+   const basis=pool===typed?'ท่าเดียวกัน':pool===samePhase?'ช่วงตลาดเดียวกัน':'ฝั่งเดียวกัน (กลุ่มกว้าง)';
    const ranked=pool.map(s=>({s,score:setupSimilarityScore(snap,s)})).sort((a,b)=>b.score-a.score);
-   let similar=ranked.filter(x=>x.score>=.54).slice(0,8);
-   const wanted=Math.min(3,ranked.length);
-   if(similar.length<wanted)similar=ranked.slice(0,Math.min(5,ranked.length));
-   return {exact:setupStats(exact),similar:setupStats(similar.map(x=>x.s)),basis,meanSimilarity:similar.length?similar.reduce((a,x)=>a+x.score,0)/similar.length:null};
+   const tight=ranked.filter(x=>x.score>=.57).slice(0,8);
+   const selected=tight.length>=3?tight:ranked.slice(0,Math.min(6,ranked.length));
+   return {exact:setupStats(exact),similar:setupStats(selected.map(x=>x.s)),basis,
+    meanSimilarity:selected.length?selected.reduce((a,x)=>a+x.score,0)/selected.length:null};
+  }
+  function setupPickLive(v,directionView,micro={}){
+   if(!v?.f||!v?.phase||!directionView?.available||!state.quote)return null;
+   const snaps={HIGH:setupLiveSnapshot(v,directionView,micro,'HIGH'),LOW:setupLiveSnapshot(v,directionView,micro,'LOW')};
+   const own=setupDoneSignals(),previous=CFG.version==='7.1.0'?[]:setupDoneSignals('7.1.0');
+   const ownEnough=['HIGH','LOW'].every(d=>own.filter(s=>s.direction===d).length>=3);
+   const usePrevious=!ownEnough&&previous.length>=6;
+   const source=usePrevious?previous:own;
+   const version=usePrevious?'7.1.0':CFG.version;
+   const high=setupComparison(snaps.HIGH,source),low=setupComparison(snaps.LOW,source);
+   const h=high.similar,l=low.similar;
+   const credible=(x)=>x.similar.n>=3&&x.meanSimilarity>=.42&&x.basis!=='ฝั่งเดียวกัน (กลุ่มกว้าง)';
+   let leading=null;
+   if(credible(high)&&credible(low)&&Math.abs(h.rate-l.rate)>=.10)leading=h.rate>l.rate?'HIGH':'LOW';
+   // Keep the live signal visible when history is insufficient; never manufacture a winner.
+   const issued=v.signal?.direction,watch=v.event?.d>0?'HIGH':v.event?.d<0?'LOW':null;
+   const direction=leading||(['HIGH','LOW'].includes(issued)?issued:null)||watch||
+     (directionView.direction!=='BALANCED'?directionView.direction:'HIGH');
+   return {snap:snaps[direction],leading,high,low,version,isReference:usePrevious};
   }
   function setupName(snap){
    const base={
@@ -1482,7 +1556,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     failed_break:'ทะลุไม่ผ่านแล้วกลับฝั่ง',
     range_reversal:'เด้งกลับจากขอบกรอบ',
     exhaustion_reversal:'จับกลับตัวหลังแรงเริ่มหมด'
-   }[snap.type]||typeName[snap.type]||snap.type;
+   }[snap.type]||typeName[snap.type]||'เฝ้าดูสภาพตลาด (ยังไม่มีท่าเข้ายืนยัน)';
    return `${base} · ${directionThai(snap.direction)} · ${phaseThai(snap.phase)}`;
   }
   function setupList(id,items,fallback){
@@ -1494,7 +1568,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    return n>=8?'ตัวอย่างค่อนข้างพอ'+sim:n>=5?'ตัวอย่างปานกลาง'+sim:n>=3?'ตัวอย่างยังน้อย'+sim:'ข้อมูลยังน้อยมาก'+sim;
   }
   function renderSetupProfile(v,directionView,micro={}){
-   const snap=setupLiveSnapshot(v,directionView,micro),status=$('setup-profile-status'),rateBox=$('setup-profile-rate');
+   const live=setupPickLive(v,directionView,micro),snap=live?.snap||null,status=$('setup-profile-status'),rateBox=$('setup-profile-rate');
+   const panel=$('setup-profile-panel');panel.classList.remove('side-high','side-low');
    if(!snap){
     status.className='setup-profile-status learning';status.textContent='รอจังหวะ';
     $('setup-profile-name').textContent='กำลังรอจุดเข้า';
@@ -1502,12 +1577,24 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('setup-similar-rate').textContent='—';$('setup-history-lean').textContent='รอข้อมูล';$('setup-rate-bar').style.width='0%';
     $('setup-similar-record').textContent='—';$('setup-sample-quality').textContent='—';$('setup-exact-rate').textContent='—';$('setup-exact-record').textContent='ยังไม่มีท่าปัจจุบัน';
     for(const id of ['setup-live-direction','setup-live-extension','setup-live-room','setup-live-volume'])$(id).textContent='—';
-    rateBox.className='setup-profile-rate';setupList('setup-support-list',[],'รอจังหวะจากระบบ');setupList('setup-warning-list',[],'ยังไม่มีจุดที่ต้องประเมิน');
+    rateBox.className='setup-profile-rate';
+    for(const side of ['high','low']){$('setup-full-'+side+'-rate').textContent='—';$('setup-full-'+side+'-count').textContent='รอข้อมูล';$('setup-full-'+side).className='setup-side '+side;}
+    setupList('setup-support-list',[],'รอราคาสดและแท่ง 1 นาที');
+    setupList('setup-warning-list',[],'เมื่อข้อมูลครบ จะแสดงทั้ง HIGH และ LOW โดยไม่ต้องรอสัญญาณ');
     return;
    }
-   const cmp=setupComparison(snap),sim=cmp.similar,exact=cmp.exact,d=snap.direction==='HIGH'?1:-1;
+   const cmp=snap.direction==='HIGH'?live.high:live.low,sim=cmp.similar,exact=cmp.exact,d=snap.direction==='HIGH'?1:-1;
+   const sideStats={high:live.high.similar,low:live.low.similar};
+   for(const side of ['high','low']){
+    const row=sideStats[side],s=side==='high'?'HIGH':'LOW',box=$('setup-full-'+side);
+    $('setup-full-'+side+'-rate').textContent=row.rate===null?'—':Math.round(row.rate*100)+'%';
+    $('setup-full-'+side+'-count').textContent=row.n?row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis):'ยังไม่มีตัวอย่าง';
+    box.className='setup-side '+side+(live.leading===s?' active':'');
+   }
+   if(live.leading)panel.classList.add(live.leading==='HIGH'?'side-high':'side-low');
    $('setup-profile-name').textContent=setupName(snap);
-   $('setup-profile-desc').textContent=(snap.isRecentSignal?'สัญญาณเพิ่งออกแล้ว · กำลังประเมินว่าถ้าเข้าที่ราคาตอนนี้ยังเหมือนไม้ชนะย้อนหลังหรือไม่':'ประเมินจากราคาตอนนี้ก่อน/ระหว่างจุดเข้า')+` · ใช้เฉพาะผล V${CFG.version} ที่จบครบ 10 นาที`;
+   $('setup-profile-desc').textContent=(snap.hasConfirmedEntry?'จุดเข้าออกสัญญาณแล้ว · อัปเดตการประเมินจากราคาสด':snap.isLiveEvent?'ระบบกำลังติดตามท่านี้ แต่จุดเข้ายังไม่ผ่านการยืนยัน':'ประเมินสภาพตลาดสดทั้งสองฝั่ง แม้จุดเข้ายังไม่แนะนำให้เข้า')
+     +' · สถิติ '+(live.isReference?'อ้างอิง V7.1.0 (สูตรก่อนหน้า)':'V'+live.version);
    const pct=Number.isFinite(sim.rate)?Math.round(sim.rate*100):null;
    $('setup-similar-rate').textContent=pct===null?'—':pct+'%';
    $('setup-rate-bar').style.width=pct===null?'0%':pct+'%';
@@ -1520,9 +1607,9 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-exact-record').textContent=exact.n?`${exact.wins} ชนะ / ${exact.losses} แพ้ จาก ${exact.n} ไม้ตรงท่า`:'ยังไม่มีไม้ที่ตรงทั้งท่า ฝั่ง และช่วงตลาด';
 
    const exactForStatus=exact.n>=3?exact:sim;
-   if(exactForStatus.n>=5&&exactForStatus.rate>=.65){status.className='setup-profile-status good';status.textContent='ท่าถนัด';}
-   else if(exactForStatus.n>=5&&exactForStatus.rate<=.4){status.className='setup-profile-status bad';status.textContent='ท่าเสียเปรียบ';}
-   else{status.className='setup-profile-status learning';status.textContent=exactForStatus.n>=3?'ผลยังสูสี':'กำลังเรียนรู้';}
+   if(live.leading){status.className='setup-profile-status '+(live.leading==='HIGH'?'good':'bad');status.textContent='สถิติหนุน'+directionThai(live.leading);}
+   else if(exactForStatus.n>=5&&exactForStatus.rate>=.65){status.className='setup-profile-status good';status.textContent='ท่านี้เคยชนะบ่อย';}
+   else{status.className='setup-profile-status learning';status.textContent='ยังไม่มีฝั่งเด่นชัด';}
 
    $('setup-live-direction').textContent=Number.isFinite(snap.probability)?`${directionThai(snap.direction)} ${Math.round(snap.probability)}%`:directionThai(snap.direction);
    $('setup-live-extension').textContent=Number.isFinite(snap.extension)?Math.abs(snap.extension).toFixed(2)+' ATR':'—';
@@ -1530,7 +1617,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-live-volume').textContent=Number.isFinite(snap.relVol)&&snap.relVol>0?snap.relVol.toFixed(2)+'x':'—';
 
    const support=[],warning=[];
-   if(sim.n>=3&&sim.rate>=.6)support.push(`ไม้ที่ตำแหน่งใกล้กันชนะ ${sim.wins}/${sim.n} ไม้ (${Math.round(sim.rate*100)}%)`);
+   if(live.leading)support.push('จากผลย้อนหลังกลุ่มที่เปรียบเทียบ สถิติหนุนฝั่ง'+directionThai(live.leading));
+   if(sim.n>=3&&sim.rate>=.6)support.push(`ไม้ที่ตำแหน่งคล้ายกันชนะ ${sim.wins}/${sim.n} ไม้ (${Math.round(sim.rate*100)}%)`);
    if(sim.n>=3&&sim.rate<=.4)warning.push(`ไม้ที่ตำแหน่งใกล้กันแพ้ ${sim.losses}/${sim.n} ไม้`);
    if(Number.isFinite(snap.probability)&&snap.probability>=62)support.push(`น้ำหนัก +10 นาทีหนุนฝั่ง${directionThai(snap.direction)} ${Math.round(snap.probability)}%`);
    else if(Number.isFinite(snap.probability)&&snap.probability<=55)warning.push(`น้ำหนัก +10 นาทีของฝั่งนี้มีเพียง ${Math.round(snap.probability)}% ยังไม่ได้เปรียบชัด`);
@@ -1574,9 +1662,12 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(snap.phase==='EXHAUSTION'&&snap.type!=='exhaustion_reversal')warning.push('ตลาดอยู่ช่วงแรงเริ่มหมด แต่จุดเข้ายังตามทิศเดิม');
    if(snap.phase==='MATURE_IMPULSE'&&Number.isFinite(snap.extension)&&Math.abs(snap.extension)>=CFG.climaxExtensionAtr)warning.push('เป็นช่วงวิ่งแรงมาไกลแล้ว จังหวะนี้ต้องระวังรูปแบบ “ภูเขา” เป็นพิเศษ');
 
-   setupList('setup-support-list',support.slice(0,6),'ยังไม่มีเหตุผลหนุนที่เด่นพอในขณะนี้');
+   if(!snap.hasConfirmedEntry)warning.unshift('ยังไม่มีจุดเข้าที่ผ่านการยืนยันจากเครื่องยนต์ · ข้อมูลนี้ใช้ดูประกอบ');
+   if(live.isReference)warning.push('กำลังอ้างอิงไม้ V7.1.0 จนกว่า V7.1.1 มีตัวอย่างทั้งสองฝั่งพอ');
+   if(!live.leading)warning.push('จำนวนไม้หรือความคล้ายยังไม่พอจะสรุปว่าฝั่งไหนชนะบ่อยกว่า');
+   setupList('setup-support-list',support.slice(0,6),'ยังไม่มีเหตุผลหนุนเด่นในขณะนี้');
    setupList('setup-warning-list',warning.slice(0,6),'ยังไม่พบสัญญาณเตือนเด่นจากข้อมูลเรียลไทม์');
-   $('setup-profile-foot').textContent=`อัปเดต ${clockMs((state.quote?.ts||0)*1000)} · สถิติ V${CFG.version} เฉพาะไม้ที่จบผลแล้ว · เปรียบเทียบจากท่า ฝั่ง ช่วงตลาด ระยะจากฐาน แนวสำคัญ Volume และแรงตลาด · ไม่เปลี่ยนสูตรจุดเข้า`;
+   $('setup-profile-foot').textContent=`ข้อมูลสดล่าสุด ${clockMs((state.quote?.ts||0)*1000)} · สถิติจาก V${live.version} เฉพาะไม้ที่เคยออกสัญญาณและจบผลแล้ว · ไม่ใช่โอกาสชนะที่รับประกันของทุกจุดเข้า · ไม่เปลี่ยนสูตรสัญญาณ V${CFG.version}`;
   }
 
   function renderCompactSetupProfile(){
@@ -1593,6 +1684,15 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(fullRate&&compactRate)compactRate.className='setup-compact-rate'+(fullRate.classList.contains('good')?' good':fullRate.classList.contains('bad')?' bad':'');
    const fullBar=$('setup-rate-bar'),compactBar=$('setup-compact-rate-bar');
    if(fullBar&&compactBar)compactBar.style.width=fullBar.style.width||'0%';
+   const source=$('setup-profile-panel'),target=$('setup-profile-compact');
+   target.classList.toggle('side-high',source.classList.contains('side-high'));
+   target.classList.toggle('side-low',source.classList.contains('side-low'));
+   for(const side of ['high','low']){
+    const full=$('setup-full-'+side),small=$('setup-compact-'+side);
+    $('setup-compact-'+side+'-rate').textContent=$('setup-full-'+side+'-rate').textContent;
+    small.className='setup-compact-side '+side+(full.classList.contains('active')?' active':'');
+   }
+   $('setup-compact-why').textContent=$('setup-support-list').firstElementChild?.textContent||'รอเหตุผลสนับสนุนสด';
   }
 
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
@@ -2067,6 +2167,8 @@ function openReport(){
     chart.subscribeCrosshairMove(p=>{const b=p.seriesData.get(state.candleSeries);if(b&&b.open!==undefined)$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;});
     state.chartReady=true;
     setIndicatorsExpanded(state.indicatorsExpanded);
+    // Safari sometimes measures the auto-sized canvas before grid/font layout settles.
+    requestAnimationFrame(()=>{const el=$('chart');if(state.chart&&el?.clientWidth>0&&el.clientHeight>0)state.chart.resize(el.clientWidth,el.clientHeight);});
   }
   function emaPoints(arr,period){const values=ema(arr.map(b=>b.close),period);return arr.map((b,i)=>({time:b.time,value:values[i]}));}
   function rsiPoints(arr,period=14){
@@ -2158,6 +2260,14 @@ function openReport(){
     location.reload();
    });
   }
+  let chartResizeFrame=0;
+  window.addEventListener('resize',()=>{
+   if(!state.chartReady||!state.chart)return;
+   cancelAnimationFrame(chartResizeFrame);
+   chartResizeFrame=requestAnimationFrame(()=>{
+    const el=$('chart');if(el?.clientWidth>0&&el.clientHeight>0)state.chart.resize(el.clientWidth,el.clientHeight);
+   });
+  });
   $('latest').addEventListener('click',()=>state.chart&&state.chart.timeScale().scrollToRealTime());
   $('reconnect').addEventListener('click',()=>{state.reconnectCount=0;connect();});
   window.addEventListener('online',()=>connect());window.addEventListener('offline',()=>statusView('offline','อินเทอร์เน็ตขาดการเชื่อมต่อ'));
