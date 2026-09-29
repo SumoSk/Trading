@@ -1694,7 +1694,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const exactForStatus=exact.n>=3?exact:sim;
    if(live.displayLeading){
     status.className='setup-profile-status '+(live.displayLeading==='HIGH'?'good':'bad');
-    status.textContent=(live.displaySource==='history'?'สถิติหนุน':'ตลาดสดเอนเอียง')+directionThai(live.displayLeading);
+    status.textContent=(live.leadingSource==='candles'?'กราฟย้อนหลัง':live.leadingSource==='signals'?'ไม้จริงย้อนหลัง':'ตลาดสด')+'เอนเอียง'+directionThai(live.displayLeading);
    }else{status.className='setup-profile-status learning';status.textContent='น้ำหนักสองฝั่งใกล้เคียง';}
 
    $('setup-live-direction').textContent=Number.isFinite(snap.probability)?`${directionThai(snap.direction)} ${Math.round(snap.probability)}%`:directionThai(snap.direction);
@@ -1703,12 +1703,16 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-live-volume').textContent=Number.isFinite(snap.relVol)&&snap.relVol>0?snap.relVol.toFixed(2)+'x':'—';
 
    const support=[],warning=[];
-   if(live.leading)support.push('สถิติย้อนหลังของท่าคล้ายกันหนุนฝั่ง'+directionThai(live.leading)
+   if(live.leading&&live.leadingSource==='candles')
+    support.push('จากกราฟ Futures จริงที่คล้ายกัน ฝั่ง'+directionThai(live.leading)
+      +' เคยปิดถูกทาง '+(live.leading==='HIGH'?live.shadow.highWins:live.shadow.lowWins)
+      +'/'+live.shadow.n+' ครั้งเมื่อครบ 10 นาที · เป็นสถิติสังเกตย้อนหลัง');
+   else if(live.leading)support.push('ไม้สัญญาณจริงย้อนหลังหนุนฝั่ง'+directionThai(live.leading)
      +' ('+(live.leading==='HIGH'?Math.round(live.high.similar.rate*100):Math.round(live.low.similar.rate*100))+'% ในกลุ่มตัวอย่าง)');
    else if(live.marketLeading)support.push('น้ำหนักของโมเดลตลาดสดเอนเอียงฝั่ง'+directionThai(live.marketLeading)
      +' '+Math.round(live.model[live.marketLeading])+'% · ยังไม่ใช่ผลชนะย้อนหลัง');
-   if(sim.n>=3&&sim.rate>=.6)support.push(`ไม้ที่ตำแหน่งคล้ายกันชนะ ${sim.wins}/${sim.n} ไม้ (${Math.round(sim.rate*100)}%)`);
-   if(sim.n>=3&&sim.rate<=.4)warning.push(`ไม้ที่ตำแหน่งใกล้กันแพ้ ${sim.losses}/${sim.n} ไม้`);
+   if(!live.chartBasis&&sim.n>=3&&sim.rate>=.6)support.push(`ไม้ที่ตำแหน่งคล้ายกันชนะ ${sim.wins}/${sim.n} ไม้ (${Math.round(sim.rate*100)}%)`);
+   if(!live.chartBasis&&sim.n>=3&&sim.rate<=.4)warning.push(`ไม้ที่ตำแหน่งใกล้กันแพ้ ${sim.losses}/${sim.n} ไม้`);
    if(Number.isFinite(snap.probability)&&snap.probability>=62)support.push(`น้ำหนัก +10 นาทีหนุนฝั่ง${directionThai(snap.direction)} ${Math.round(snap.probability)}%`);
    else if(Number.isFinite(snap.probability)&&snap.probability<=55)warning.push(`น้ำหนัก +10 นาทีของฝั่งนี้มีเพียง ${Math.round(snap.probability)}% ยังไม่ได้เปรียบชัด`);
    if(snap.risk==='ต่ำตามเกณฑ์')support.push('ตัวประเมินความเสี่ยงเรียลไทม์อยู่ระดับต่ำตามเกณฑ์');
@@ -1752,11 +1756,17 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(snap.phase==='MATURE_IMPULSE'&&Number.isFinite(snap.extension)&&Math.abs(snap.extension)>=CFG.climaxExtensionAtr)warning.push('เป็นช่วงวิ่งแรงมาไกลแล้ว จังหวะนี้ต้องระวังรูปแบบ “ภูเขา” เป็นพิเศษ');
 
    if(!snap.hasConfirmedEntry)warning.unshift('ยังไม่มีจุดเข้าที่ผ่านการยืนยันจากเครื่องยนต์ · ข้อมูลนี้ใช้ดูประกอบ');
-   if(live.isReference)warning.push('กำลังอ้างอิงไม้ V7.1.0 จนกว่า V7.1.1 มีตัวอย่างทั้งสองฝั่งพอ');
-   if(!live.leading)warning.push('ข้อมูลย้อนหลังสองฝั่งยังไม่พอสำหรับเปรียบเทียบอัตราชนะ · สีอ้างอิงน้ำหนักโมเดลสด');
+   if(live.chartBasis)warning.push('ผลกราฟย้อนหลังจำลองเข้าที่ราคาปิดแท่ง 1 นาที · ตัวอย่างเว้นอย่างน้อย 10 นาที · ไม่ใช่ไม้จริง');
+   else if(live.isReference)warning.push('ใช้ไม้ V7.1.0 เป็นข้อมูลอ้างอิงจนกว่า V7.1.1 มีตัวอย่างเพียงพอ');
+   if(live.marketLeading&&live.leading&&live.marketLeading!==live.leading)
+    warning.unshift('ข้อมูลขัดกัน: โมเดลสดเอนเอียง'+directionThai(live.marketLeading)+' แต่ย้อนหลังเอนเอียง'+directionThai(live.leading));
+   if(!live.leading&&!live.chartBasis)warning.push('ข้อมูลย้อนหลังสองฝั่งยังไม่พอ · สีอ้างอิงน้ำหนักโมเดลสด');
    setupList('setup-support-list',support.slice(0,6),'ยังไม่มีเหตุผลหนุนเด่นในขณะนี้');
    setupList('setup-warning-list',warning.slice(0,6),'ยังไม่พบสัญญาณเตือนเด่นจากข้อมูลเรียลไทม์');
-   $('setup-profile-foot').textContent=`ข้อมูลสด ${clockMs((state.quote?.ts||0)*1000)} · ตัวเลขหลัก = น้ำหนักโมเดล HIGH/LOW ไม่ใช่อัตราชนะ · สถิติด้านล่าง = ไม้จบจริงของ V${live.version} · ไม่เปลี่ยนสัญญาณ V${CFG.version}`;
+   $('setup-profile-foot').textContent=`Futures ล่าสุด ${clockMs((state.quote?.ts||0)*1000)}
+    · ตัวเลขหลัก = น้ำหนักโมเดล ไม่ใช่อัตราชนะ
+    · ${live.chartBasis?'กราฟย้อนหลัง T+10 เป็นการจำลอง ไม่ใช่ไม้เข้า':'ผลไม้จริง V'+live.version}
+    · สัญญาณ V${CFG.version} แยกอิสระ`;
   }
 
   function renderCompactSetupProfile(){
