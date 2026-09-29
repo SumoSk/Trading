@@ -287,44 +287,47 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 @media(max-width:700px){.engine-version-picker{order:3;width:100%;margin-left:0}.engine-version-picker select{max-width:none;flex:1}}
 
 
-/* Compact setup summary beside entry; full realtime profile remains below */
+/* Text-only realtime briefing beside entry; full profile remains below */
 .signal-panel>.signal-card-direction{grid-column:span 4!important}
 .signal-panel>.signal-card-entry{grid-column:span 4!important}
 .signal-panel>.setup-profile-compact{
- grid-column:span 4!important;
- min-width:0;align-self:stretch;
- padding:10px;
- border:1px solid var(--card-border);
- border-radius:10px;
- background:var(--card-bg);
- overflow:hidden
+ grid-column:span 4!important;min-width:0;align-self:stretch;
+ padding:10px;border:1px solid var(--card-border);border-radius:10px;
+ background:var(--card-bg);overflow:hidden
 }
-.setup-profile-compact h3{font-size:13px;line-height:1.2;font-weight:600;margin:0 0 3px;color:#dfeaf8}
-.setup-profile-compact>p{font-size:8.5px;line-height:1.35;color:#8396af;margin:0 0 8px}
-.setup-compact-rate{padding:8px;border:1px solid #2a3c55;border-radius:8px;background:#0a131f}
-.setup-compact-rate>span{display:block;font-size:8px;color:#8194ad;margin-bottom:4px}
-.setup-compact-rate-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
-.setup-compact-rate-head strong{font:700 23px/1 'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;color:#dce9f8}
-.setup-compact-rate-head b{font-size:9px;font-weight:600;color:#aebed1;text-align:right}
-.setup-compact-rate.good .setup-compact-rate-head strong,.setup-compact-rate.good .setup-compact-rate-head b{color:#69e9c5}
-.setup-compact-rate.bad .setup-compact-rate-head strong,.setup-compact-rate.bad .setup-compact-rate-head b{color:#ff8da1}
-.setup-compact-track{height:4px;margin-top:6px;border-radius:8px;overflow:hidden;background:#273348}
-.setup-compact-track>div{height:100%;width:0;background:linear-gradient(90deg,#788ba5,#9db0c8);transition:width .25s ease}
-.setup-compact-rate.good .setup-compact-track>div{background:linear-gradient(90deg,#2f9a7e,#69e9c5)}
-.setup-compact-rate.bad .setup-compact-track>div{background:linear-gradient(90deg,#bd5368,#ff8da1)}
-.setup-compact-meta{display:flex;justify-content:space-between;gap:8px;margin-top:5px;font-size:7.5px;color:#8497b0}
-.setup-compact-meta span:last-child{text-align:right}
-.setup-compact-exact{padding:7px 1px 0}
-.setup-compact-exact>div{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-.setup-compact-exact span{font-size:8px;color:#9bacc1}
-.setup-compact-exact b{font:600 11px 'Segoe UI',sans-serif}
-.setup-compact-exact small{display:block;margin-top:2px;font-size:7.5px;color:#70849f}
+.compact-brief-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid #233247}
+.compact-brief-kicker{display:block;font-size:7.5px;letter-spacing:.7px;color:#758ba8;margin-bottom:2px}
+.setup-profile-compact h3{font-size:13px;line-height:1.25;font-weight:650;margin:0;color:#dfeaf8}
+.compact-brief-status{flex:0 0 auto;padding:3px 6px;border:1px solid #34445c;border-radius:999px;font-size:8px;color:#a9b9cc;white-space:nowrap}
+.compact-brief-summary{font-size:9px;line-height:1.5;color:#aebfd2;margin:7px 0}
+.compact-entry-line{display:grid;grid-template-columns:auto 1fr;gap:2px 7px;padding:7px 8px;border:1px solid #27374d;border-radius:7px;background:#0b141f}
+.compact-entry-line>span{font-size:8px;color:#7f93ad}
+.compact-entry-line>b{font-size:10px;font-weight:650;color:#dce7f5}
+.compact-entry-line>small{grid-column:1/-1;font-size:8px;line-height:1.4;color:#879bb4}
+.compact-brief-columns{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.compact-brief-box{min-width:0;padding:7px;border:1px solid #24344a;border-radius:7px;background:#0b141f}
+.compact-brief-box h4{font-size:8.5px;margin:0 0 5px;font-weight:650}
+.compact-brief-box.support h4{color:#69dcb8}
+.compact-brief-box.warning h4{color:#f0b676}
+.compact-brief-box ul{list-style:none;padding:0;margin:0;display:grid;gap:4px}
+.compact-brief-box li{position:relative;padding-left:9px;font-size:8px;line-height:1.4;color:#9fb1c6}
+.compact-brief-box li:before{content:'';position:absolute;left:0;top:.52em;width:4px;height:4px;border-radius:50%;background:#617690}
+.compact-brief-box.support li:before{background:#58cda8}
+.compact-brief-box.warning li:before{background:#e6a15e}
+.compact-next{margin-top:6px;padding-top:6px;border-top:1px solid #233247}
+.compact-next>span{display:block;font-size:7.5px;color:#71869f;margin-bottom:2px}
+.compact-next>p{font-size:8.5px;line-height:1.4;color:#b7c6d8;margin:0}
+.setup-profile-compact.side-high h3,.setup-profile-compact.side-high .compact-brief-status{color:#61e3bc}
+.setup-profile-compact.side-high .compact-brief-status{border-color:#2c866c;background:#102922}
+.setup-profile-compact.side-low h3,.setup-profile-compact.side-low .compact-brief-status{color:#ff8da1}
+.setup-profile-compact.side-low .compact-brief-status{border-color:#a3485f;background:#301b26}
 @media(max-width:900px){
  .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry{grid-column:span 3!important}
  .signal-panel>.setup-profile-compact{grid-column:1/-1!important}
 }
 @media(max-width:560px){
  .signal-panel>.signal-card-direction,.signal-panel>.signal-card-entry,.signal-panel>.setup-profile-compact{grid-column:1/-1!important}
+ .compact-brief-columns{grid-template-columns:1fr}
 }
 
 
@@ -339,24 +342,27 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-side small{display:block;color:#8295ae;font-size:8px;line-height:1.45}
 .setup-side.active.high{border-color:#2c866c;background:#102922}.setup-side.active.high span,.setup-side.active.high b{color:#61e3bc}
 .setup-side.active.low{border-color:#a3485f;background:#301b26}.setup-side.active.low span,.setup-side.active.low b{color:#ff8da1}
-.setup-profile-panel.side-high .setup-profile-hero h3,.setup-profile-panel.side-high .setup-profile-rate .setup-rate-main strong,.setup-profile-compact.side-high h3,.setup-profile-compact.side-high .setup-compact-rate-head strong{color:#61e3bc!important}
-.setup-profile-panel.side-low .setup-profile-hero h3,.setup-profile-panel.side-low .setup-profile-rate .setup-rate-main strong,.setup-profile-compact.side-low h3,.setup-profile-compact.side-low .setup-compact-rate-head strong{color:#ff8da1!important}
+
+
 .setup-profile-panel.side-high .setup-profile-status{border-color:#2c866c;background:#102922;color:#61e3bc}
 .setup-profile-panel.side-low .setup-profile-status{border-color:#a3485f;background:#301b26;color:#ff8da1}
-.setup-compact-sides{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:5px 0}
-.setup-compact-side{display:flex;justify-content:space-between;align-items:center;gap:4px;min-width:0;padding:5px 6px;border:1px solid #29394e;border-radius:6px;font-size:9px;color:#95a6bb}
-.setup-compact-side b{font:700 12px 'Segoe UI',sans-serif}
-.setup-compact-side.active.high{border-color:#2c866c;color:#61e3bc;background:#102922}
-.setup-compact-side.active.low{border-color:#a3485f;color:#ff8da1;background:#301b26}
-.setup-compact-why{font-size:9px;line-height:1.4;color:#a4b5c9;margin-top:5px}
 
+
+
+
+
+
+
+
+
+.setup-profile-panel.side-high .setup-profile-hero h3,.setup-profile-panel.side-high .setup-profile-rate .setup-rate-main strong{color:#61e3bc!important}
+.setup-profile-panel.side-low .setup-profile-hero h3,.setup-profile-panel.side-low .setup-profile-rate .setup-rate-main strong{color:#ff8da1!important}
 
 /* Live confidence is separate from observed historical outcomes. */
-.setup-profile-rate .setup-rate-main strong,.setup-compact-rate-head strong{font-variant-numeric:tabular-nums}
-.setup-profile-panel:not(.side-high):not(.side-low) .setup-rate-main strong,
-.setup-profile-compact:not(.side-high):not(.side-low) .setup-compact-rate-head strong{color:#dce9f8!important}
-.setup-side small,.setup-compact-exact small{overflow-wrap:anywhere}
-.setup-compact-why{color:#b6c9de!important}
+
+
+
+
 @media(min-width:701px) and (max-width:1200px){.chart-toolbar{align-content:start}}
 
 
@@ -420,24 +426,39 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </section>
 
 <section class="setup-profile-compact" id="setup-profile-compact" aria-live="polite">
-  <h3 id="setup-compact-name">กำลังรอจุดเข้า</h3>
-  <p id="setup-compact-desc">เมื่อมีจังหวะหรือเพิ่งมีสัญญาณ ช่องนี้จะเทียบกับไม้ย้อนหลังและอัปเดตจากราคาตอนนี้แบบเรียลไทม์</p>
-  <div class="setup-compact-rate" id="setup-compact-rate">
-    <span>น้ำหนักตลาดสดของฝั่งที่แสดง · +10 นาที</span>
-    <div class="setup-compact-rate-head"><strong id="setup-compact-similar-rate">—</strong><b id="setup-compact-history-lean">รอข้อมูล</b></div>
-    <div class="setup-compact-track"><div id="setup-compact-rate-bar"></div></div>
-    <div class="setup-compact-meta"><span id="setup-compact-similar-record">—</span><span id="setup-compact-sample-quality">—</span></div>
+  <div class="compact-brief-head">
+    <div>
+      <span class="compact-brief-kicker">สรุปสำคัญ · REALTIME</span>
+      <h3 id="setup-compact-name">กำลังอ่านตลาด</h3>
+    </div>
+    <span class="compact-brief-status" id="setup-compact-status">รอข้อมูล</span>
   </div>
-  <div class="setup-compact-sides" id="setup-compact-sides">
-    <div class="setup-compact-side high" id="setup-compact-high"><span>สูงกว่า</span><b id="setup-compact-high-rate">—</b></div>
-    <div class="setup-compact-side low" id="setup-compact-low"><span>ต่ำกว่า</span><b id="setup-compact-low-rate">—</b></div>
+
+  <p class="compact-brief-summary" id="setup-compact-desc">กำลังรอข้อมูล Futures สดเพื่อสรุปสถานการณ์</p>
+
+  <div class="compact-entry-line">
+    <span>จุดเข้าตอนนี้</span>
+    <b id="setup-compact-entry">กำลังวิเคราะห์</b>
+    <small id="setup-compact-entry-reason">รอข้อมูลตลาด</small>
   </div>
-  <div class="setup-compact-why" id="setup-compact-why">น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง</div>
+
+  <div class="compact-brief-columns">
+    <section class="compact-brief-box support">
+      <h4>อะไรที่กำลังหนุน</h4>
+      <ul id="setup-compact-support"><li>รอข้อมูลตลาดสด</li></ul>
+    </section>
+    <section class="compact-brief-box warning">
+      <h4>อะไรที่ต้องระวัง</h4>
+      <ul id="setup-compact-warning"><li>รอข้อมูลตลาดสด</li></ul>
+    </section>
+  </div>
+
+  <div class="compact-next">
+    <span>ระบบกำลังรออะไรต่อ</span>
+    <p id="setup-compact-next">รอข้อมูลตลาด</p>
+  </div>
+
   <small class="setup-compact-health warning" id="setup-compact-health">รอ Futures สด</small>
-  <div class="setup-compact-exact">
-    <div><span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-compact-exact-rate">—</b></div>
-    <small id="setup-compact-exact-record">ยังไม่มีท่าปัจจุบัน</small>
-  </div>
 </section>
 
   <section class="signal-card signal-card-market">
@@ -1803,30 +1824,44 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
 
   function renderCompactSetupProfile(){
-   const copyText=(from,to)=>{const a=$(from),b=$(to);if(a&&b)b.textContent=a.textContent;};
-   copyText('setup-profile-name','setup-compact-name');
-   copyText('setup-profile-desc','setup-compact-desc');
-   copyText('setup-similar-rate','setup-compact-similar-rate');
-   copyText('setup-history-lean','setup-compact-history-lean');
-   copyText('setup-similar-record','setup-compact-similar-record');
-   copyText('setup-sample-quality','setup-compact-sample-quality');
-   copyText('setup-exact-rate','setup-compact-exact-rate');
-   copyText('setup-exact-record','setup-compact-exact-record');
-   const fullRate=$('setup-profile-rate'),compactRate=$('setup-compact-rate');
-   if(fullRate&&compactRate)compactRate.className='setup-compact-rate'+(fullRate.classList.contains('good')?' good':fullRate.classList.contains('bad')?' bad':'');
-   const fullBar=$('setup-rate-bar'),compactBar=$('setup-compact-rate-bar');
-   if(fullBar&&compactBar)compactBar.style.width=fullBar.style.width||'0%';
-   const source=$('setup-profile-panel'),target=$('setup-profile-compact');
+   const target=$('setup-profile-compact'),source=$('setup-profile-panel');
+   if(!target||!source)return;
+
    target.classList.toggle('side-high',source.classList.contains('side-high'));
    target.classList.toggle('side-low',source.classList.contains('side-low'));
-   for(const side of ['high','low']){
-    const full=$('setup-full-'+side),small=$('setup-compact-'+side);
-    $('setup-compact-'+side+'-rate').textContent=$('setup-full-'+side+'-rate').textContent;
-    small.className='setup-compact-side '+side+(full.classList.contains('active')?' active':'');
-   }
-   const conflicting=$('setup-warning-list').firstElementChild?.textContent||'';
-   $('setup-compact-why').textContent=conflicting.startsWith('ข้อมูลขัดกัน')?conflicting:
-     $('setup-support-list').firstElementChild?.textContent||'น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง';
+
+   const profileName=$('setup-profile-name')?.textContent||'กำลังอ่านตลาด';
+   const profileDesc=$('setup-profile-desc')?.textContent||'รอข้อมูลตลาดสด';
+   const profileStatus=$('setup-profile-status')?.textContent||'รอข้อมูล';
+   $('setup-compact-name').textContent=profileName;
+   $('setup-compact-desc').textContent=profileDesc;
+   $('setup-compact-status').textContent=profileStatus;
+
+   const signalTitle=$('signal-title')?.textContent||'กำลังวิเคราะห์';
+   const entryState=$('entry-state')?.textContent||'รอข้อมูลตลาด';
+   const signalReason=$('signal-description')?.textContent||'รอข้อมูลตลาด';
+   $('setup-compact-entry').textContent=signalTitle+(entryState&&entryState!==signalTitle?' · '+entryState:'');
+   $('setup-compact-entry-reason').textContent=signalReason;
+
+   const copyList=(fromId,toId,max=3)=>{
+    const from=$(fromId),to=$(toId);if(!to)return;
+    to.replaceChildren();
+    const rows=[...(from?.querySelectorAll('li')||[])].map(li=>li.textContent.trim()).filter(Boolean).slice(0,max);
+    for(const text of (rows.length?rows:['ยังไม่มีข้อมูลเด่นในขณะนี้'])){
+     const li=document.createElement('li');li.textContent=text;to.append(li);
+    }
+   };
+   copyList('setup-support-list','setup-compact-support',3);
+   copyList('setup-warning-list','setup-compact-warning',3);
+
+   let next=signalReason;
+   if(signalTitle.includes('เข้าได้ตอนนี้'))next='มีจุดเข้าที่ผ่านเงื่อนไขแล้ว · ดูราคาล็อกและทิศที่ระบบออกก่อนตัดสินใจ';
+   else if(signalTitle.includes('จุดเข้าออกแล้ว'))next='สัญญาณถูกล็อกแล้ว · ระบบกำลังติดตามผลจนครบ 10 นาที';
+   else if(signalTitle.includes('กำลังยืนยัน'))next='รอหลักฐานยืนยันเพิ่มก่อนออกไม้';
+   else if(signalTitle.includes('เฝ้าดู'))next='เฝ้าดูว่าท่าปัจจุบันจะผ่านเงื่อนไขจุดเข้าหรือเสียรูปก่อน';
+   else if(signalTitle.includes('รอจุดเข้า'))next='รอให้ราคาและแรงตลาดเข้าตำแหน่งที่ระบบยอมรับก่อน';
+   else if(signalTitle.includes('พักสัญญาณ'))next='รอข้อมูล Futures สดกลับมาครบก่อนประเมินจุดเข้าใหม่';
+   $('setup-compact-next').textContent=next||'ติดตามข้อมูลตลาดสดต่อ';
   }
 
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
