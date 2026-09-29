@@ -485,7 +485,27 @@ body.toolbar-floating .chart-toolbar{position:fixed;top:6px;left:50%;transform:t
 .chart-meta{min-height:34px;padding-block:6px}
 .chart-history-toggle{flex:0 0 auto;min-height:30px!important;height:30px;padding:0 8px;border-radius:7px;border:1px solid #325a50;background:#0f241f;color:#78d6b4;font:600 9px 'Segoe UI',sans-serif;white-space:nowrap}
 .chart-history-toggle[aria-pressed=false]{border-color:#354258;background:#141b27;color:#94a3b8}
-@media(max-width:560px){.chart-history-toggle{min-height:28px!important;height:28px;padding:0 6px;font-size:8px}}
+.drawing-tools{position:relative;flex:0 0 auto}
+.drawing-tools>summary{list-style:none;height:30px;display:grid;place-items:center;padding:0 9px;border:1px solid #3d4d64;border-radius:7px;background:#121c29;color:#bfd0e3;cursor:pointer;font:600 9px 'Segoe UI',sans-serif;white-space:nowrap}
+.drawing-tools>summary::-webkit-details-marker{display:none}
+.drawing-tools[open]>summary,.drawing-tools.active>summary{border-color:#7d69c8;background:#211c38;color:#d8d0ff}
+.drawing-tools-popover{position:absolute;right:0;top:36px;z-index:140;display:grid;gap:7px;width:228px;padding:9px;border:1px solid #35465e;border-radius:10px;background:#0c1420;box-shadow:0 14px 40px #0009}
+.drawing-tools-head{display:flex;align-items:center;justify-content:space-between;gap:7px}.drawing-tools-head b{font-size:10px}.drawing-tools-head small{font-size:8px;color:#8397b2;text-align:right}
+.drawing-tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}.drawing-tool-grid button,.drawing-clear{min-height:31px!important;padding:5px 7px;font-size:9px}
+.drawing-tool-grid button.active{border-color:#7d69c8;background:#262043;color:#ded8ff}.drawing-tool-grid.secondary button{font-size:8px}
+.drawing-scope{display:flex!important;align-items:center;gap:7px;margin:0!important;padding:6px 7px;border:1px solid #27364a;border-radius:7px;background:#0f1926;color:#b9c7d8;font-size:9px}
+.drawing-scope input{display:block;width:14px;height:14px;margin:0;padding:0;accent-color:#8f7be0}.drawing-scope span{float:none!important;font-size:9px!important;color:#b9c7d8!important}
+.drawing-clear{width:100%;border-color:#5e3b49!important;color:#e9a3b3!important;background:#24151d!important}
+.drawing-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;overflow:hidden}
+.drawing-overlay.drawing-active{pointer-events:auto;cursor:crosshair;touch-action:none}
+.drawing-line{stroke:#d5c86f;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.drawing-line.global{stroke:#a899ff}.drawing-line.selected{stroke-width:2.4}
+.drawing-hit{stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer;vector-effect:non-scaling-stroke}
+.drawing-handle{fill:#101824;stroke:#e8df90;stroke-width:2;pointer-events:all;cursor:grab;vector-effect:non-scaling-stroke}
+.drawing-handle.global{stroke:#b9aaff}.drawing-handle:active{cursor:grabbing}
+.drawing-preview{stroke:#d5c86f;stroke-width:1.5;stroke-dasharray:5 4;vector-effect:non-scaling-stroke;pointer-events:none}
+.drawing-tag{fill:#172130dd;stroke:#39495d;stroke-width:1}.drawing-tag-text{fill:#aebed2;font:8px 'Segoe UI',sans-serif;pointer-events:none}
+@media(max-width:560px){.chart-history-toggle{min-height:28px!important;height:28px;padding:0 6px;font-size:8px}.drawing-tools>summary{height:28px;padding:0 7px;font-size:8px}.drawing-tools-popover{position:fixed;top:42px;right:6px;width:min(228px,calc(100vw - 12px))}}
 .signal-card-main .signal-description{margin-bottom:10px}
 .prediction-log-head p:empty{display:none}
 .signal-card-market .signal-card-title{display:none!important}
@@ -586,6 +606,22 @@ main{padding-top:10px}
         <small id="analysis-tf-active">ใช้อยู่ 1m</small>
       </div>
       <button id="chart-history-toggle" class="chart-history-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ">แพ้/ชนะ: เปิด</button>
+      <details class="drawing-tools" id="drawing-tools">
+        <summary aria-label="เครื่องมือตีเส้น" title="เครื่องมือตีเส้น">✏ เส้น</summary>
+        <div class="drawing-tools-popover">
+          <div class="drawing-tools-head"><b>ตีเส้นบนกราฟ</b><small id="drawing-status">เลือกเครื่องมือ</small></div>
+          <div class="drawing-tool-grid">
+            <button type="button" id="draw-trend">เส้นเทรนด์ ↗</button>
+            <button type="button" id="draw-horizontal">แนวนอน —</button>
+          </div>
+          <label class="drawing-scope"><input type="checkbox" id="drawing-all-tf"><span>ใช้เส้นนี้ทุก TF</span></label>
+          <div class="drawing-tool-grid secondary">
+            <button type="button" id="drawing-cancel">หยุดวาด</button>
+            <button type="button" id="drawing-delete" disabled>ลบเส้นที่เลือก</button>
+          </div>
+          <button type="button" id="drawing-clear-tf" class="drawing-clear">ล้างเส้นเฉพาะ TF นี้</button>
+        </div>
+      </details>
       <details class="toolbar-more" id="toolbar-more">
         <summary aria-label="เครื่องมือเพิ่มเติม" title="เครื่องมือเพิ่มเติม">•••</summary>
         <div class="toolbar-more-popover">
@@ -599,7 +635,7 @@ main{padding-top:10px}
   </div>
   <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
-  <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
+  <div class="chart-wrap"><div id="chart"></div><svg id="drawing-overlay" class="drawing-overlay" aria-label="พื้นที่ตีเส้นบนกราฟ"></svg><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
@@ -1849,6 +1885,85 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
   }
   function resetContextEngine(tf){if(tf!=='1m')analysisContextEngines.set(tf,new Engine({}));}
   let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null,showChartOutcomes=true;
+  const DRAW_STORE='btc-chart-drawings-v1';
+  let drawings=[];try{const d=JSON.parse(localStorage.getItem(DRAW_STORE)||'[]');if(Array.isArray(d))drawings=d.filter(x=>x&&['trend','horizontal'].includes(x.type)&&x.p1&&Number.isFinite(x.p1.time)&&Number.isFinite(x.p1.price));}catch{}
+  let drawingMode=null,drawingScopeAll=false,drawingDraft=null,selectedDrawingId=null,drawingDrag=null,drawingRenderFrame=0;
+  const saveDrawings=()=>{try{localStorage.setItem(DRAW_STORE,JSON.stringify(drawings.slice(-300)));}catch{}};
+  const drawingVisible=d=>d.global||d.tf===state.selectedTf;
+  const normalChartTime=t=>{
+   if(Number.isFinite(t))return Number(t);
+   if(t&&Number.isFinite(t.year)&&Number.isFinite(t.month)&&Number.isFinite(t.day))return Date.UTC(t.year,t.month-1,t.day)/1000;
+   return null;
+  };
+  function chartPointFromClient(clientX,clientY){
+   if(!state.chartReady||!state.chart||!state.candleSeries)return null;
+   const svg=$('drawing-overlay'),rect=svg?.getBoundingClientRect();if(!rect)return null;
+   const x=clip(clientX-rect.left,0,Math.max(0,rect.width)),y=clip(clientY-rect.top,0,Math.max(0,rect.height));
+   const time=normalChartTime(state.chart.timeScale().coordinateToTime(x)),price=state.candleSeries.coordinateToPrice(y);
+   if(!Number.isFinite(time)||!Number.isFinite(price))return null;
+   return {x,y,time,price};
+  }
+  function drawingScreenPoint(p){
+   if(!state.chartReady||!p)return null;
+   const x=state.chart.timeScale().timeToCoordinate(p.time),y=state.candleSeries.priceToCoordinate(p.price);
+   return Number.isFinite(x)&&Number.isFinite(y)?{x,y}:null;
+  }
+  function setDrawingMode(mode){
+   drawingMode=mode;drawingDraft=null;
+   const svg=$('drawing-overlay'),box=$('drawing-tools'),status=$('drawing-status');
+   svg?.classList.toggle('drawing-active',!!mode);
+   box?.classList.toggle('active',!!mode);
+   $('draw-trend')?.classList.toggle('active',mode==='trend');
+   $('draw-horizontal')?.classList.toggle('active',mode==='horizontal');
+   if(status)status.textContent=mode==='trend'?'ลากจากจุดแรกไปจุดที่สอง':mode==='horizontal'?'แตะราคาที่ต้องการ':'เลือกเครื่องมือ';
+   renderDrawingOverlay();
+  }
+  function renderDrawingOverlay(){
+   cancelAnimationFrame(drawingRenderFrame);
+   drawingRenderFrame=requestAnimationFrame(()=>{
+    const svg=$('drawing-overlay');if(!svg||!state.chartReady)return;
+    const rect=svg.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    const ns='http://www.w3.org/2000/svg';
+    const make=(name,attrs={})=>{const el=document.createElementNS(ns,name);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,String(v));return el;};
+    const visible=drawings.filter(drawingVisible);
+    if(selectedDrawingId&&!visible.some(d=>d.id===selectedDrawingId)){selectedDrawingId=null;$('drawing-delete')&&( $('drawing-delete').disabled=true );}
+    for(const d of visible){
+     const p1=drawingScreenPoint(d.p1);if(!p1)continue;
+     let p2=d.type==='horizontal'?{x:w,y:p1.y}:drawingScreenPoint(d.p2);if(!p2)continue;
+     const x1=d.type==='horizontal'?0:p1.x,y1=p1.y,x2=p2.x,y2=p2.y,selected=d.id===selectedDrawingId;
+     const hit=make('line',{x1,y1,x2,y2,class:'drawing-hit','data-drawing-id':d.id});
+     hit.addEventListener('pointerdown',ev=>{
+      if(drawingMode)return;
+      ev.stopPropagation();selectedDrawingId=d.id;$('drawing-delete').disabled=false;
+      if(d.type==='horizontal'){drawingDrag={id:d.id,endpoint:'p1',pointerId:ev.pointerId};hit.setPointerCapture?.(ev.pointerId);}
+      renderDrawingOverlay();
+     });
+     svg.append(hit);
+     svg.append(make('line',{x1,y1,x2,y2,class:'drawing-line'+(d.global?' global':'')+(selected?' selected':'')}));
+     if(selected){
+      const pts=d.type==='horizontal'?[{key:'p1',p:{x:Math.min(w-12,Math.max(12,w*.82)),y:p1.y}}]:[{key:'p1',p:p1},{key:'p2',p:p2}];
+      for(const hp of pts){
+       const c=make('circle',{cx:hp.p.x,cy:hp.p.y,r:5,class:'drawing-handle'+(d.global?' global':'')});
+       c.addEventListener('pointerdown',ev=>{if(drawingMode)return;ev.stopPropagation();drawingDrag={id:d.id,endpoint:hp.key,pointerId:ev.pointerId};c.setPointerCapture?.(ev.pointerId);});
+       svg.append(c);
+      }
+      const tagX=clip((x1+x2)/2-25,2,w-54),tagY=clip((y1+y2)/2-17,2,h-16);
+      svg.append(make('rect',{x:tagX,y:tagY,width:52,height:14,rx:4,class:'drawing-tag'}));
+      const tx=make('text',{x:tagX+5,y:tagY+10,class:'drawing-tag-text'});tx.textContent=d.global?'ทุก TF':state.selectedTf;svg.append(tx);
+     }
+    }
+    if(drawingDraft){
+     const a=drawingScreenPoint(drawingDraft.p1),b=drawingDraft.p2?drawingScreenPoint(drawingDraft.p2):null;
+     if(a&&b)svg.append(make('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'drawing-preview'}));
+    }
+   });
+  }
+  function createDrawing(type,p1,p2=null){
+   const d={id:(crypto.randomUUID?.()||('d'+Date.now()+Math.random().toString(16).slice(2))),type,tf:state.selectedTf,global:drawingScopeAll,p1:{time:p1.time,price:p1.price}};
+   if(type==='trend'&&p2)d.p2={time:p2.time,price:p2.price};else if(type==='horizontal')d.p2={time:p1.time,price:p1.price};
+   drawings.push(d);selectedDrawingId=d.id;saveDrawings();$('drawing-delete').disabled=false;renderDrawingOverlay();
+  }
   const CANDLE_VERSION='0.2.0',CANDLE_STORE='btc-candle-behavior-v1';
   let candleSaved={};try{candleSaved=JSON.parse(localStorage.getItem(CANDLE_STORE)||'{}')||{};}catch{}
   const candleState={
@@ -3445,6 +3560,9 @@ function openReport(){
     if(panes[2])panes[2].setStretchFactor(1.25);
     if(panes[3])panes[3].setStretchFactor(1.5);
     chart.subscribeCrosshairMove(p=>{const b=p.seriesData.get(state.candleSeries);if(b&&b.open!==undefined)$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;});
+    chart.timeScale().subscribeVisibleLogicalRangeChange(()=>renderDrawingOverlay());
+    $('chart')?.addEventListener('wheel',()=>requestAnimationFrame(renderDrawingOverlay),{passive:true});
+    $('chart')?.addEventListener('pointerup',()=>requestAnimationFrame(renderDrawingOverlay),{passive:true});
     state.chartReady=true;
     setIndicatorsExpanded(state.indicatorsExpanded);
     // Safari sometimes measures the auto-sized canvas before grid/font layout settles.
@@ -3483,8 +3601,8 @@ function openReport(){
     const r=rsiPoints(arr),rv=r.at(-1);if(rv){state.rsiSeries.update(rv);state.rsiUpper.update({time:rv.time,value:70});state.rsiLower.update({time:rv.time,value:30});}
     const m=macdPoints(arr),mv=m.macd.at(-1),sv=m.signal.at(-1),hv=m.hist.at(-1);if(mv)state.macdSeries.update(mv);if(sv)state.macdSignalSeries.update(sv);if(hv)state.macdHistSeries.update(hv);
   }
-  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();}
-  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();}
+  function renderChart(fit=false){if(!state.chartReady)makeChart();const arr=state.bars[state.selectedTf];if(!arr.length)return;state.candleSeries.setData(arr.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));state.emaFast.setData(emaPoints(arr,8));state.emaSlow.setData(emaPoints(arr,21));setIndicatorData(arr);rangeStats();const b=arr.at(-1);$('ohlc').textContent=`O ${money(b.open)}   H ${money(b.high)}   L ${money(b.low)}   C ${money(b.close)}`;if(fit)state.chart.timeScale().fitContent();requestAnimationFrame(renderDrawingOverlay);}
+  function updateChartBar(b){if(!state.chartReady)return;state.candleSeries.update({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});const a=state.bars[state.selectedTf];state.emaFast.update(emaPoints(a,8).at(-1));state.emaSlow.update(emaPoints(a,21).at(-1));updateIndicators(a);$('ohlc').textContent=`O ${money(b.open)} H ${money(b.high)} L ${money(b.low)} C ${money(b.close)}`;rangeStats();requestAnimationFrame(renderDrawingOverlay);}
   function rangeStats(){const arr=state.bars[state.selectedTf];if(!arr.length)return;$('high-price').textContent=money(Math.max(...arr.map(b=>b.high)));$('low-price').textContent=money(Math.min(...arr.map(b=>b.low)));}
 
   function createIndicatorPanes(){
@@ -3527,9 +3645,59 @@ function openReport(){
    else removeIndicatorPanes();
   }
 
-  const chartToolbar=$('chart-toolbar'),chartToolbarSlot=$('chart-toolbar-slot'),toolbarMore=$('toolbar-more');
+  const chartToolbar=$('chart-toolbar'),chartToolbarSlot=$('chart-toolbar-slot'),toolbarMore=$('toolbar-more'),drawingTools=$('drawing-tools');
   document.body.classList.add('toolbar-floating');
-  document.addEventListener('click',ev=>{if(toolbarMore?.open&&!toolbarMore.contains(ev.target))toolbarMore.open=false;});
+  document.addEventListener('click',ev=>{if(toolbarMore?.open&&!toolbarMore.contains(ev.target))toolbarMore.open=false;if(drawingTools?.open&&!drawingTools.contains(ev.target))drawingTools.open=false;});
+  $('drawing-all-tf')?.addEventListener('change',e=>{drawingScopeAll=!!e.target.checked;});
+  $('draw-trend')?.addEventListener('click',()=>{setDrawingMode(drawingMode==='trend'?null:'trend');drawingTools.open=false;});
+  $('draw-horizontal')?.addEventListener('click',()=>{setDrawingMode(drawingMode==='horizontal'?null:'horizontal');drawingTools.open=false;});
+  $('drawing-cancel')?.addEventListener('click',()=>setDrawingMode(null));
+  $('drawing-delete')?.addEventListener('click',()=>{
+   if(!selectedDrawingId)return;
+   drawings=drawings.filter(d=>d.id!==selectedDrawingId);selectedDrawingId=null;saveDrawings();$('drawing-delete').disabled=true;renderDrawingOverlay();
+  });
+  $('drawing-clear-tf')?.addEventListener('click',()=>{
+   if(!drawings.some(d=>!d.global&&d.tf===state.selectedTf))return;
+   if(!confirm('ล้างเส้นเฉพาะ '+state.selectedTf+' ทั้งหมด?'))return;
+   drawings=drawings.filter(d=>d.global||d.tf!==state.selectedTf);selectedDrawingId=null;saveDrawings();$('drawing-delete').disabled=true;renderDrawingOverlay();
+  });
+  const drawingOverlay=$('drawing-overlay');
+  drawingOverlay?.addEventListener('pointerdown',ev=>{
+   if(drawingDrag||!drawingMode)return;
+   const p=chartPointFromClient(ev.clientX,ev.clientY);if(!p)return;
+   ev.preventDefault();drawingOverlay.setPointerCapture?.(ev.pointerId);
+   drawingDraft={pointerId:ev.pointerId,p1:p,p2:p};
+   renderDrawingOverlay();
+  });
+  drawingOverlay?.addEventListener('pointermove',ev=>{
+   const p=chartPointFromClient(ev.clientX,ev.clientY);if(!p)return;
+   if(drawingDrag){
+    ev.preventDefault();
+    const d=drawings.find(x=>x.id===drawingDrag.id);if(!d)return;
+    if(d.type==='horizontal')d.p1={time:d.p1.time,price:p.price};
+    else d[drawingDrag.endpoint]={time:p.time,price:p.price};
+    if(d.type==='horizontal')d.p2={...d.p1};
+    renderDrawingOverlay();return;
+   }
+   if(!drawingDraft||drawingDraft.pointerId!==ev.pointerId)return;
+   ev.preventDefault();drawingDraft.p2=p;renderDrawingOverlay();
+  });
+  drawingOverlay?.addEventListener('pointerup',ev=>{
+   if(drawingDrag){
+    const d=drawings.find(x=>x.id===drawingDrag.id);if(d&&d.type==='horizontal')d.p2={...d.p1};
+    drawingDrag=null;saveDrawings();renderDrawingOverlay();return;
+   }
+   if(!drawingDraft||drawingDraft.pointerId!==ev.pointerId)return;
+   const p=chartPointFromClient(ev.clientX,ev.clientY)||drawingDraft.p2,start=drawingDraft.p1;
+   drawingDraft=null;
+   if(!p)return renderDrawingOverlay();
+   if(drawingMode==='horizontal')createDrawing('horizontal',p);
+   else if(drawingMode==='trend'){
+    const a=drawingScreenPoint(start),b=drawingScreenPoint(p);
+    if(a&&b&&Math.hypot(a.x-b.x,a.y-b.y)>=8)createDrawing('trend',start,p);
+   }
+  });
+  drawingOverlay?.addEventListener('pointercancel',()=>{drawingDraft=null;drawingDrag=null;renderDrawingOverlay();});
 
   const chartTfSelect=$('chart-tf-select');
   if(chartTfSelect){
@@ -3555,6 +3723,18 @@ function openReport(){
     }finally{chartTfSelect.disabled=false;}
    });
   }
+  window.addEventListener('pointermove',ev=>{
+   if(!drawingDrag)return;
+   const p=chartPointFromClient(ev.clientX,ev.clientY);if(!p)return;
+   const d=drawings.find(x=>x.id===drawingDrag.id);if(!d)return;
+   if(d.type==='horizontal'){d.p1={time:d.p1.time,price:p.price};d.p2={...d.p1};}
+   else d[drawingDrag.endpoint]={time:p.time,price:p.price};
+   renderDrawingOverlay();
+  },{passive:true});
+  window.addEventListener('pointerup',()=>{
+   if(!drawingDrag)return;drawingDrag=null;saveDrawings();renderDrawingOverlay();
+  },{passive:true});
+
   const chartHistoryToggle=$('chart-history-toggle');
   chartHistoryToggle?.addEventListener('click',()=>{
    showChartOutcomes=!showChartOutcomes;
@@ -3622,7 +3802,7 @@ function openReport(){
    if(!state.chartReady||!state.chart)return;
    cancelAnimationFrame(chartResizeFrame);
    chartResizeFrame=requestAnimationFrame(()=>{
-    const el=$('chart');if(el?.clientWidth>0&&el.clientHeight>0)state.chart.resize(el.clientWidth,el.clientHeight);
+    const el=$('chart');if(el?.clientWidth>0&&el.clientHeight>0)state.chart.resize(el.clientWidth,el.clientHeight);renderDrawingOverlay();
    });
   });
   $('latest').addEventListener('click',()=>state.chart&&state.chart.timeScale().scrollToRealTime());
