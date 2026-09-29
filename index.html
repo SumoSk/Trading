@@ -350,6 +350,15 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .setup-compact-side.active.low{border-color:#a3485f;color:#ff8da1;background:#301b26}
 .setup-compact-why{font-size:9px;line-height:1.4;color:#a4b5c9;margin-top:5px}
 
+
+/* Live confidence is separate from observed historical outcomes. */
+.setup-profile-rate .setup-rate-main strong,.setup-compact-rate-head strong{font-variant-numeric:tabular-nums}
+.setup-profile-panel:not(.side-high):not(.side-low) .setup-rate-main strong,
+.setup-profile-compact:not(.side-high):not(.side-low) .setup-compact-rate-head strong{color:#dce9f8!important}
+.setup-side small,.setup-compact-exact small{overflow-wrap:anywhere}
+.setup-compact-why{color:#b6c9de!important}
+@media(min-width:701px) and (max-width:1200px){.chart-toolbar{align-content:start}}
+
 </style>
 </head>
 <body data-feed="syncing">
@@ -408,7 +417,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   <h3 id="setup-compact-name">กำลังรอจุดเข้า</h3>
   <p id="setup-compact-desc">เมื่อมีจังหวะหรือเพิ่งมีสัญญาณ ช่องนี้จะเทียบกับไม้ย้อนหลังและอัปเดตจากราคาตอนนี้แบบเรียลไทม์</p>
   <div class="setup-compact-rate" id="setup-compact-rate">
-    <span>ถ้าเข้าจากตำแหน่งคล้ายตอนนี้</span>
+    <span>น้ำหนักฝั่งที่เด่นตอนนี้ · ตลาดสด +10 นาที</span>
     <div class="setup-compact-rate-head"><strong id="setup-compact-similar-rate">—</strong><b id="setup-compact-history-lean">รอข้อมูล</b></div>
     <div class="setup-compact-track"><div id="setup-compact-rate-bar"></div></div>
     <div class="setup-compact-meta"><span id="setup-compact-similar-record">—</span><span id="setup-compact-sample-quality">—</span></div>
@@ -417,7 +426,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
     <div class="setup-compact-side high" id="setup-compact-high"><span>สูงกว่า</span><b id="setup-compact-high-rate">—</b></div>
     <div class="setup-compact-side low" id="setup-compact-low"><span>ต่ำกว่า</span><b id="setup-compact-low-rate">—</b></div>
   </div>
-  <div class="setup-compact-why" id="setup-compact-why">รอเหตุผลสนับสนุนจากตลาดสด</div>
+  <div class="setup-compact-why" id="setup-compact-why">น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง</div>
   <div class="setup-compact-exact">
     <div><span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-compact-exact-rate">—</b></div>
     <small id="setup-compact-exact-record">ยังไม่มีท่าปัจจุบัน</small>
@@ -458,15 +467,15 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
   </section>
   <section class="setup-profile-rate" id="setup-profile-rate">
     <div class="setup-rate-main">
-      <div><span>ถ้าเข้าจากตำแหน่งคล้ายตอนนี้</span><strong id="setup-similar-rate">—</strong></div>
+      <div><span>น้ำหนักฝั่งที่เด่นตอนนี้ · ตลาดสด +10 นาที</span><strong id="setup-similar-rate">—</strong></div>
       <b id="setup-history-lean">รอข้อมูล</b>
     </div>
     <div class="setup-rate-track"><div id="setup-rate-bar"></div></div>
     <div class="setup-rate-meta"><span id="setup-similar-record">—</span><span id="setup-sample-quality">—</span></div>
   </section>
   <div class="setup-side-compare" id="setup-side-compare">
-    <div class="setup-side high" id="setup-full-high"><span>สูงกว่า · ประวัติท่าคล้ายกัน</span><b id="setup-full-high-rate">—</b><small id="setup-full-high-count">รอข้อมูล</small></div>
-    <div class="setup-side low" id="setup-full-low"><span>ต่ำกว่า · ประวัติท่าคล้ายกัน</span><b id="setup-full-low-rate">—</b><small id="setup-full-low-count">รอข้อมูล</small></div>
+    <div class="setup-side high" id="setup-full-high"><span>สูงกว่า · น้ำหนักตลาดสด</span><b id="setup-full-high-rate">—</b><small id="setup-full-high-count">รอข้อมูล</small></div>
+    <div class="setup-side low" id="setup-full-low"><span>ต่ำกว่า · น้ำหนักตลาดสด</span><b id="setup-full-low-rate">—</b><small id="setup-full-low-count">รอข้อมูล</small></div>
   </div>
   <div class="setup-exact-row">
     <span>ท่าเดียวกัน · ฝั่งเดียวกัน · ช่วงตลาดเดียวกัน</span><b id="setup-exact-rate">—</b>
@@ -1549,7 +1558,12 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const issued=v.signal?.direction,watch=v.event?.d>0?'HIGH':v.event?.d<0?'LOW':null;
    const direction=leading||(['HIGH','LOW'].includes(issued)?issued:null)||watch||
      (directionView.direction!=='BALANCED'?directionView.direction:'HIGH');
-   return {snap:snaps[direction],leading,high,low,version,isReference:usePrevious};
+   const marketLeading=directionView.high>=55?'HIGH':directionView.low>=55?'LOW':null;
+   const displayLeading=leading||marketLeading;
+   const displaySource=leading?'history':marketLeading?'model':'balanced';
+   const selected=displayLeading||direction;
+   return {snap:snaps[selected],leading,marketLeading,displayLeading,displaySource,
+    high,low,version,isReference:usePrevious,model:{HIGH:directionView.high,LOW:directionView.low}};
   }
   function setupName(snap){
    const base={
@@ -1576,13 +1590,13 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    if(!snap){
     status.className='setup-profile-status learning';status.textContent='รอจังหวะ';
     $('setup-profile-name').textContent='กำลังรอจุดเข้า';
-    $('setup-profile-desc').textContent='เมื่อมีจังหวะหรือเพิ่งมีสัญญาณ ช่องนี้จะเทียบกับไม้ย้อนหลังและอัปเดตจากราคาตอนนี้แบบเรียลไทม์';
+    $('setup-profile-desc').textContent='กำลังรอราคา Futures สดที่ต่อเนื่อง · ข้อมูลไม่พร้อมจะแสดง — แทน 0%';
     $('setup-similar-rate').textContent='—';$('setup-history-lean').textContent='รอข้อมูล';$('setup-rate-bar').style.width='0%';
     $('setup-similar-record').textContent='—';$('setup-sample-quality').textContent='—';$('setup-exact-rate').textContent='—';$('setup-exact-record').textContent='ยังไม่มีท่าปัจจุบัน';
     for(const id of ['setup-live-direction','setup-live-extension','setup-live-room','setup-live-volume'])$(id).textContent='—';
     rateBox.className='setup-profile-rate';
     for(const side of ['high','low']){$('setup-full-'+side+'-rate').textContent='—';$('setup-full-'+side+'-count').textContent='รอข้อมูล';$('setup-full-'+side).className='setup-side '+side;}
-    setupList('setup-support-list',[],'รอราคาสดและแท่ง 1 นาที');
+    setupList('setup-support-list',[],'รอราคา Futures สดและแท่ง 1 นาทีที่ต่อเนื่อง');
     setupList('setup-warning-list',[],'เมื่อข้อมูลครบ จะแสดงทั้ง HIGH และ LOW โดยไม่ต้องรอสัญญาณ');
     return;
    }
@@ -1590,29 +1604,35 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const sideStats={high:live.high.similar,low:live.low.similar};
    for(const side of ['high','low']){
     const row=sideStats[side],s=side==='high'?'HIGH':'LOW',box=$('setup-full-'+side);
-    $('setup-full-'+side+'-rate').textContent=row.rate===null?'—':Math.round(row.rate*100)+'%';
-    $('setup-full-'+side+'-count').textContent=row.n?row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis):'ยังไม่มีตัวอย่าง';
-    box.className='setup-side '+side+(live.leading===s?' active':'');
+    $('setup-full-'+side+'-rate').textContent=Math.round(live.model[s])+'%';
+    $('setup-full-'+side+'-count').textContent=row.n
+      ?'ย้อนหลัง '+row.wins+' ชนะ / '+row.losses+' แพ้ · '+(side==='high'?live.high.basis:live.low.basis)
+      :'ย้อนหลังยังไม่มีตัวอย่างฝั่งนี้';
+    box.className='setup-side '+side+(live.displayLeading===s?' active':'');
    }
-   if(live.leading)panel.classList.add(live.leading==='HIGH'?'side-high':'side-low');
+   if(live.displayLeading)panel.classList.add(live.displayLeading==='HIGH'?'side-high':'side-low');
    $('setup-profile-name').textContent=setupName(snap);
    $('setup-profile-desc').textContent=(snap.hasConfirmedEntry?'จุดเข้าออกสัญญาณแล้ว · อัปเดตการประเมินจากราคาสด':snap.isLiveEvent?'ระบบกำลังติดตามท่านี้ แต่จุดเข้ายังไม่ผ่านการยืนยัน':'ประเมินสภาพตลาดสดทั้งสองฝั่ง แม้จุดเข้ายังไม่แนะนำให้เข้า')
      +' · สถิติ '+(live.isReference?'อ้างอิง V7.1.0 (สูตรก่อนหน้า)':'V'+live.version);
-   const pct=Number.isFinite(sim.rate)?Math.round(sim.rate*100):null;
+   const pct=Number.isFinite(snap.probability)?Math.round(snap.probability):null;
    $('setup-similar-rate').textContent=pct===null?'—':pct+'%';
    $('setup-rate-bar').style.width=pct===null?'0%':pct+'%';
-   const lean=sim.n<3?'ข้อมูลยังน้อย':sim.rate>.5?'ส่วนมากชนะ':sim.rate<.5?'ส่วนมากแพ้':'ชนะ/แพ้พอ ๆ กัน';
-   $('setup-history-lean').textContent=lean;
-   $('setup-similar-record').textContent=sim.n?`${sim.wins} ชนะ / ${sim.losses} แพ้ · ${cmp.basis}`:'ยังไม่มีไม้ย้อนหลังที่ใกล้พอ';
-   $('setup-sample-quality').textContent=setupSampleLabel(sim.n,cmp.meanSimilarity);
-   rateBox.className='setup-profile-rate '+(sim.n>=3&&sim.rate>=.6?'good':sim.n>=3&&sim.rate<=.4?'bad':'');
+   $('setup-history-lean').textContent=live.displayLeading
+     ?(live.displaySource==='history'?'ย้อนหลังหนุน':'น้ำหนักสดเอนเอียง')+' '+directionThai(live.displayLeading)
+     :'สองฝั่งใกล้เคียง';
+   $('setup-similar-record').textContent=sim.n
+     ?'ผลย้อนหลัง V'+live.version+' · '+sim.wins+' ชนะ / '+sim.losses+' แพ้ ('+Math.round(sim.rate*100)+'%)'
+     :'ผลย้อนหลัง · ยังไม่มีตัวอย่างฝั่งนี้';
+   $('setup-sample-quality').textContent=sim.n?setupSampleLabel(sim.n,cmp.meanSimilarity):'ดูน้ำหนักสด · รอเก็บสถิติจริง';
+   rateBox.className='setup-profile-rate '+(live.displayLeading==='HIGH'?'good':live.displayLeading==='LOW'?'bad':'');
    $('setup-exact-rate').textContent=Number.isFinite(exact.rate)?Math.round(exact.rate*100)+'%':'—';
    $('setup-exact-record').textContent=exact.n?`${exact.wins} ชนะ / ${exact.losses} แพ้ จาก ${exact.n} ไม้ตรงท่า`:'ยังไม่มีไม้ที่ตรงทั้งท่า ฝั่ง และช่วงตลาด';
 
    const exactForStatus=exact.n>=3?exact:sim;
-   if(live.leading){status.className='setup-profile-status '+(live.leading==='HIGH'?'good':'bad');status.textContent='สถิติหนุน'+directionThai(live.leading);}
-   else if(exactForStatus.n>=5&&exactForStatus.rate>=.65){status.className='setup-profile-status good';status.textContent='ท่านี้เคยชนะบ่อย';}
-   else{status.className='setup-profile-status learning';status.textContent='ยังไม่มีฝั่งเด่นชัด';}
+   if(live.displayLeading){
+    status.className='setup-profile-status '+(live.displayLeading==='HIGH'?'good':'bad');
+    status.textContent=(live.displaySource==='history'?'สถิติหนุน':'ตลาดสดเอนเอียง')+directionThai(live.displayLeading);
+   }else{status.className='setup-profile-status learning';status.textContent='น้ำหนักสองฝั่งใกล้เคียง';}
 
    $('setup-live-direction').textContent=Number.isFinite(snap.probability)?`${directionThai(snap.direction)} ${Math.round(snap.probability)}%`:directionThai(snap.direction);
    $('setup-live-extension').textContent=Number.isFinite(snap.extension)?Math.abs(snap.extension).toFixed(2)+' ATR':'—';
@@ -1620,7 +1640,10 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    $('setup-live-volume').textContent=Number.isFinite(snap.relVol)&&snap.relVol>0?snap.relVol.toFixed(2)+'x':'—';
 
    const support=[],warning=[];
-   if(live.leading)support.push('จากผลย้อนหลังกลุ่มที่เปรียบเทียบ สถิติหนุนฝั่ง'+directionThai(live.leading));
+   if(live.leading)support.push('สถิติย้อนหลังของท่าคล้ายกันหนุนฝั่ง'+directionThai(live.leading)
+     +' ('+(live.leading==='HIGH'?Math.round(live.high.similar.rate*100):Math.round(live.low.similar.rate*100))+'% ในกลุ่มตัวอย่าง)');
+   else if(live.marketLeading)support.push('น้ำหนักของโมเดลตลาดสดเอนเอียงฝั่ง'+directionThai(live.marketLeading)
+     +' '+Math.round(live.model[live.marketLeading])+'% · ยังไม่ใช่ผลชนะย้อนหลัง');
    if(sim.n>=3&&sim.rate>=.6)support.push(`ไม้ที่ตำแหน่งคล้ายกันชนะ ${sim.wins}/${sim.n} ไม้ (${Math.round(sim.rate*100)}%)`);
    if(sim.n>=3&&sim.rate<=.4)warning.push(`ไม้ที่ตำแหน่งใกล้กันแพ้ ${sim.losses}/${sim.n} ไม้`);
    if(Number.isFinite(snap.probability)&&snap.probability>=62)support.push(`น้ำหนัก +10 นาทีหนุนฝั่ง${directionThai(snap.direction)} ${Math.round(snap.probability)}%`);
@@ -1667,10 +1690,10 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 
    if(!snap.hasConfirmedEntry)warning.unshift('ยังไม่มีจุดเข้าที่ผ่านการยืนยันจากเครื่องยนต์ · ข้อมูลนี้ใช้ดูประกอบ');
    if(live.isReference)warning.push('กำลังอ้างอิงไม้ V7.1.0 จนกว่า V7.1.1 มีตัวอย่างทั้งสองฝั่งพอ');
-   if(!live.leading)warning.push('จำนวนไม้หรือความคล้ายยังไม่พอจะสรุปว่าฝั่งไหนชนะบ่อยกว่า');
+   if(!live.leading)warning.push('ข้อมูลย้อนหลังสองฝั่งยังไม่พอสำหรับเปรียบเทียบอัตราชนะ · สีอ้างอิงน้ำหนักโมเดลสด');
    setupList('setup-support-list',support.slice(0,6),'ยังไม่มีเหตุผลหนุนเด่นในขณะนี้');
    setupList('setup-warning-list',warning.slice(0,6),'ยังไม่พบสัญญาณเตือนเด่นจากข้อมูลเรียลไทม์');
-   $('setup-profile-foot').textContent=`ข้อมูลสดล่าสุด ${clockMs((state.quote?.ts||0)*1000)} · สถิติจาก V${live.version} เฉพาะไม้ที่เคยออกสัญญาณและจบผลแล้ว · ไม่ใช่โอกาสชนะที่รับประกันของทุกจุดเข้า · ไม่เปลี่ยนสูตรสัญญาณ V${CFG.version}`;
+   $('setup-profile-foot').textContent=`ข้อมูลสด ${clockMs((state.quote?.ts||0)*1000)} · ตัวเลขหลัก = น้ำหนักโมเดล HIGH/LOW ไม่ใช่อัตราชนะ · สถิติด้านล่าง = ไม้จบจริงของ V${live.version} · ไม่เปลี่ยนสัญญาณ V${CFG.version}`;
   }
 
   function renderCompactSetupProfile(){
@@ -1695,7 +1718,8 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
     $('setup-compact-'+side+'-rate').textContent=$('setup-full-'+side+'-rate').textContent;
     small.className='setup-compact-side '+side+(full.classList.contains('active')?' active':'');
    }
-   $('setup-compact-why').textContent=$('setup-support-list').firstElementChild?.textContent||'รอเหตุผลสนับสนุนสด';
+   $('setup-compact-why').textContent=$('setup-support-list').firstElementChild?.textContent
+     ||'น้ำหนักตลาดสดเป็นการประเมินของโมเดล ไม่ใช่อัตราชนะจริง';
   }
 
   function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'บันทึกในเบราว์เซอร์นี้ · ส่งออกเพื่อสำรองหรือย้ายเครื่อง':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
@@ -2158,7 +2182,44 @@ function openReport(){
     bookWS.onmessage=evt=>{if(state.bookSocket!==bookWS)return;try{const w=JSON.parse(evt.data);ingest(w.data||w);}catch(err){console.error(err);}};
     bookWS.onerror=()=>{state.book=null;};
     bookWS.onclose=()=>{if(state.bookSocket===bookWS)state.book=null;};
-    ws.onopen=async()=>{state.booted=false;state.historyFallback=false;engine.reset('เชื่อมต่อใหม่',Date.now());state.tradeTape=[];state.bars={'1m':[],'5m':[],'15m':[]};state.book=null;state.quote=null;state.liquidationTape=[];state.reconnectCount=0;statusView('syncing','กำลังซิงก์แท่งเทียนใหม่');try{const data=await Promise.all(['1m','5m','15m'].map(loadHistory));if(state.socket!==ws)return;['1m','5m','15m'].forEach((tf,i)=>{const merged=new Map(data[i].map(b=>[b.time,b]));state.bars[tf].filter(b=>b.time>=data[i].at(-1).time).forEach(b=>merged.set(b.time,b));state.bars[tf]=[...merged.values()].sort((a,b)=>a.time-b.time).slice(-1000);});state.booted=true;renderChart(false);statusView(state.historyFallback?'stale':'live',state.historyFallback?'กำลังแสดง Spot สำรอง — พักสัญญาณ Futures':'');}catch(err){statusView('offline','ซิงก์ข้อมูลไม่สำเร็จ');ws.close();}};
+    ws.onopen=async()=>{
+     if(state.socket!==ws)return;
+     state.historyFallback=false;
+     engine.reset('เชื่อมต่อใหม่',Date.now());
+     state.tradeTape=[];state.book=null;state.liquidationTape=[];
+     state.reconnectCount=0;
+     statusView('syncing','เชื่อมต่อแล้ว · ซิงก์แท่ง 1 นาทีเพื่อวิเคราะห์สด');
+     try{
+      const bars=await loadHistory('1m');
+      if(state.socket!==ws)return;
+      const merged=new Map(bars.map(b=>[b.time,b]));
+      (state.bars['1m']||[]).filter(b=>b.time>=bars.at(-1).time)
+       .forEach(b=>merged.set(b.time,b));
+      state.bars['1m']=[...merged.values()].sort((a,b)=>a.time-b.time).slice(-1000);
+      state.booted=true;
+      renderChart(false);
+      statusView(state.historyFallback?'stale':'live',
+       state.historyFallback?'แสดง Spot สำรอง · รอข้อมูล Futures เพื่อวิเคราะห์สด':'');
+      analyseNow(true);
+      for(const tf of ['5m','15m']){
+       loadHistory(tf).then(other=>{
+        if(state.socket!==ws)return;
+        const mergedTf=new Map(other.map(b=>[b.time,b]));
+        (state.bars[tf]||[]).filter(b=>b.time>=other.at(-1).time)
+         .forEach(b=>mergedTf.set(b.time,b));
+        state.bars[tf]=[...mergedTf.values()].sort((a,b)=>a.time-b.time).slice(-1000);
+        const btn=document.querySelector('[data-tf="'+tf+'"]');if(btn)btn.disabled=false;
+        if(state.selectedTf===tf)renderChart(false);
+       }).catch(err=>console.warn('กราฟเสริม '+tf+' โหลดไม่ได้ แต่ 1m ยังทำงาน',err));
+      }
+     }catch(err){
+      if(state.socket!==ws)return;
+      console.warn('ซิงก์กราฟหลักไม่สำเร็จ',err);
+      state.booted=false;
+      statusView('stale','ซิงก์ 1 นาทีไม่สำเร็จ · กำลังเชื่อมใหม่');
+      ws.close();
+     }
+    };
     ws.onmessage=(evt)=>{if(state.socket!==ws)return;state.lastMessageAt=Date.now();try{const w=JSON.parse(evt.data);ingest(w.data||w);}catch(e){console.error(e);}};
     ws.onerror=()=>statusView('stale','WebSocket มีปัญหา กำลังเชื่อมต่อใหม่');
     ws.onclose=()=>{if(state.socket!==ws)return;state.booted=false;engine.reset('การเชื่อมต่อขาด',Date.now());$('strong-banner').hidden=true;$('signal-title').textContent='พักสัญญาณ';statusView('offline','การเชื่อมต่อขาด กำลังลองใหม่');const delay=Math.min(30000,1500*2**Math.min(state.reconnectCount++,4));state.reconnectTimer=setTimeout(connect,delay);};
