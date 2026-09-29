@@ -2899,7 +2899,9 @@ function openReport(){
    throw new Error('โหลด 10m ไม่สำเร็จ: '+(lastError?.message||'unknown error'));
   }
   async function ensureTimeframe(tf){
-   if((state.bars[tf]||[]).length>=20)return state.bars[tf];
+   const existing=state.bars[tf]||[],last=existing.at(-1),seconds=TF_SECONDS[tf]||60;
+   const currentEnough=existing.length>=20&&last&&(Date.now()/1000-last.time)<seconds*1.5+120;
+   if(currentEnough)return existing;
    if(tf==='10m')state.bars[tf]=await loadTenMinuteHistory();
    else if(['1m','5m','15m','1h','4h','1d','1w'].includes(tf))state.bars[tf]=await loadHistory(tf);
    return state.bars[tf]||[];
