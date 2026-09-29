@@ -483,6 +483,9 @@ body.toolbar-floating .chart-toolbar{position:fixed;top:6px;left:50%;transform:t
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
 .panel-heading{justify-content:flex-end}
 .chart-meta{min-height:34px;padding-block:6px}
+.chart-history-toggle{margin-left:auto;min-height:27px!important;padding:3px 8px;border-radius:7px;border:1px solid #325a50;background:#112b25;color:#78d6b4;font:600 10px 'Segoe UI',sans-serif;white-space:nowrap}
+.chart-history-toggle[aria-pressed=false]{border-color:#354258;background:#151c28;color:#94a3b8}
+@media(max-width:560px){.chart-history-toggle{min-height:25px!important;padding:2px 6px;font-size:9px}}
 .signal-card-main .signal-description{margin-bottom:10px}
 .prediction-log-head p:empty{display:none}
 .signal-card-market .signal-card-title{display:none!important}
@@ -570,7 +573,7 @@ main{padding-top:10px}
           <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
           <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
         </select>
-        <button id="chart-tf-confirm" type="button" disabled>ยืนยัน</button>
+        
         <small id="chart-tf-active">กราฟ 1m</small>
       </div>
       <div class="analysis-tf-control" title="กราฟที่ดูเปลี่ยนได้อิสระ การวิเคราะห์จะเปลี่ยนเมื่อกดยืนยันเท่านั้น">
@@ -579,7 +582,7 @@ main{padding-top:10px}
           <option value="1m">1m</option><option value="5m">5m</option><option value="10m">10m</option><option value="15m">15m</option>
           <option value="1h">1h</option><option value="4h">4h</option><option value="1d">1D</option><option value="1w">1W</option>
         </select>
-        <button id="analysis-tf-confirm" type="button" disabled>ยืนยัน</button>
+        
         <small id="analysis-tf-active">ใช้อยู่ 1m</small>
       </div>
       <details class="toolbar-more" id="toolbar-more">
@@ -593,7 +596,7 @@ main{padding-top:10px}
       </details>
     </div>
   </div>
-  <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
+  <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span><button id="chart-history-toggle" class="chart-history-toggle" type="button" aria-pressed="true" title="แสดงหรือซ่อนจุดชนะ/แพ้บนกราฟ">แพ้/ชนะ: เปิด</button></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
   <div class="chart-wrap"><div id="chart"></div><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <span id="zone-legend" hidden></span>
@@ -1844,7 +1847,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    return analysisContextEngines.get(tf);
   }
   function resetContextEngine(tf){if(tf!=='1m')analysisContextEngines.set(tf,new Engine({}));}
-  let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null;
+  let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null,showChartOutcomes=true;
   const CANDLE_VERSION='0.2.0',CANDLE_STORE='btc-candle-behavior-v1';
   let candleSaved={};try{candleSaved=JSON.parse(localStorage.getItem(CANDLE_STORE)||'{}')||{};}catch{}
   const candleState={
@@ -2993,7 +2996,7 @@ function openReport(){
        shape:isHigh?'arrowUp':'arrowDown',
        text:s.direction
       });
-     }else if(s.result==='correct'||s.result==='incorrect'){
+     }else if(showChartOutcomes&&(s.result==='correct'||s.result==='incorrect')){
       const win=s.result==='correct';
       markers.push({
        time,
@@ -3527,19 +3530,13 @@ function openReport(){
   document.body.classList.add('toolbar-floating');
   document.addEventListener('click',ev=>{if(toolbarMore?.open&&!toolbarMore.contains(ev.target))toolbarMore.open=false;});
 
-  const chartTfSelect=$('chart-tf-select'),chartTfConfirm=$('chart-tf-confirm'),chartTfControl=chartTfSelect?.closest('.chart-tf-control');
-  if(chartTfSelect&&chartTfConfirm){
+  const chartTfSelect=$('chart-tf-select');
+  if(chartTfSelect){
    chartTfSelect.value=state.selectedTf;
-   chartTfSelect.addEventListener('change',()=>{
-    const changed=chartTfSelect.value!==state.selectedTf;
-    chartTfConfirm.disabled=!changed;
-    chartTfControl?.classList.toggle('pending',changed);
-    chartTfConfirm.textContent=changed?'ยืนยัน':'ใช้อยู่';
-   });
-   chartTfConfirm.addEventListener('click',async()=>{
+   chartTfSelect.addEventListener('change',async()=>{
     const tf=chartTfSelect.value,previous=state.selectedTf;
-    if(tf===previous){chartTfConfirm.disabled=true;chartTfControl?.classList.remove('pending');chartTfConfirm.textContent='ใช้อยู่';state.chart?.timeScale().fitContent();return;}
-    chartTfConfirm.disabled=true;chartTfConfirm.textContent='กำลังโหลด…';
+    if(tf===previous)return;
+    chartTfSelect.disabled=true;
     try{
      await ensureTimeframe(tf);
      if(!state.bars[tf]?.length)throw new Error('ไม่มีข้อมูลกราฟ '+tf);
@@ -3548,19 +3545,22 @@ function openReport(){
      $('tf-label').textContent=TF_LABELS[tf]||tf;
      $('chart-tf-active').textContent='กราฟ '+tf;
      renderChart(true);drawHistory();
-     chartTfControl?.classList.remove('pending');
     }catch(err){
      console.warn('เปลี่ยนกราฟ '+tf+' ไม่สำเร็จ',err);
      state.selectedTf=previous;chartTfSelect.value=previous;
      $('tf-label').textContent=TF_LABELS[previous]||previous;
      $('chart-tf-active').textContent='กราฟ '+previous;
      renderChart(false);
-    }finally{
-     chartTfConfirm.textContent=chartTfSelect.value===state.selectedTf?'ใช้อยู่':'ยืนยัน';
-     chartTfConfirm.disabled=chartTfSelect.value===state.selectedTf;
-    }
+    }finally{chartTfSelect.disabled=false;}
    });
   }
+  const chartHistoryToggle=$('chart-history-toggle');
+  chartHistoryToggle?.addEventListener('click',()=>{
+   showChartOutcomes=!showChartOutcomes;
+   chartHistoryToggle.setAttribute('aria-pressed',String(showChartOutcomes));
+   chartHistoryToggle.textContent=showChartOutcomes?'แพ้/ชนะ: เปิด':'แพ้/ชนะ: ปิด';
+   drawHistory();
+  });
 
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',async()=>{
    const tf=btn.dataset.tf,previous=state.selectedTf;
@@ -3582,20 +3582,14 @@ function openReport(){
     renderChart(false);
    }finally{btn.disabled=false;btn.textContent=originalText;}
   }));
-  const analysisTfSelect=$('analysis-tf-select'),analysisTfConfirm=$('analysis-tf-confirm'),analysisTfControl=analysisTfSelect?.closest('.analysis-tf-control');
-  if(analysisTfSelect&&analysisTfConfirm){
+  const analysisTfSelect=$('analysis-tf-select');
+  if(analysisTfSelect){
    analysisTfSelect.value=state.analysisTf;
-   analysisTfSelect.addEventListener('change',()=>{
-    state.pendingAnalysisTf=analysisTfSelect.value;
-    const changed=state.pendingAnalysisTf!==state.analysisTf;
-    analysisTfConfirm.disabled=!changed||state.analysisSwitching;
-    analysisTfControl?.classList.toggle('pending',changed);
-    analysisTfConfirm.textContent=changed?'ยืนยัน':'ใช้อยู่';
-   });
-   analysisTfConfirm.addEventListener('click',async()=>{
-    const next=state.pendingAnalysisTf;
+   analysisTfSelect.addEventListener('change',async()=>{
+    const next=analysisTfSelect.value;
     if(!next||next===state.analysisTf||state.analysisSwitching)return;
-    state.analysisSwitching=true;analysisTfConfirm.disabled=true;analysisTfConfirm.textContent='กำลังโหลด…';
+    state.pendingAnalysisTf=next;
+    state.analysisSwitching=true;analysisTfSelect.disabled=true;
     try{
      await ensureTimeframe(next,true);
      if(state.selectedTf===next)renderChart(false);
@@ -3603,17 +3597,11 @@ function openReport(){
      state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.marketOverviewState=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;
      resetContextEngine(next);
      refreshAnalysisLabels();
-     analysisTfControl?.classList.remove('pending');
-     analysisTfConfirm.textContent='ใช้อยู่';
      setTimeout(()=>analyseNow(true),0);
     }catch(err){
      console.warn('เปลี่ยนไทม์เฟรมวิเคราะห์ไม่สำเร็จ',err);
      state.pendingAnalysisTf=state.analysisTf;analysisTfSelect.value=state.analysisTf;
-     analysisTfControl?.classList.remove('pending');
-     analysisTfConfirm.textContent='ยืนยัน';
-    }finally{
-     state.analysisSwitching=false;analysisTfConfirm.disabled=state.pendingAnalysisTf===state.analysisTf;
-    }
+    }finally{state.analysisSwitching=false;analysisTfSelect.disabled=false;}
    });
   }
   $('ema-toggle').addEventListener('click',()=>{state.emaVisible=!state.emaVisible;state.emaFast.applyOptions({visible:state.emaVisible});state.emaSlow.applyOptions({visible:state.emaVisible});$('ema-toggle').setAttribute('aria-pressed',String(state.emaVisible));});
