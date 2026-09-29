@@ -2206,7 +2206,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
    const panel=$('setup-profile-panel');panel.classList.remove('side-high','side-low');
    if(!snap){
     status.className='setup-profile-status learning';status.textContent='รอจังหวะ';
-    $('setup-profile-name').textContent='กำลังรอจุดเข้า';
+    $('setup-profile-name').textContent=primary?'กำลังรอจุดเข้า':'กำลังอ่านบริบทจากกราฟ '+tfLabel;
     $('setup-profile-desc').textContent=setupFeedHealth().label+' · ข้อมูลยังไม่พร้อมจะแสดง — แทน 0%';
     $('setup-similar-rate').textContent='—';$('setup-history-lean').textContent='รอข้อมูล';$('setup-rate-bar').style.width='0%';
     $('setup-similar-record').textContent='—';$('setup-sample-quality').textContent='—';$('setup-exact-rate').textContent='—';$('setup-exact-record').textContent='ยังไม่มีท่าปัจจุบัน';
@@ -2928,8 +2928,11 @@ function openReport(){
    const arr=state.bars[tf]||[],raw=arr.at(-1);
    if(!raw||!state.quote)return raw||null;
    if(tf==='1m')return raw;
-   const seconds=TF_SECONDS[tf]||60,elapsed=clip(state.quote.ts-raw.time,1,seconds),frac=clip(elapsed/seconds,.03,1);
-   return {...raw,volume:(raw.volume||0)/frac,high:Math.max(raw.high,state.quote.price),low:Math.min(raw.low,state.quote.price),close:state.quote.price};
+   const seconds=TF_SECONDS[tf]||60,elapsed=clip(state.quote.ts-raw.time,1,seconds),tfFrac=clip(elapsed/seconds,.03,1);
+   // marketPhase() still normalizes the first 60s like the original 1m model.
+   // Feed it a compensated volume so the final pace estimates a full candle of the selected TF only once.
+   const internalMinuteFrac=clip(elapsed/60,.25,1),projectedFull=(raw.volume||0)/tfFrac;
+   return {...raw,volume:projectedFull*internalMinuteFrac,high:Math.max(raw.high,state.quote.price),low:Math.min(raw.low,state.quote.price),close:state.quote.price};
   }
   function analysisDataReady(tf=state.analysisTf){
    const bars=state.bars[tf]||[],seconds=TF_SECONDS[tf]||60,recent=bars.slice(-36);
@@ -3193,12 +3196,12 @@ function openReport(){
      refreshAnalysisLabels();
      analysisTfControl?.classList.remove('pending');
      analysisTfConfirm.textContent='ใช้อยู่';
-     analyseNow(true);
+     setTimeout(()=>analyseNow(true),0);
     }catch(err){
      console.warn('เปลี่ยนไทม์เฟรมวิเคราะห์ไม่สำเร็จ',err);
      state.pendingAnalysisTf=state.analysisTf;analysisTfSelect.value=state.analysisTf;
      analysisTfControl?.classList.remove('pending');
-     analysisTfConfirm.textContent='ลองใหม่';
+     analysisTfConfirm.textContent='ยืนยัน';
     }finally{
      state.analysisSwitching=false;analysisTfConfirm.disabled=state.pendingAnalysisTf===state.analysisTf;
     }
