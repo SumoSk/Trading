@@ -357,12 +357,12 @@
           <button type="button" class="training-guide-close" id="training-guide-close">×</button>
         </header>
         <div class="training-guide-body">
-          <section class="training-guide-step"><h3>1 · เลือกเวอร์ชัน</h3><p>เลือก V6.6, V7.2, ARIS 1.2 หรือ ARIS 2.0 ที่ด้านบนของหน้าเทรน เวอร์ชันนี้ใช้เฉพาะ Historical Training และไม่เปลี่ยนเวอร์ชัน Live</p></section>
+          <section class="training-guide-step"><h3>1 · เลือกเวอร์ชัน</h3><p>เลือก V6.6, V7.2, ARIS 1.2, ARIS 2.0 หรือ ARIS 3.0 ที่ด้านบนของหน้าเทรน เวอร์ชันนี้ใช้เฉพาะ Historical Training และไม่เปลี่ยนเวอร์ชัน Live</p></section>
           <section class="training-guide-step"><h3>2 · โหลดข้อมูลย้อนหลัง</h3><p>เลือกช่วง <b>7 / 30 / 90 วัน</b> หรือกำหนดเอง แล้วกด <b>โหลดข้อมูล</b> ระบบใช้ BTCUSDT Futures 1 นาที และเพิ่ม Warm-up ก่อนช่วงทดสอบ</p></section>
           <section class="training-guide-step"><h3>3 · ตรวจ Data Quality</h3><p>ระบบตรวจ Missing candle, Duplicate, OHLC ผิดรูป และ Coverage ของข้อมูลเสริม ถ้าข้อมูลขาดจริง ระบบจะไม่สร้าง Order Book, Tick flow หรือข้อมูลย้อนหลังที่ไม่มีอยู่ขึ้นมาเอง</p></section>
           <section class="training-guide-step"><h3>4 · เลือกชุดข้อมูล</h3><p>Session เก็บช่วงเวลา, Warm-up, Engine snapshot และ Data Quality แยกจาก Live Journal กด <b>ดู</b> ที่ Session ที่ต้องการก่อนทำ Replay</p></section>
           <section class="training-guide-step"><h3>5 · Replay</h3><p>Replay เปิดข้อมูลตามลำดับเวลาแบบ <b>1m bar-close</b> ให้เครื่องยนต์วิเคราะห์ทีละแท่ง จุดเข้าจะถูก freeze ณ ตอนนั้น และตัดสินผลหลังครบ 10 แท่ง จึงไม่ส่งอนาคตย้อนกลับไปช่วยจุดเข้า สามารถ Pause, Resume และ Stop ได้</p></section>
-          <section class="training-guide-step"><h3>6 · วิเคราะห์ผล</h3><p>หลัง Replay มีไม้ที่ตัดสินแล้ว กด <b>วิเคราะห์ Phase 3</b> เพื่อดู Win rate, Audit calibration, State / Playbook, รูปแบบแพ้ชนะ และ MFE / MAE จาก Compact Training records</p></section>
+          <section class="training-guide-step"><h3>6 · วิเคราะห์ผล</h3><p>หลัง Replay มีไม้ที่ตัดสินแล้ว กด <b>วิเคราะห์ Phase 3</b> เพื่อดู Win rate, State / Playbook, รูปแบบแพ้ชนะ และ MFE / MAE จาก Compact Training records ส่วน Audit calibration ใช้เฉพาะ ARIS 2.0; ARIS 3.0 ใช้สถานะและเงื่อนไขทั้ง 4 หมวดของตัวเอง</p></section>
           <section class="training-guide-step"><h3>7 · Validation / Walk-forward</h3><p>Phase 4 แบ่งข้อมูลตามเวลาเป็น <b>Train 60% / Validation 20% / Holdout 20%</b> Candidate ถูกสร้างจาก Train เท่านั้น แล้วค่อยสอบกับข้อมูลที่ไม่เคยเห็น พร้อม Walk-forward หลายช่วงเพื่อจับ overfitting</p></section>
           <div class="training-guide-rule"><b>หลักสำคัญ:</b> ผล Historical Training เป็นหลักฐานสำหรับวิจัยและปรับ Candidate ไม่ใช่คำสั่งให้แก้ Live อัตโนมัติ แม้ผล Phase 4 ผ่าน ระบบก็ยังเก็บเป็นรุ่นทดลอง/Shadow ก่อนค่ะ</div>
         </div>
@@ -673,11 +673,19 @@
 
   function wrText(v){return Number.isFinite(Number(v))?Number(v).toFixed(1)+'%':'—';}
 
+  function analyticsKeyLabel(key){
+    return ({
+      SHOCK_UNRESOLVED:'แรงกระแทก · ยังไม่เฉลย',BREAKOUT_ATTEMPT:'กำลังลองทะลุกรอบ',BREAKOUT_ACCEPTED:'ทะลุกรอบเริ่มถูกยอมรับ',
+      EXHAUSTION:'ปลายขา / แรงเริ่มหมด',REVERSAL_DEVELOPING:'กำลังสร้างโครงกลับตัว',COMPRESSION:'บีบตัวสะสมแรง',
+      PULLBACK:'กำลังย่อในโครงสร้างเดิม',TREND_ADVANCE:'เทรนด์กำลังเดิน',RANGE_EDGE:'อยู่ขอบกรอบ',RANGE_CHOP:'แกว่งสลับในกรอบ',TRANSITION:'ช่วงเปลี่ยนจังหวะ',
+      breakout_continuation:'ทะลุกรอบแล้วไปต่อ',shock_resolution:'รอผลหลังแรงกระแทก',pullback_reclaim:'ย่อสร้างฐานแล้วกลับมายืน',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว'
+    })[String(key)]||String(key??'—');
+  }
   function rowsTable(rows,keyLabel='กลุ่ม',limit=6){
     const a=(rows||[]).slice(0,limit);
     if(!a.length)return '<span class="analytics-empty">ยังไม่มีข้อมูล</span>';
     return '<table class="analytics-table"><thead><tr><th>'+esc(keyLabel)+'</th><th>N</th><th>WR</th></tr></thead><tbody>'+
-      a.map(x=>'<tr><td>'+esc(x.key)+'</td><td>'+fmtInt(x.n)+'</td><td>'+esc(wrText(x.winRate))+'</td></tr>').join('')+'</tbody></table>';
+      a.map(x=>'<tr><td>'+esc(analyticsKeyLabel(x.key))+'</td><td>'+fmtInt(x.n)+'</td><td>'+esc(wrText(x.winRate))+'</td></tr>').join('')+'</tbody></table>';
   }
 
   function renderAnalytics(report){
@@ -686,12 +694,17 @@
     empty.hidden=true;result.hidden=false;
     byId('analytics-trades').textContent=fmtInt(report.counts?.scored||0);
     byId('analytics-wr').textContent=wrText(report.winRate);
+    const isV2=report.engineVersion==='ARIS-2.0.0';
     byId('analytics-audit-n').textContent=fmtInt(report.auditCalibration?.health?.samples||0);
     byId('analytics-order').textContent=Number.isFinite(report.auditCalibration?.health?.orderingPct)?report.auditCalibration.health.orderingPct+'%':'ข้อมูลน้อย';
+    const auditCountCard=byId('analytics-audit-n')?.closest('.analytics-kpi');
     const auditCard=byId('analytics-order')?.closest('.analytics-kpi');
-    if(auditCard)auditCard.hidden=selectedTrainingVersion!=='ARIS-2.0.0';
+    if(auditCountCard)auditCountCard.hidden=!isV2;
+    if(auditCard)auditCard.hidden=!isV2;
+    const auditPanel=byId('analytics-calibration')?.closest('.analytics-panel');
+    if(auditPanel)auditPanel.hidden=!isV2;
 
-    byId('analytics-calibration').innerHTML=rowsTable(report.auditCalibration?.bands,'Audit',5);
+    byId('analytics-calibration').innerHTML=isV2?rowsTable(report.auditCalibration?.bands,'Audit',5):'<span class="analytics-empty">ARIS 3.0 ไม่ใช้ Audit V2</span>';
 
     const states=(report.byState||[]).slice(0,4),plays=(report.byPlaybook||[]).slice(0,4);
     byId('analytics-context').innerHTML=
@@ -703,7 +716,9 @@
       '<div class="analytics-tags">'+losses.map(x=>'<span>แพ้ · '+esc(x.tag)+' ×'+fmtInt(x.n)+'</span>').join('')+
       wins.map(x=>'<span>ชนะ · '+esc(x.tag)+' ×'+fmtInt(x.n)+'</span>').join('')+'</div>';
 
-    const mm=report.mfeMae||{},miss=(report.auditMisses||[]).slice(0,5);
+    const qualityPanel=byId('analytics-quality')?.closest('.analytics-panel');
+    if(qualityPanel?.querySelector('h4'))qualityPanel.querySelector('h4').textContent=isV2?'MFE / MAE + Audit miss':'MFE / MAE';
+    const mm=report.mfeMae||{},miss=isV2?(report.auditMisses||[]).slice(0,5):[];
     byId('analytics-quality').innerHTML=
       '<div class="analytics-tags"><span>Win MFE '+esc(String(mm.winMfe??'—'))+' ATR</span><span>Win MAE '+esc(String(mm.winMae??'—'))+
       ' ATR</span><span>Loss MFE '+esc(String(mm.lossMfe??'—'))+' ATR</span><span>Loss MAE '+esc(String(mm.lossMae??'—'))+' ATR</span>'+
@@ -711,9 +726,9 @@
 
     const h=report.auditCalibration?.health;
     const analyticsNote=byId('analytics-note');
-    if(analyticsNote)analyticsNote.textContent=
-      'Historical 1m bar-close · Audit ordering '+(Number.isFinite(h?.orderingPct)?h.orderingPct+'%':'ยังวัดไม่ได้')+
-      ' · Samples '+fmtInt(h?.samples||0)+' · Phase 4 จะใช้ holdout/walk-forward ยืนยันก่อนแตะ Live';
+    if(analyticsNote)analyticsNote.textContent=isV2
+      ?'Historical 1m bar-close · Audit ordering '+(Number.isFinite(h?.orderingPct)?h.orderingPct+'%':'ยังวัดไม่ได้')+' · Samples '+fmtInt(h?.samples||0)+' · Phase 4 จะใช้ holdout/walk-forward ยืนยันก่อนแตะ Live'
+      :'Historical 1m bar-close · ARIS 3.0 ใช้ State / Playbook / Fib / MFE-MAE และเงื่อนไขของ V3 โดยไม่ใช้ Audit V2 · Phase 4 จะใช้ holdout/walk-forward ยืนยันก่อนแตะ Live';
   }
 
   async function updateAnalyticsPanel(session=latestSession){
