@@ -32,9 +32,9 @@
     const base=new URL('.',document.baseURI).href;
     frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><base href="'+escapeHtml(base)+'"></head><body>'+
       '<script>window.__TRAINING_VERSION='+JSON.stringify(v)+';<\/script>'+
-      '<script src="'+escapeHtml(asset('training-engine-core.js','20261001-r5'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('training-engine-core.js','20261001-r6'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v2.js','20260930-r6'))+'"><\/script>'+ 
-      '<script src="'+escapeHtml(asset('v3.js','20261001-r5'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v3.js','20261001-r6'))+'"><\/script>'+
       '</body></html>';
     document.body.append(frame);
 
