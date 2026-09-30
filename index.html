@@ -958,9 +958,10 @@ const ARIS_V12_CONFIG=Object.freeze({...ARIS_V11_CONFIG,
  arisMacroHardExtension:3.60
 });
 const ARIS_V2_CONFIG=Object.freeze({...ARIS_V12_CONFIG,
- version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r3',
+ version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r4',
  v2RangeLookback:20,v2RangeEdgeAtr:.14,v2RangeBalancedEff:.38,v2CompressionRatio:.72,
  v2BreakBuffer:.04,v2BreakAccepted:.08,v2BreakMaxChaseAtr:.36,v2FakeBreakBuffer:.05,
+ v2BreakoutMemoryMs:180000,v2BreakFailAtr:.08,v2RetestBelowAtr:.04,v2RetestMaxAtr:.16,v2FakeBreakMemoryBars:4,
  v2FibZoneAtr:.15,v2ZoneNearAtr:.25,
  v2StateMemoryMs:3600000,v2SnapshotMemory:240,v2StoryLogCooldownMs:10000,
  v2CandidateMaxAgeMs:25000,v2EntryReady:58,v2EntryEnter:66,
