@@ -363,12 +363,13 @@
           <button type="button" class="training-guide-close" id="training-guide-close">×</button>
         </header>
         <div class="training-guide-body">
-          <section class="training-guide-step"><h3>1 · โหลดข้อมูลย้อนหลัง</h3><p>เลือกช่วง <b>7 / 30 / 90 วัน</b> หรือกำหนดเอง แล้วกด <b>โหลดข้อมูลย้อนหลัง</b> ระบบใช้ BTCUSDT Futures 1 นาที และเพิ่ม Warm-up เพื่อเตรียม EMA, ATR, Swing และ Fib ก่อนช่วงที่ใช้ทดสอบ</p></section>
-          <section class="training-guide-step"><h3>2 · ตรวจ Data Quality</h3><p>ระบบตรวจ Missing candle, Duplicate, OHLC ผิดรูป และ Coverage ของข้อมูลเสริม ถ้าข้อมูลขาดจริง ระบบจะไม่สร้าง Order Book, Tick flow หรือข้อมูลย้อนหลังที่ไม่มีอยู่ขึ้นมาเอง</p></section>
-          <section class="training-guide-step"><h3>3 · เลือก Training Session</h3><p>Session เก็บช่วงเวลา, Warm-up, Engine snapshot และ Data Quality แยกจาก Live Journal กด <b>ดู</b> ที่ Session ที่ต้องการก่อนทำ Replay</p></section>
-          <section class="training-guide-step"><h3>4 · Historical Replay</h3><p>Replay เปิดข้อมูลตามลำดับเวลาแบบ <b>1m bar-close</b> ให้เครื่องยนต์วิเคราะห์ทีละแท่ง จุดเข้าจะถูก freeze ณ ตอนนั้น และตัดสินผลหลังครบ 10 แท่ง จึงไม่ส่งอนาคตย้อนกลับไปช่วยจุดเข้า สามารถ Pause, Resume และ Stop ได้</p></section>
-          <section class="training-guide-step"><h3>5 · Training Analytics</h3><p>หลัง Replay มีไม้ที่ตัดสินแล้ว กด <b>วิเคราะห์ Phase 3</b> เพื่อดู Win rate, Audit calibration, State / Playbook, รูปแบบแพ้ชนะ และ MFE / MAE จาก Compact Training records</p></section>
-          <section class="training-guide-step"><h3>6 · Validation / Walk-forward</h3><p>Phase 4 แบ่งข้อมูลตามเวลาเป็น <b>Train 60% / Validation 20% / Holdout 20%</b> Candidate ถูกสร้างจาก Train เท่านั้น แล้วค่อยสอบกับข้อมูลที่ไม่เคยเห็น พร้อม Walk-forward หลายช่วงเพื่อจับ overfitting</p></section>
+          <section class="training-guide-step"><h3>1 · เลือกเวอร์ชัน</h3><p>เลือก V6.6, V7.2, ARIS 1.2 หรือ ARIS 2.0 ที่ด้านบนของหน้าเทรน เวอร์ชันนี้ใช้เฉพาะ Historical Training และไม่เปลี่ยนเวอร์ชัน Live</p></section>
+          <section class="training-guide-step"><h3>2 · โหลดข้อมูลย้อนหลัง</h3><p>เลือกช่วง <b>7 / 30 / 90 วัน</b> หรือกำหนดเอง แล้วกด <b>โหลดข้อมูล</b> ระบบใช้ BTCUSDT Futures 1 นาที และเพิ่ม Warm-up ก่อนช่วงทดสอบ</p></section>
+          <section class="training-guide-step"><h3>3 · ตรวจ Data Quality</h3><p>ระบบตรวจ Missing candle, Duplicate, OHLC ผิดรูป และ Coverage ของข้อมูลเสริม ถ้าข้อมูลขาดจริง ระบบจะไม่สร้าง Order Book, Tick flow หรือข้อมูลย้อนหลังที่ไม่มีอยู่ขึ้นมาเอง</p></section>
+          <section class="training-guide-step"><h3>4 · เลือกชุดข้อมูล</h3><p>Session เก็บช่วงเวลา, Warm-up, Engine snapshot และ Data Quality แยกจาก Live Journal กด <b>ดู</b> ที่ Session ที่ต้องการก่อนทำ Replay</p></section>
+          <section class="training-guide-step"><h3>5 · Replay</h3><p>Replay เปิดข้อมูลตามลำดับเวลาแบบ <b>1m bar-close</b> ให้เครื่องยนต์วิเคราะห์ทีละแท่ง จุดเข้าจะถูก freeze ณ ตอนนั้น และตัดสินผลหลังครบ 10 แท่ง จึงไม่ส่งอนาคตย้อนกลับไปช่วยจุดเข้า สามารถ Pause, Resume และ Stop ได้</p></section>
+          <section class="training-guide-step"><h3>6 · วิเคราะห์ผล</h3><p>หลัง Replay มีไม้ที่ตัดสินแล้ว กด <b>วิเคราะห์ Phase 3</b> เพื่อดู Win rate, Audit calibration, State / Playbook, รูปแบบแพ้ชนะ และ MFE / MAE จาก Compact Training records</p></section>
+          <section class="training-guide-step"><h3>7 · Validation / Walk-forward</h3><p>Phase 4 แบ่งข้อมูลตามเวลาเป็น <b>Train 60% / Validation 20% / Holdout 20%</b> Candidate ถูกสร้างจาก Train เท่านั้น แล้วค่อยสอบกับข้อมูลที่ไม่เคยเห็น พร้อม Walk-forward หลายช่วงเพื่อจับ overfitting</p></section>
           <div class="training-guide-rule"><b>หลักสำคัญ:</b> ผล Historical Training เป็นหลักฐานสำหรับวิจัยและปรับ Candidate ไม่ใช่คำสั่งให้แก้ Live อัตโนมัติ แม้ผล Phase 4 ผ่าน ระบบก็ยังเก็บเป็นรุ่นทดลอง/Shadow ก่อนค่ะ</div>
         </div>
       </div>`;
@@ -598,6 +599,7 @@
     const start=byId('train-replay-start'),pause=byId('train-replay-pause'),resume=byId('train-replay-resume'),stop=byId('train-replay-stop');
     const selected=!!latestSession,ready=!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status);
     start.disabled=!selected||!ready||mode==='running'||mode==='paused';
+    document.querySelectorAll('[data-train-engine]').forEach(el=>el.disabled=mode==='running'||mode==='paused');
     pause.disabled=mode!=='running';pause.hidden=mode!=='running';
     resume.disabled=mode!=='paused';resume.hidden=mode!=='paused';
     stop.disabled=!['running','paused'].includes(mode);stop.hidden=!['running','paused'].includes(mode);
@@ -617,6 +619,7 @@
     const sameVersion=session.engineVersion===selectedTrainingVersion;
     const report=sameVersion?await globalThis.HistoricalDataV1.getReport(session.id):null;
     showReplayReport(report);
+    if(!sameVersion)renderReplayProgress({});
     const running=globalThis.HistoricalReplayV1?.current?.();
     const same=running?.session?.id===session.id;
     if(same&&running.paused){replayStatus('Paused · มี Checkpoint','warn');setReplayButtons('paused');}
@@ -627,7 +630,7 @@
       replayStatus(completedSame?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม':'Dataset ยังไม่พร้อม',completedSame||can?'ready':'warn');
       byId('train-replay-start').textContent=cp?'ทำต่อ':completedSame?'Replay ใหม่':'เริ่ม Replay';
       setReplayButtons('idle');
-      if(session.replayProcessedBars&&session.loadedBars)renderReplayProgress({
+      if(sameVersion&&session.replayProcessedBars&&session.loadedBars)renderReplayProgress({
         processedBars:session.replayProcessedBars,totalBars:session.loadedBars,progress:session.replayProgress||0,
         signals:session.replayReport?.signals||0,settled:session.replayReport?.settled||0,correct:session.replayReport?.correct||0,incorrect:session.replayReport?.incorrect||0,pending:session.replayReport?.pending||0
       });
@@ -693,6 +696,8 @@
     byId('analytics-wr').textContent=wrText(report.winRate);
     byId('analytics-audit-n').textContent=fmtInt(report.auditCalibration?.health?.samples||0);
     byId('analytics-order').textContent=Number.isFinite(report.auditCalibration?.health?.orderingPct)?report.auditCalibration.health.orderingPct+'%':'ข้อมูลน้อย';
+    const auditCard=byId('analytics-order')?.closest('.analytics-kpi');
+    if(auditCard)auditCard.hidden=selectedTrainingVersion!=='ARIS-2.0.0';
 
     byId('analytics-calibration').innerHTML=rowsTable(report.auditCalibration?.bands,'Audit',5);
 
@@ -767,7 +772,7 @@
     document.querySelectorAll('[data-train-days]').forEach(b=>b.classList.toggle('active',b.dataset.trainDays==='custom'));
     updatePreview();
     if(s.quality)showQuality(s);
-    status(s.status==='ready'?'Session พร้อม Phase 2':s.status,sessionStatusClass(s.status));
+    status(s.status==='ready'?'พร้อม':s.status,sessionStatusClass(s.status));
     if(s.expectedBars)showProgress({loadedBars:s.loadedBars,expectedBars:s.expectedBars,progress:(s.loadedBars||0)/(s.expectedBars||1),barsPerSecond:0});
     await updateReplayPanel(s);
   }
