@@ -5737,11 +5737,25 @@ function openReport(){
       patterns:Array.isArray(state.candleView.patterns)?state.candleView.patterns.slice(0,6).map(p=>pick(p,['name','bias','priority','meaning','change'])):[],
       metrics:state.candleView.metrics?{...state.candleView.metrics}:null
     }:null;
+    const v3=view?.v3Story?{
+      state:view.v3Story.state||null,stateLabel:view.v3Story.stateLabel||null,stateDescription:view.v3Story.stateDescription||null,
+      direction:view.v3Story.direction||null,highEvidence:view.v3Story.highEvidence??null,lowEvidence:view.v3Story.lowEvidence??null,
+      episodeId:view.v3Story.episodeId||null,episodeFamily:view.v3Story.episodeFamily||null,episodeDescription:view.v3Story.episodeDescription||null,
+      shockState:view.v3Story.shockState||null,shockLabel:view.v3Story.shockLabel||null,shockReason:view.v3Story.shockReason||null,
+      playbook:view.v3Story.playbook||null,playbookLabel:view.v3Story.playbookLabel||null,entryState:view.v3Story.entryState||null,
+      gatePassed:view.v3Story.gatePassed??0,gateTotal:view.v3Story.gateTotal??4,
+      thesis:view.v3Story.thesis?pick(view.v3Story.thesis,['code','d','playbook','why','trigger','invalidation','nextPlan']):null,
+      trigger:view.v3Story.trigger||null,invalidation:view.v3Story.invalidation||null,nextPlan:view.v3Story.nextPlan||null,
+      gates:view.v3Story.gates?Object.fromEntries(Object.entries(view.v3Story.gates).map(([k,g])=>[k,pick(g,['state','pass','reason','summary','room','extension','rangePosition','chaseAtr','htfConflict','htfObstacleAtr','tags','pressure','source','coverage','aligned15','aligned60','aligned180','alignedComposite','alignedBook'])])):{},
+      fib:view.v3Story.fib?pick(view.v3Story.fib,['valid','d','start','end','moveAtr','retracement','extension','retraceZone','extensionZone','confluence','healthy','deep']):null,
+      supports:Array.isArray(view.v3Story.supports)?view.v3Story.supports.slice(0,10):[],
+      warnings:Array.isArray(view.v3Story.warnings)?view.v3Story.warnings.slice(0,10):[]
+    }:null;
     return {
       schema:'live-situation-snapshot-v1',capturedAt:Date.now(),symbol:SYMBOL,engineVersion:CFG.version,
       tf,tfLabel:TF_LABELS[tf]||tf,source:analysisSource(tf),fresh:!!data.fresh,continuous:!!data.continuous,
       horizonBars:10,horizonMs:(TF_SECONDS[tf]||60)*1000*10,
-      quote:q?{price:q.price,ts:q.ts,id:q.id}:null,currentBar,bars,features:f,phase,regime,zones,candle,
+      quote:q?{price:q.price,ts:q.ts,id:q.id}:null,currentBar,bars,features:f,phase,regime,zones,candle,v3,
       direction,
       flow:{...flowRaw,composite:flow},
       book:{...depth,composite:book,usable:bookValid},
