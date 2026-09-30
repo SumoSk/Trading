@@ -263,7 +263,7 @@ function marketDescription(r){
  })[r.state]||'กำลังอ่านตลาด';
 }
 
-/* ---------- Shock / Episode ---------- *//* ---------- Shock / Episode ---------- */
+/* ---------- Shock / Episode ---------- */
 function shockSnapshot(reader,x,existing){
  if(!existing)return null;
  const s=existing,a=reader.atr,b=reader.behavior,d=s.d,age=x.ts-s.startedAt,flow=d*(x.flow||0),progress=d*(x.price-s.mid)/a;
@@ -509,7 +509,7 @@ function story(reader,ep,thesis,bundle){
   trigger:thesis.trigger,invalidation:thesis.invalidation,nextPlan:thesis.nextPlan,summary,gateText,sameLeg};
 }
 
-function invalidationLevel(reader,d,thesis){function invalidationLevel(reader,d,thesis){
+function invalidationLevel(reader,d,thesis){
  const s=reader.structure,a=reader.atr;
  if(thesis.playbook==='confirmed_reversal')return d>0?(s.lastLow?.price??reader.price-a):(s.lastHigh?.price??reader.price+a);
  return d>0?(s.bullProtected??Math.min(...reader._f.b.slice(-5).map(q=>q.low))):(s.bearProtected??Math.max(...reader._f.b.slice(-5).map(q=>q.high)));
