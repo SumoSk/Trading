@@ -160,6 +160,7 @@
     const e=signal?.dataset?.entry||{},o=signal?.dataset?.outcome||{},review=signal?.dataset?.review||{},a=e.auditV2||{},ev=signal?.dataset?.auditEvaluationV2||null;
     return {
       id:signal.id,version:signal.version,type:signal.type,direction:signal.direction,
+      episodeSequence:signal.dataset?.episodeSequence||1,
       entryTime:signal.entryTime,entryPrice:signal.entryPrice,result:signal.result,
       exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
       entry:{
