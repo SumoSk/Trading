@@ -2823,7 +2823,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 })(typeof globalThis!=='undefined'?globalThis:window);
 </script>
 <script src="v2.js?v=20260930-r6"></script>
-<script src="v3.js?v=20261001-r2"></script>
+<script src="v3.js?v=20261001-r3"></script>
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
 <script src="audit-engine.js?v=20261001-r2"></script>\n<script src="historical-data.js?v=20261001-r2"></script>
@@ -3976,31 +3976,20 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    const target=$('setup-profile-compact');if(!target)return;
    const primary=state.analysisTf==='1m',tf=state.analysisTf,main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
    if(CFG.version==='ARIS-3.0.0'&&v?.v3Story){
-    const st=v.v3Story,dir=st.direction==='HIGH'?'HIGH':st.direction==='LOW'?'LOW':null;
+    const st=v.v3Story,dir=st.direction==='HIGH'?'HIGH':st.direction==='LOW'?'LOW':null,g=st.gates||{},th=st.thesis||{};
     target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
-    $('setup-compact-next').textContent=cleanReportText((st.stateLabel||st.state||'กำลังอ่านตลาด')+' · '+(st.episodeFamily||'Episode'));$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
+    $('setup-compact-next').textContent=cleanReportText((st.stateLabel||'กำลังอ่านตลาด')+' · '+(st.episodeFamily||'Episode'));$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
     $('setup-compact-name').textContent=cleanReportText((st.playbookLabel||'Observe only')+(dir?' · '+directionThai(dir):''));
-    $('setup-compact-status').textContent='Gate '+Math.round(st.quality||0)+'% · '+(st.shockState&&st.shockState!=='NONE'?'Shock '+st.shockState:(st.episodeFamily||'Episode'));
-    $('setup-compact-desc').textContent=cleanReportText((st.stateDescription||'')+(st.playbookDescription?' · '+st.playbookDescription:'')+(st.episodeDescription?' · '+st.episodeDescription:''));
+    $('setup-compact-status').textContent=cleanReportText((st.entryState||'OBSERVE')+' · Gate '+(st.gatePassed||0)+'/'+(st.gateTotal||4)+(st.shockState?' · Shock '+st.shockState:''));
+    $('setup-compact-desc').textContent=cleanReportText((st.stateDescription||'')+' · '+(st.episodeDescription||''));
     const title=$('signal-title')?.textContent||'กำลังเฝ้ากราฟ',es=$('entry-state')?.textContent||'WATCH';$('setup-compact-entry').textContent=cleanReportText(title+' · '+es);
-    const wait=(st.blocked||[]);
-    $('setup-compact-entry-reason').textContent=cleanReportText(
-      'Trigger: '+(st.trigger||'รอรูปแบบยืนยัน')+
-      ' · ยกเลิกเมื่อ: '+(st.invalidation||'Structure เสีย')+
-      ' · ต่อไป: '+(st.nextPlan||'ประเมิน Episode ใหม่')+
-      (wait.length?' · ตอนนี้ติด: '+wait.join(' · '):' · Gate ผ่านครบ')
-    );
+    $('setup-compact-entry-reason').textContent=cleanReportText('Thesis: '+(th.why||st.summary||'กำลัง Observe')+' · Trigger: '+(st.trigger||th.trigger||'รอหลักฐานเพิ่ม')+' · ยกเลิกเมื่อ: '+(st.invalidation||th.invalidation||'Structure เสีย')+' · ต่อไป: '+(st.nextPlan||th.nextPlan||'ประเมิน Episode ต่อ'));
     const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=cleanReportText(t);ul.append(li);}};
     const sup=[...(st.supports||[])],warn=[...(st.warnings||[])],fib=st.fib;
-    if(fib?.valid){
-      const near=fib.nearest;
-      sup.unshift('Fibonacci · '+(fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone));
-      if(near) sup.push('Fib ใกล้สุด '+(near.ratio*100).toFixed(1).replace('.0','')+'% ที่ '+Number(near.price).toFixed(2)+' · ห่าง '+Number(near.distanceAtr).toFixed(2)+' ATR'+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
-      sup.push('Fib leg '+(fib.d>0?'ขึ้น':'ลง')+' '+Number(fib.moveAtr).toFixed(2)+' ATR · Start '+Number(fib.start).toFixed(2)+' → End '+Number(fib.end).toFixed(2));
-    }else warn.push('Fibonacci · '+(fib?.reason||'รอ Swing leg ที่ยืนยัน'));
-    fill('setup-compact-support',sup.slice(0,9),'ยังไม่มีแรงหนุนที่ผ่าน Gate');
-    fill('setup-compact-warning',warn.slice(0,9),'ยังไม่พบจุดเตือนเด่น');
-    return;
+    if(st.structure?.summary)sup.unshift('Structure · '+st.structure.summary+(Number.isFinite(st.structure.bullProtected)?' · protected low '+money(st.structure.bullProtected):'')+(Number.isFinite(st.structure.bearProtected)?' · protected high '+money(st.structure.bearProtected):''));
+    if(fib?.valid){sup.push('Fibonacci · '+(fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone)+(fib.confluence?' · ซ้อนแนวสำคัญ':''));if(fib.nearest)sup.push('Fib ใกล้สุด '+(fib.nearest.ratio*100).toFixed(1).replace('.0','')+'% ที่ '+money(fib.nearest.price)+' · ห่าง '+Number(fib.nearest.distanceAtr).toFixed(2)+' ATR');}
+    if(g.structure)warn.push('Gate · Structure '+g.structure.state+' · '+g.structure.reason);if(g.location)warn.push('Gate · Location '+g.location.state+' · '+g.location.reason);if(g.behavior)warn.push('Gate · Behavior '+g.behavior.state+' · '+g.behavior.reason);if(g.micro)warn.push('Gate · Micro '+g.micro.state+' · '+g.micro.reason);
+    fill('setup-compact-support',[...new Set(sup)].slice(0,10),'ยังไม่มีแรงหนุนที่ยืนยัน');fill('setup-compact-warning',[...new Set(warn)].slice(0,10),'ยังไม่พบข้อขัดแย้งสำคัญ');return;
    }
    if(CFG.version==='ARIS-2.0.0'&&v?.v2Story){
     const st=v.v2Story,dir=st.playDirection>0?'HIGH':st.playDirection<0?'LOW':null;
@@ -4615,12 +4604,9 @@ function openReport(){
    else rows.push(v.reason||'ยังไม่มี trigger จุดเข้า');
    const m=gate?.metrics;
    if(m&&CFG.version==='ARIS-3.0.0'){
-    if(m.episodeId)rows.push('Episode '+m.episodeId+(m.legKey?' · leg '+m.legKey:''));
-    if(Number.isFinite(m.quality))rows.push('Gate readiness '+Math.round(m.quality)+'% · ต้องผ่านครบ 4 หมวดก่อนเข้า');
-    if(typeof m.structurePassed==='boolean')rows.push('Structure '+(m.structurePassed?'PASS':'WAIT')+' · Boss Gate');
-    if(typeof m.locationPassed==='boolean')rows.push('Location '+(m.locationPassed?'PASS':'WAIT'));
-    if(typeof m.behaviorPassed==='boolean')rows.push('Behavior '+(m.behaviorPassed?'PASS':'WAIT'));
-    if(typeof m.microPassed==='boolean')rows.push('Micro '+(m.microPassed?'PASS':'WAIT'));
+    if(m.episodeId)rows.push('Episode '+m.episodeId+(m.legKey?' · leg '+m.legIndex+' · '+m.legKey:''));
+    if(m.gateStates){rows.push('Structure '+(m.gateStates.structure||'—')+' · Boss Gate');rows.push('Location '+(m.gateStates.location||'—')+' · Behavior '+(m.gateStates.behavior||'—')+' · Micro '+(m.gateStates.micro||'—'));}
+    if(Number.isFinite(m.gatePassed))rows.push('ผ่าน '+m.gatePassed+'/'+(m.gateTotal||4)+' หมวด · ต้อง PASS ครบทุกหมวดก่อนเข้า');
    }
    if(m&&v.event){
     if(CFG.version==='ARIS-2.0.0'&&Number.isFinite(m.evidence))rows.push('คะแนนจุดเข้า '+Math.round(m.evidence)+'/100 · ENTER ≥ '+CFG.v2EntryEnter);
@@ -5026,9 +5012,14 @@ function openReport(){
    const flow=(f['15s']||0)*.65+(f['60s']||0)*.35;
    const depth=depthSnapshot(q.ts),valid=depth.valid&&depth.ageSeconds<2&&depth.spreadBps<3;
    const book=valid?.76*depth.imbalance+.24*depth.micropriceBias:0;
+   const liq=liquidationSnapshot(q.ts);
+   const micro={source:'live',coverageSeconds:coverage,flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,
+    trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,
+    depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,
+    liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s};
    const fresh=data.fresh;
    const aEngine=analysisEngine(tf),before=aEngine.audit.length;
-   let v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],fifteen:state.bars['15m'],flow,coverage,book,bookValid:valid,fresh,current,expedite:CFG.version==='ARIS-2.0.0'&&tf==='1m'&&!!state.expediteFive?.active,horizonBars:ANALYSIS_HORIZON_BARS[tf]||1});
+   let v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],fifteen:state.bars['15m'],flow,coverage,book,bookValid:valid,micro,fresh,current,expedite:CFG.version==='ARIS-2.0.0'&&tf==='1m'&&!!state.expediteFive?.active,horizonBars:ANALYSIS_HORIZON_BARS[tf]||1});
    if(data.sourceFallback)v.reason='แสดงแท่ง Spot สำรองของ '+tf+' เท่านั้น — พักการประเมินจนโหลด Futures ได้ครบ';
    lastView=v;
    const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});
@@ -5054,8 +5045,7 @@ function openReport(){
     captureTradeJournal(v,directionView,{flow,coverage,book,bookValid:valid});
    }
    if(tf==='1m'&&v.signal?.dataset?.entry){
-    const liq=liquidationSnapshot(q.ts);
-    v.signal.dataset.entry.microstructure={flow15s:f['15s']||0,flow60s:f['60s']||0,flow180s:f['180s']||0,trades60s:f.trades60s||0,notional60s:f.notional60s||0,notional180s:f.notional180s||0,depthImbalance:depth.imbalance,micropriceBias:depth.micropriceBias,spreadBps:depth.spreadBps,liquidationSigned60s:liq.signed60s,liquidationSigned180s:liq.signed180s,liquidationEvents60s:liq.events60s,liquidationEvents180s:liq.events180s,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};
+    v.signal.dataset.entry.microstructure={...micro,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};
    }
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
    renderEvent(v);
