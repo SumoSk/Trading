@@ -110,10 +110,16 @@
   }
 
   function inputFor(run,bar,engineBar,ts,id){
+    const flow=minuteFlow(bar);
     return {
       ts,id,price:Number(bar.close),bars:run.recentBars,
       five:run.agg5.closed,fifteen:run.agg15.closed,
-      flow:minuteFlow(bar),coverage:60,book:0,bookValid:false,fresh:true,
+      flow,coverage:60,book:0,bookValid:false,fresh:true,
+      micro:{source:'historical_1m_adapter',replay:true,coverageSeconds:60,flow15s:null,flow60s:flow,flow180s:null,
+       trades60s:Number.isFinite(Number(bar.trades))?Number(bar.trades):null,
+       notional60s:Number.isFinite(Number(bar.quoteVolume))?Number(bar.quoteVolume):null,
+       notional180s:null,depthImbalance:null,micropriceBias:null,spreadBps:null,
+       liquidationSigned60s:null,liquidationSigned180s:null,liquidationEvents60s:null,liquidationEvents180s:null},
       current:engineBar,expedite:false,horizonBars:10
     };
   }
@@ -171,7 +177,8 @@
       exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
       entry:{
         state:e.v3State||e.v2State||null,playbook:e.v3Playbook||e.v2Playbook||null,family:e.v3EpisodeFamily||e.v2Family||null,
-        evidence:e.v3GateQuality??e.v2EntryEvidence??null,stateConfidence:e.v2StateConfidence??null,
+        evidence:e.v3GatePassCount??e.v2EntryEvidence??null,stateConfidence:e.v2StateConfidence??null,
+        gateStates:e.v3GateStates??null,thesis:e.v3Thesis?.code??null,
         atr:e.atr??null,trend:e.trend??null,momentum:e.momentum??null,flow:e.flow??null,
         rangePosition:e.rangePosition??null,relativeVolume:e.relativeVolume??null,
         roomSupport:e.zones?.nearestSupport?.distanceAtr??null,roomResistance:e.zones?.nearestResistance?.distanceAtr??null,
