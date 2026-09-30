@@ -4190,7 +4190,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function trainingBundle(){
    refreshTradeSummaries();
    const closed=engine.signals.filter(s=>['correct','incorrect'].includes(s.result));
-   return {schema:DATASET_SCHEMA,journalSchema:JOURNAL_SCHEMA,exportedAt:new Date().toISOString(),symbol:SYMBOL,horizonMs:CFG.horizonMs,currentVersion:CFG.version,currentRevision:CFG.arisRevision||null,
+   return {schema:DATASET_SCHEMA,journalSchema:JOURNAL_SCHEMA,timelinePolicy:{schema:'hybrid-v1',earlyUntilSec:120,earlyIntervalSec:15,lateIntervalSec:30,eventTriggered:true},exportedAt:new Date().toISOString(),symbol:SYMBOL,horizonMs:CFG.horizonMs,currentVersion:CFG.version,currentRevision:CFG.arisRevision||null,
     evaluationPolicy:{horizonMs:CFG.horizonMs,settlementToleranceMs:CFG.settlementToleranceMs,groupBy:['version','arisRevision','expediteFive.requested'],scoresAreWinProbabilities:false},
     leakageRule:'Only dataset.entry, candidate.input and watches[].input are valid model inputs. dataset.timeline, candidate transitions, issuedAt, endedAt, cancellation reasons, path1m, context1m, v2Followup, outcome, result, review and summaryV3 are post-entry observations/labels and must not be used as entry-time predictors.',
     config:CFG,versionProfile:VERSION_PROFILE,versionSettings,
@@ -4377,7 +4377,7 @@ function openReport(){
    ${metric('Flow ตอนเข้า',val(e.flow))}
    ${metric('Momentum ตอนเข้า',val(e.momentum))}
   </div></section>
- <section class="review-section"><h3>3 · Timeline ระหว่างไม้${sig.result==='pending'?' · สด':''}</h3><p class="review-note">บันทึกทุกประมาณ 15 วินาทีหรือเมื่อ State / Playbook / Fib / Flow / Structure เปลี่ยน เพื่อเอาไปวิเคราะห์หลังไม้โดยไม่เก็บทุก tick</p>
+ <section class="review-section"><h3>3 · Timeline ระหว่างไม้${sig.result==='pending'?' · สด':''}</h3><p class="review-note">0–2 นาทีแรกบันทึกทุก 15 วินาที หลังจากนั้นทุก 30 วินาที และบันทึกทันทีเมื่อ State / Playbook / Fib / Flow / Structure เปลี่ยน เพื่อเก็บรายละเอียดที่ใช้เทรนโดยไม่บวมจากทุก tick</p>
   <div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>ผ่านไป</th><th>ราคา</th><th>Move</th><th>State</th><th>Playbook</th><th>Flow</th><th>H/L</th><th>Fib</th><th>Structure</th></tr></thead><tbody>${timelineRows.join('')||'<tr><td colspan="10">ยังไม่มี Timeline V3 สำหรับไม้นี้</td></tr>'}</tbody></table></div></section>
  <section class="review-section"><h3>4 · แท่งเทียนตอนเข้า</h3><div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>สี</th><th>เปิด</th><th>สูง</th><th>ต่ำ</th><th>ปิด</th><th>Body/ATR</th><th>Range/ATR</th><th>Close loc</th></tr></thead><tbody>${candleRows||'<tr><td colspan="9">ไม่มี snapshot แท่งเทียน</td></tr>'}</tbody></table></div></section>
  <section class="review-section"><h3>5 · เส้นทางราคา +10 นาที</h3><div class="review-table-wrap"><table class="review-table"><thead><tr><th>นาที</th><th>เปิด</th><th>สูง</th><th>ต่ำ</th><th>ล่าสุด</th><th>Flow</th><th>Regime</th><th>Phase</th></tr></thead><tbody>${pathRows}</tbody></table></div></section>
@@ -4822,8 +4822,10 @@ function openReport(){
      return rows.length?Math.min(...rows):null;
     };
     const elapsedSec=Math.max(0,Math.round((nowMs-sig.entryTime)/1000)),exc=liveExcursion(sig,price);
+    const cadenceSec=elapsedSec<=120?15:30;
+    const sampleSlot=elapsedSec<=120?'early:'+Math.floor(elapsedSec/15):'late:'+Math.floor((elapsedSec-120)/30);
     const snap={
-     ts:nowMs,elapsedSec,price,movePoints:d*(price-sig.entryPrice),moveAtr:d*(price-sig.entryPrice)/atr,
+     ts:nowMs,elapsedSec,cadenceSec,sampleSlot,price,movePoints:d*(price-sig.entryPrice),moveAtr:d*(price-sig.entryPrice)/atr,
      mfeAtr:exc.mfeAtr,maeAtr:exc.maeAtr,
      state:story?.state||v.regime?.v2State||v.phase?.phase||null,
      stateConfidence:Number(story?.stateConfidence),
@@ -4837,14 +4839,23 @@ function openReport(){
      candleTags:(story?.candle?.tags||[]).slice(0,6),trendChangeRisk:story?.trendChangeRisk||null
     };
     const flowBand=alignedFlow<=-.04?-1:alignedFlow>=.04?1:0,lastFlowBand=last?.alignedFlow<=-.04?-1:last?.alignedFlow>=.04?1:0;
-    const important=!last||
-     Math.floor(elapsedSec/15)!==Math.floor((last.elapsedSec||0)/15)||
-     last.state!==snap.state||last.playbook!==snap.playbook||last.fibZone!==snap.fibZone||
-     last.structureBroken!==snap.structureBroken||flowBand!==lastFlowBand||
-     (last.trendChangeRisk||null)!==(snap.trendChangeRisk||null);
+    const scheduled=!last||last.sampleSlot!==sampleSlot;
+    const eventReasons=[];
+    if(last){
+     if(last.state!==snap.state)eventReasons.push('state');
+     if(last.playbook!==snap.playbook)eventReasons.push('playbook');
+     if(last.fibZone!==snap.fibZone)eventReasons.push('fib_zone');
+     if(last.structureBroken!==snap.structureBroken)eventReasons.push('structure');
+     if(flowBand!==lastFlowBand)eventReasons.push('flow_band');
+     if((last.trendChangeRisk||null)!==(snap.trendChangeRisk||null))eventReasons.push('trend_risk');
+    }
+    const important=scheduled||eventReasons.length>0;
     if(important){
-     tl.push(snap);if(tl.length>160)tl.splice(1,tl.length-160);
+     snap.captureReason=!last?'entry':scheduled&&eventReasons.length?'scheduled+event':eventReasons.length?'event':'scheduled';
+     snap.events=eventReasons;
+     tl.push(snap);if(tl.length>120)tl.splice(1,tl.length-120);
      sig.dataset.journalSchema=JOURNAL_SCHEMA;
+     sig.dataset.timelinePolicy={schema:'hybrid-v1',earlyUntilSec:120,earlyIntervalSec:15,lateIntervalSec:30,eventTriggered:true};
      sig.dataset.liveState={updatedAt:nowMs,...snap};
      changed=true;
     }
