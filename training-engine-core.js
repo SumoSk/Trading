@@ -122,7 +122,7 @@ const ARIS_V2_CONFIG=Object.freeze({...ARIS_V12_CONFIG,
  v2MaxFollowExtension:1.75,v2HardExtension:3.25,v2ReversalEvidence:3
 });
 const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
- version:'ARIS-3.0.0',arisRevision:'episode-gated-v3-r1',
+ version:'ARIS-3.0.0',arisRevision:'blueprint-v3-r2',
  v3StructureEffMin:.34,v3TrendEffMin:.42,v3BreakoutEffMin:.26,v3ChopEffMax:.20,
  v3BreakBuffer:.06,v3BreakCloseMin:.62,v3MicroBreakAtr:.015,
  v3MinRoomAtr:.22,v3HardExtension:2.40,v3ExhaustionExtension:1.80,
@@ -131,7 +131,10 @@ const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3ConfirmTicks:2,v3ConfirmMs:500,v3ShockResolveMinMs:700,
  v3EpisodeMaxAgeMs:720000,v3EpisodeFlipAtr:.12,v3NewLegPullbackAtr:.35,v3NewLegMinMoveAtr:.65,
  v3ReversalMinExtension:1.40,
- v3FibZoneAtr:.15,v3FibMaxAgeBars:25
+ v3FibZoneAtr:.15,v3FibMaxAgeBars:25,
+ v3SwingBreakAtr:.08,v3BaseReclaimAtr:.03,v3NewLegReclaimAtr:.18,
+ v3ReplayMinFlow:.025,v3ShockExhaustExtension:2.10,v3AbsorbProgressAtr:.12,
+ v3HtfObstacleAtr:.45,v3BreakoutMaxChaseAtr:.75
 });
 const V650_SELECT_CONFIG=Object.freeze({
  version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
