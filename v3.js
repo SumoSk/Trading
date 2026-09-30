@@ -156,7 +156,7 @@ function behaviorSequence(f,x,structure){
  const priorPath=prior.slice(1).reduce((s,q,i)=>s+Math.abs(q.close-prior[i].close),0);
  const priorEff=priorPath?Math.abs(prior.at(-1).close-prior[0].open)/priorPath:0;
  const priorWidthAtr=(hi-lo)/a;
- const breakoutContext=compression||priorEff<=(CFG.v3BreakoutBaseEffMax||.58)||priorWidthAtr<=(CFG.v3BreakoutBaseWidthAtr||4.2)||(f.sideCrosses||0)>=1;
+ const breakoutContext=compression||priorEff<=(CFG.v3BreakoutBaseEffMax||.35)||(f.sideCrosses||0)>=1;
  const breakoutUp=breakoutContext&&x.price>=hi+a*(CFG.v3BreakBuffer||.06),breakoutDown=breakoutContext&&x.price<=lo-a*(CFG.v3BreakBuffer||.06);
  const acceptedUp=breakoutUp&&live.closeLoc>=CFG.v3BreakCloseMin&&live.d>=0&&!upperReject;
  const acceptedDown=breakoutDown&&live.closeLoc<=1-CFG.v3BreakCloseMin&&live.d<=0&&!lowerReject;
