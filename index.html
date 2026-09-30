@@ -5852,9 +5852,12 @@ function openReport(){
    const signal=signals[0]||null,signalAt=signal?.entryTime||null;
    const base=firstOpportunity||firstSL||start,refEnd=signal?{at:signal.entryTime,price:signal.entryPrice}:end;
    const atr=base?.atr||start?.atr||null,priceMove=Number.isFinite(base?.price)&&Number.isFinite(refEnd?.price)?refEnd.price-base.price:null;
-   const dir=base?.direction==='LOW'?-1:1,moveAtr=Number.isFinite(priceMove)&&Number.isFinite(atr)&&atr>0?dir*priceMove/atr:null;
+   const chosenDirection=base?.direction||signal?.direction,dir=chosenDirection==='LOW'?-1:1,moveAtr=Number.isFinite(priceMove)&&Number.isFinite(atr)&&atr>0?dir*priceMove/atr:null;
    const latency=signalAt&&base?.at?signalAt-base.at:null,durations=marketRecorderGateDurations(s,rec.endedAt);
    const ranked=Object.entries(durations).sort((a,b)=>b[1]-a[1]),top=ranked[0]||[null,0];
+   const reasonCounts=new Map();
+   for(const snap of s)for(const [k,g] of Object.entries(snap.gates||{})){if(g&&g.state!=='PASS'&&g.reason){const key=k+'|'+g.reason;reasonCounts.set(key,(reasonCounts.get(key)||0)+1);}}
+   const blockerReasons=[...reasonCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(([key,n])=>{const [gate,...rest]=key.split('|');return {gate,reason:rest.join('|'),count:n};});
    const threeRatio=s.length?s.filter(x=>(x.gatePassed??0)>=3).length/s.length:0;
    const endMove=Number.isFinite(start?.price)&&Number.isFinite(end?.price)&&Number.isFinite(start?.atr)&&start.atr>0?(end.price-start.price)/start.atr:null;
    let verdict='ยังไม่มีหลักฐานชัดว่า V3 ช้า',tone='neutral',why='ข้อมูลช่วงนี้ยังไม่แสดงว่าระบบเห็นโอกาสชัดแล้วปล่อยให้ราคาวิ่งไปไกลก่อนออกไม้';
@@ -5865,7 +5868,7 @@ function openReport(){
    }else if(!signal&&threeRatio<.2){
     verdict='ยังไม่ใช่หลักฐานว่า V3 ช้า';tone='good';why='ช่วงส่วนใหญ่ยังไม่ถึง 3/4 เงื่อนไข การไม่ออกไม้จึงสอดคล้องกับข้อมูลที่เอนจิ้นเห็นขณะนั้น';
    }
-   return {firstOpportunity,firstSL,first3,first4,signal,latency,moveAtr,durations,ranked,topBlocker:top[0],topBlockerMs:top[1],threeRatio,endMove,verdict,tone,why};
+   return {firstOpportunity,firstSL,first3,first4,signal,latency,moveAtr,durations,ranked,blockerReasons,topBlocker:top[0],topBlockerMs:top[1],threeRatio,endMove,verdict,tone,why};
   }
   function marketRecorderStateSummary(snaps){
    const counts=new Map();for(const s of snaps){const k=s.stateLabel||'กำลังอ่านตลาด';counts.set(k,(counts.get(k)||0)+1);}
@@ -5896,7 +5899,7 @@ function openReport(){
    ctx.fillStyle=pass?'#8fe6ca':dev?'#e7c979':'#ff9bb0';ctx.fillText(label+' '+recorderGateState(state0),x+12,y+27);
   }
   function marketRecorderCanvas(rec){
-   const diag=rec.diagnostic||marketRecorderDiagnostic(rec),snaps=rec.snapshots||[],W=1440,H=2920,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+   const diag=rec.diagnostic||marketRecorderDiagnostic(rec),snaps=rec.snapshots||[],W=1440,H=3160,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
    const ctx=canvas.getContext('2d');ctx.fillStyle='#08111b';ctx.fillRect(0,0,W,H);
    ctx.fillStyle='#dce8f7';ctx.font="700 44px 'Segoe UI',Tahoma,sans-serif";ctx.fillText('ARIS MARKET RECORD',70,82);
    ctx.font="500 24px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#91a5bd';ctx.fillText(rec.id+' · '+rec.engineVersion+' · '+rec.tf,70,122);
@@ -5958,7 +5961,14 @@ function openReport(){
    const gateNames={structure:'โครงสร้าง',location:'ตำแหน่งราคา',behavior:'พฤติกรรมแท่ง',micro:'แรงซื้อขายระยะสั้น'};
    ctx.font="600 22px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#c9d6e6';ctx.fillText('เวลาที่ Gate ยังไม่ผ่าน',70,y);y+=32;
    diag.ranked.forEach(([k,ms],i)=>{const max=Math.max(1,diag.ranked[0]?.[1]||1),bw=760*(ms/max);ctx.fillStyle='#1c2b3d';ctx.fillRect(70,y+i*52,760,22);ctx.fillStyle=i===0?'#ff8da1':'#7fa1c5';ctx.fillRect(70,y+i*52,bw,22);ctx.font="500 20px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#aebfd3';ctx.fillText((gateNames[k]||k)+' · '+recorderDuration(ms),855,y+i*52+19);});
-   y+=diag.ranked.length*52+36;
+   y+=diag.ranked.length*52+30;
+   ctx.font="600 22px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#c9d6e6';ctx.fillText('เหตุผลที่ทำให้ยังไม่ออกไม้บ่อยที่สุด',70,y);y+=34;
+   const reasonGateNames={structure:'โครงสร้าง',location:'ตำแหน่ง',behavior:'พฤติกรรมแท่ง',micro:'แรงซื้อขายสั้น'};
+   const reasons=(diag.blockerReasons||[]).slice(0,3);
+   if(reasons.length){
+    reasons.forEach((r,i)=>{ctx.font="500 21px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle=i===0?'#ffb0bf':'#adbed2';recorderText(ctx,(i+1)+'. '+(reasonGateNames[r.gate]||r.gate)+' · '+r.reason,70,y+i*58,W-140,30,2);});
+    y+=reasons.length*58+20;
+   }else{ctx.font="400 21px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#8ea1b8';ctx.fillText('ไม่พบเหตุผลบล็อกที่บันทึกซ้ำ',70,y);y+=52;}
 
    ctx.font="700 28px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#dce8f7';ctx.fillText('สรุปสำหรับปรับ V3',70,y);y+=38;
    const blocker=diag.topBlocker?gateNames[diag.topBlocker]||diag.topBlocker:'ยังระบุไม่ได้';
