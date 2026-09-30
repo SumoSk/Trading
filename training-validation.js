@@ -399,7 +399,15 @@
       '.validation-verdict{margin-top:8px;padding:8px;border:1px solid #39445a;border-radius:8px;background:#0d1622}.validation-verdict strong{font-size:9px;color:#cbd6e6}.validation-verdict span{display:block;margin-top:3px;font-size:6.5px;color:#8292a8;line-height:1.45}.validation-verdict.supported{border-color:#2f6d58;background:#0e201b}.validation-verdict.supported strong{color:#69deb4}.validation-verdict.rejected{border-color:#67394b;background:#24151c}.validation-verdict.rejected strong{color:#e98ba2}',
       '.wf-table-wrap{overflow:auto;margin-top:8px}',
       '@media(max-width:760px){.validation-split{grid-template-columns:1fr 1fr 1fr}}',
-      '@media(max-width:560px){.validation-split{grid-template-columns:1fr}.validation-head{display:block}.validation-head>div:last-child{margin-top:5px}}'
+      '@media(max-width:560px){.validation-split{grid-template-columns:1fr}.validation-head{display:block}.validation-head>div:last-child{margin-top:5px}}',
+      '.validation-card{background:#10131f;border-color:#30354c}',
+      '.validation-card .validation-actions{margin:0}',
+      '.validation-split{margin:10px 0 0;gap:6px}',
+      '.validation-slice{padding:9px;border-radius:9px;background:#0a121c;border-color:#242f42}',
+      '.validation-slice span{font-size:6px}.validation-slice b{font-size:12px;color:#d5dbea}',
+      '.validation-candidate{margin-top:10px;padding:9px;border-radius:9px}',
+      '.validation-verdict{border-radius:10px;padding:10px}',
+      '@media(max-width:560px){.validation-split{grid-template-columns:repeat(3,1fr)}.validation-slice{padding:7px}.validation-slice b{font-size:10px}}'
     ].join('');
     document.head.append(s);
   }
@@ -411,25 +419,24 @@
     const section=document.createElement('section');
     section.className='train-card validation-card';section.id='train-validation-card';
     section.innerHTML=[
-      '<div class="validation-head">',
-      '<div><h3>7 · Phase 4 · Validation / Walk-forward Lab</h3></div>',
+      '<div class="train-section-head">',
+      '<div><h3>Validation</h3></div>',
+      '<span class="train-status-badge" id="train-validation-status">รอ Replay</span>',
       '</div>',
       '<div class="validation-actions">',
-      '<button type="button" class="train-primary" id="train-validation-run" disabled>รัน Phase 4</button>',
-      '<button type="button" class="train-secondary" id="train-validation-export" disabled>Export Validation JSON</button>',
-      '<span class="train-status-badge" id="train-validation-status">รอ Session</span>',
+      '<button type="button" class="train-primary" id="train-validation-run" disabled>ตรวจสอบ</button>',
+      '<button type="button" class="train-secondary" id="train-validation-export" disabled>Export</button>',
       '</div>',
       '<div class="validation-split">',
-      '<div class="validation-slice"><span>TRAIN · 60%</span><b id="validation-train-n">—</b></div>',
-      '<div class="validation-slice"><span>VALIDATION · 20%</span><b id="validation-val-n">—</b></div>',
-      '<div class="validation-slice"><span>HOLDOUT · 20%</span><b id="validation-hold-n">—</b></div>',
+      '<div class="validation-slice"><span>TRAIN</span><b id="validation-train-n">—</b></div>',
+      '<div class="validation-slice"><span>VALIDATE</span><b id="validation-val-n">—</b></div>',
+      '<div class="validation-slice"><span>HOLDOUT</span><b id="validation-hold-n">—</b></div>',
       '</div>',
-      '<div id="validation-empty" class="analytics-empty">ยังไม่มีผล Validation</div>',
+      '<div id="validation-empty" class="analytics-empty" style="margin-top:9px">ยังไม่มีผล Validation</div>',
       '<div id="validation-result" hidden>',
-      '<div class="validation-candidate"><span>Experimental candidate</span><b id="validation-candidate-label">—</b></div>',
+      '<div class="validation-candidate"><span>Candidate</span><b id="validation-candidate-label">—</b></div>',
       '<div id="validation-compare"></div>',
-      '<div class="wf-table-wrap" id="validation-wf"></div>',
-      '<div class="validation-warnings" id="validation-warnings"></div>',
+      '<details class="analytics-panels-wrap"><summary>ดู Walk-forward / รายละเอียด</summary><div class="wf-table-wrap" id="validation-wf"></div><div class="validation-warnings" id="validation-warnings"></div></details>',
       '<div class="validation-verdict" id="validation-verdict"><strong>—</strong><span></span></div>',
       '</div>'
     ].join('');
@@ -487,15 +494,21 @@
   async function refresh(){
     const id=currentSessionId(),run=byId('train-validation-run'),exp=byId('train-validation-export');
     if(!id){
-      run.disabled=true;exp.disabled=true;setStatus('รอ Session');render(null);return;
+      run.disabled=true;exp.disabled=true;setStatus('รอ Replay');render(null);return;
     }
     try{
+      const session=await globalThis.HistoricalDataV1.getSession(id);
+      const selected=globalThis.TrainingLabV1?.selectedVersion?.()||session?.engineVersion;
+      const sameVersion=!!session&&session.engineVersion===selected;
+      if(!sameVersion){
+        run.disabled=true;exp.disabled=true;render(null);setStatus('รอ Replay เวอร์ชันนี้','warn');return;
+      }
       const signals=(await loadSignals(id)).filter(scored);
       run.disabled=signals.length<12;
       const report=await get(id);
       exp.disabled=!report;
-      if(report){render(report);setStatus('Validation พร้อม','ready');}
-      else{render(null);setStatus(signals.length>=12?'พร้อมรัน · '+fmt(signals.length)+' ไม้':'ข้อมูลยังน้อย · '+fmt(signals.length)+' ไม้',signals.length>=12?'ready':'warn');}
+      if(report){render(report);setStatus('พร้อม','ready');}
+      else{render(null);setStatus(signals.length>=12?'พร้อมตรวจสอบ':'ข้อมูลยังไม่พอ',signals.length>=12?'ready':'warn');}
     }catch(err){
       run.disabled=true;exp.disabled=true;setStatus('อ่านข้อมูลไม่สำเร็จ','error');
     }
@@ -533,6 +546,7 @@
     byId('training-lab-dialog')?.addEventListener('click',e=>{
       if(e.target?.id==='train-replay-start'||e.target?.id==='train-analytics-build')setTimeout(refresh,250);
     });
+    document.addEventListener('training-version-change',()=>refresh());
   }
 
   function boot(attempt=0){
