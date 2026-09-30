@@ -673,6 +673,21 @@ main{padding-top:10px}
 
 .setup-profile-compact .compact-brief-summary:empty{display:none!important}
 </style>
+
+<style id="aris-v2-auto-fib-ui">
+/* UI-only additions for ARIS 2.0. Engine logic stays in v2.js untouched. */
+.chart-meta,.chart-meta b,.ohlc{font-size:9px!important}
+.left-line-label,.left-line-label.signal,.right-order-label{font-size:9px!important}
+.chart-watermark span{font-size:9px!important}
+.auto-fib-band,.auto-fib-line,.auto-fib-leg,.auto-fib-anchor,
+.auto-fib-label,.auto-fib-status,.auto-fib-anchor-label{pointer-events:none}
+.auto-fib-line{stroke:#9bacc1;stroke-width:.65;stroke-opacity:.48;vector-effect:non-scaling-stroke}
+.auto-fib-leg{stroke:#aebccf;stroke-width:.75;stroke-opacity:.38;stroke-dasharray:4 4;vector-effect:non-scaling-stroke}
+.auto-fib-anchor{fill:#101824;stroke:#c5d0df;stroke-width:1;vector-effect:non-scaling-stroke}
+.auto-fib-label{fill:#a8b8cb;font:8px 'Segoe UI',Tahoma,sans-serif}
+.auto-fib-status{fill:#c4cfdd;font:600 8px 'Segoe UI',Tahoma,sans-serif}
+.auto-fib-anchor-label{fill:#9fb0c6;font:600 8px 'Segoe UI',Tahoma,sans-serif}
+</style>
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
@@ -2959,6 +2974,67 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    if(status)status.textContent=mode==='trend'?'ลากจากจุดแรกไปจุดที่สอง':mode==='horizontal'?'แตะราคาที่ต้องการ':'เลือกเครื่องมือ';
    renderDrawingOverlay();
   }
+
+  function renderAutoFibOverlay(svg,make,w,h){
+   if(SELECTED_ENGINE_VERSION!=='ARIS-2.0.0')return;
+   const fib=lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib;
+   if(!fib?.valid||!Number.isFinite(fib.start)||!Number.isFinite(fib.end))return;
+
+   const ext=Array.isArray(fib.extensions)?fib.extensions:[];
+   const extPrice=ratio=>{
+    const row=ext.find(q=>Math.abs(Number(q?.ratio)-ratio)<.001);
+    return Number(row?.price);
+   };
+   const raw=[
+    {label:'161.8%',price:extPrice(1.618)},
+    {label:'127.2%',price:extPrice(1.272)},
+    {label:'0%',price:Number(fib.end)},
+    ...(Array.isArray(fib.levels)?fib.levels.map(q=>({label:(Number(q.ratio)*100).toFixed(Number(q.ratio)===.5?0:1).replace('.0','')+'%',price:Number(q.price)})):[]),
+    {label:'100%',price:Number(fib.start)}
+   ];
+   const levels=raw.map(q=>({...q,y:state.candleSeries.priceToCoordinate(q.price)}))
+    .filter(q=>Number.isFinite(q.price)&&Number.isFinite(q.y)&&q.y>=-40&&q.y<=h+40)
+    .sort((a,b)=>a.y-b.y);
+   if(levels.length<2)return;
+
+   const sp=drawingScreenPoint({time:Number(fib.startTime),price:Number(fib.start)});
+   const ep=drawingScreenPoint({time:Number(fib.endTime),price:Number(fib.end)});
+   const plotRight=Math.max(40,w-62);
+   const anchorXs=[sp?.x,ep?.x].filter(Number.isFinite);
+   const bandLeft=anchorXs.length?Math.min(...anchorXs):0;
+   const x0=Math.max(0,Math.min(bandLeft,plotRight-28));
+   const bandWidth=Math.max(28,plotRight-x0);
+   const fills=['#6f9fd3','#76b995','#cfb96e','#cf9d6d','#c6889f','#a28bd0','#8398ca','#7187b8'];
+
+   for(let i=0;i<levels.length-1;i++){
+    const a=levels[i],b=levels[i+1],top=Math.min(a.y,b.y),height=Math.max(1,Math.abs(b.y-a.y));
+    svg.append(make('rect',{x:x0,y:top,width:bandWidth,height,fill:fills[i%fills.length],'fill-opacity':.075,class:'auto-fib-band'}));
+   }
+   for(const q of levels){
+    svg.append(make('line',{x1:x0,y1:q.y,x2:plotRight,y2:q.y,class:'auto-fib-line'}));
+    const tx=make('text',{x:plotRight-4,y:q.y-2,'text-anchor':'end',class:'auto-fib-label'});
+    tx.textContent=q.label+' · '+money(q.price);svg.append(tx);
+   }
+
+   if(sp&&ep){
+    svg.append(make('line',{x1:sp.x,y1:sp.y,x2:ep.x,y2:ep.y,class:'auto-fib-leg'}));
+    for(const [p,label] of [[sp,'Start'],[ep,'End']]){
+     if(p.x>=0&&p.x<=plotRight&&p.y>=0&&p.y<=h){
+      svg.append(make('circle',{cx:p.x,cy:p.y,r:3.2,class:'auto-fib-anchor'}));
+      const t=make('text',{x:Math.min(plotRight-4,p.x+5),y:Math.max(10,p.y-5),class:'auto-fib-anchor-label'});
+      t.textContent=label;svg.append(t);
+     }
+    }
+   }
+
+   const extension=Number(fib.extension),retracement=Number(fib.retracement);
+   const isExtension=Number.isFinite(extension)&&extension>1;
+   const metric=isExtension?'Ext '+(extension*100).toFixed(1)+'%':Number.isFinite(retracement)?'Retrace '+(retracement*100).toFixed(1)+'%':'Fib';
+   const zone=isExtension?(fib.extensionZone||''):(fib.retraceZone||'');
+   const status=make('text',{x:x0+5,y:12,class:'auto-fib-status'});
+   status.textContent='AUTO FIB · '+metric+(zone?' · '+zone:'');svg.append(status);
+  }
+
   function renderDrawingOverlay(){
    cancelAnimationFrame(drawingRenderFrame);
    drawingRenderFrame=requestAnimationFrame(()=>{
@@ -2967,6 +3043,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     while(svg.firstChild)svg.removeChild(svg.firstChild);
     const ns='http://www.w3.org/2000/svg';
     const make=(name,attrs={})=>{const el=document.createElementNS(ns,name);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,String(v));return el;};
+    renderAutoFibOverlay(svg,make,w,h);
     const visible=drawings.filter(drawingVisible);
     if(selectedDrawingId&&!visible.some(d=>d.id===selectedDrawingId)){selectedDrawingId=null;$('drawing-delete')&&( $('drawing-delete').disabled=true );}
     for(const d of visible){
@@ -4516,6 +4593,7 @@ function openReport(){
    }
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
    renderEvent(v);
+   renderDrawingOverlay();
    const profileNow=performance.now();
    if(v.signal||profileNow-state.lastProfileAt>=750){
     state.lastProfileAt=profileNow;
@@ -4869,7 +4947,7 @@ function openReport(){
 
   function makeChart(){
     const L=window.LightweightCharts;if(!L)throw new Error('โหลดไลบรารีกราฟไม่สำเร็จ');
-    const chart=L.createChart($('chart'),{autoSize:true,layout:{background:{type:L.ColorType.Solid,color:'#101824'},textColor:'#899bb4',fontFamily:'Segoe UI, Tahoma, sans-serif',fontSize:11,attributionLogo:true,panes:{separatorColor:'#243043',separatorHoverColor:'#3a4b63',enableResize:true}},grid:{vertLines:{color:'#1a2535'},horzLines:{color:'#1a2535'}},rightPriceScale:{borderColor:'#283449',scaleMargins:{top:.08,bottom:.06}},timeScale:{borderColor:'#283449',timeVisible:true,secondsVisible:false,rightOffset:5,barSpacing:9,tickMarkFormatter:t=>clockMs(t*1000).slice(0,5)},crosshair:{mode:L.CrosshairMode.Normal},localization:{locale:'en-US',timeFormatter:t=>new Date(t*1000).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}),priceFormatter:money}});
+    const chart=L.createChart($('chart'),{autoSize:true,layout:{background:{type:L.ColorType.Solid,color:'#101824'},textColor:'#899bb4',fontFamily:'Segoe UI, Tahoma, sans-serif',fontSize:9,attributionLogo:true,panes:{separatorColor:'#243043',separatorHoverColor:'#3a4b63',enableResize:true}},grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{borderColor:'#283449',scaleMargins:{top:.08,bottom:.06}},timeScale:{borderColor:'#283449',timeVisible:true,secondsVisible:false,rightOffset:5,barSpacing:9,tickMarkFormatter:t=>clockMs(t*1000).slice(0,5)},crosshair:{mode:L.CrosshairMode.Normal},localization:{locale:'en-US',timeFormatter:t=>new Date(t*1000).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}),priceFormatter:money}});
     state.chart=chart;
     state.candleSeries=chart.addSeries(L.CandlestickSeries,{upColor:'#44dfb5',downColor:'#ff708a',borderVisible:false,wickUpColor:'#44dfb5',wickDownColor:'#ff708a',priceFormat:{type:'price',precision:2,minMove:.01}});
     const opt={lineWidth:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false};
