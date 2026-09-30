@@ -756,19 +756,14 @@ main{padding-top:10px}
     <div class="main-signal-section signal-card-entry">
       <button type="button" id="expedite-five-toggle" class="expedite-five-button entry-request-button" aria-pressed="false" title="กดเพื่อขอสัญญาณด่วนภายใน 5 แท่ง">
         <strong id="expedite-five-label">จุดเข้า <small>(กดเพื่อขอสัญญาณด่วน)</small></strong>
-        <span id="expedite-five-status">พร้อม</span>
       </button>
       <div class="entry-top">
         <div class="signal-hero"><span class="direction-icon" id="direction-icon">—</span><span><strong id="signal-title">กำลังวิเคราะห์</strong></span></div>
       </div>
       <div class="strong-banner" id="strong-banner" hidden><span>สัญญาณใหม่</span><strong>พบจุดเข้าใหม่</strong></div>
       <div class="entry-watch">
-        <div class="entry-watch-head"><strong id="entry-state">รอข้อมูลตลาด</strong><small id="signal-updated">รอข้อมูลตลาด</small></div>
+        <div class="entry-watch-head"><strong id="entry-state">รอข้อมูลตลาด</strong></div>
         <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
-        <div class="entry-gate-detail" id="entry-gate-detail">
-          <div class="entry-gate-head"><span>ทำไมยังไม่เข้า</span><b id="entry-gate-status">รอข้อมูล</b></div>
-          <ul id="entry-gate-reasons"><li>กำลังอ่านเงื่อนไขจุดเข้า</li></ul>
-        </div>
         <p id="event-detail"></p>
       </div>
     </div>
@@ -4280,7 +4275,7 @@ function openReport(){
    $('signal-title').textContent=statusText;
    $('signal-description').textContent=(contextMode?'บริบท '+tf+' · ':'')+tfHumanText(v.reason);
    renderEntryGateDetails(v,preview,d);
-   $('signal-updated').textContent=clockMs((state.quote?.ts||0)*1000);
+   if($('signal-updated'))$('signal-updated').textContent=clockMs((state.quote?.ts||0)*1000);
    const banner=$('strong-banner');banner.hidden=!(freshSignal||(CFG.version==='ARIS-2.0.0'&&v.issuedSignal));
    if(banner){
     const [small,strong]=banner.children;
@@ -4338,10 +4333,9 @@ function openReport(){
    const row=expediteFindRequest(id);if(row)Object.assign(row,patch);persistExpediteHistory();
   }
   function expediteRender(){
-   const btn=$('expedite-five-toggle'),label=$('expedite-five-label'),status=$('expedite-five-status');if(!btn||!label||!status)return;
+   const btn=$('expedite-five-toggle'),label=$('expedite-five-label');if(!btn||!label)return;
    const e=state.expediteFive;
    btn.classList.remove('active','issued');
-   status.textContent='';
    if(!e?.active){
     btn.setAttribute('aria-pressed','false');
     label.innerHTML='จุดเข้า <small>(กดเพื่อขอสัญญาณด่วน)</small>';
