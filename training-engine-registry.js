@@ -34,7 +34,7 @@
       '<script>window.__TRAINING_VERSION='+JSON.stringify(v)+';<\/script>'+
       '<script src="'+escapeHtml(asset('training-engine-core.js','20261001-r3'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v2.js','20260930-r6'))+'"><\/script>'+ 
-      '<script src="'+escapeHtml(asset('v3.js','20261001-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v3.js','20261001-r2'))+'"><\/script>'+
       '</body></html>';
     document.body.append(frame);
 
