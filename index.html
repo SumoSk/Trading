@@ -2806,8 +2806,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 </script>
 <script src="v2.js?v=20260930-r6"></script>
 <script src="entry-score.js?v=20261001-r1"></script>
-<script src="audit-calibration.js?v=20261001-r1"></script>
-<script src="audit-engine.js?v=20261001-r1"></script>
+<script src="audit-calibration.js?v=20261001-r2"></script>
+<script src="audit-engine.js?v=20261001-r2"></script>
 <script>
 'use strict';
 (() => {
@@ -4144,7 +4144,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    if(!force&&Date.now()-lastPersist<5000)return;
    refreshTradeSummaries();
    globalThis.EntryScoreV1?.update?.(engine.signals);
-   globalThis.AuditEngineV1?.update?.(engine.signals);
+   globalThis.AuditEngineV2?.update?.(engine.signals);
    const savedAt=Date.now(),payload=engine.serialize();
    journalWrite(payload,savedAt).then(()=>{journalOK=true;journalLastSavedAt=savedAt;updateStorageStatus();})
     .catch(err=>{journalOK=false;console.warn('Journal write failed',err);updateStorageStatus();});
@@ -4195,12 +4195,12 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function trainingBundle(){
    refreshTradeSummaries();
    globalThis.EntryScoreV1?.update?.(engine.signals);
-   globalThis.AuditEngineV1?.update?.(engine.signals);
+   globalThis.AuditEngineV2?.update?.(engine.signals);
    const closed=engine.signals.filter(s=>['correct','incorrect'].includes(s.result));
-   const auditReport=globalThis.AuditEngineV1?.exportReport?.(engine.signals)||null;
+   const auditReport=globalThis.AuditEngineV2?.exportReport?.(engine.signals)||null;
    return {schema:DATASET_SCHEMA,journalSchema:JOURNAL_SCHEMA,timelinePolicy:{schema:'hybrid-v1',earlyUntilSec:120,earlyIntervalSec:15,lateIntervalSec:30,eventTriggered:true},exportedAt:new Date().toISOString(),symbol:SYMBOL,horizonMs:CFG.horizonMs,currentVersion:CFG.version,currentRevision:CFG.arisRevision||null,
     evaluationPolicy:{horizonMs:CFG.horizonMs,settlementToleranceMs:CFG.settlementToleranceMs,groupBy:['version','arisRevision','expediteFive.requested'],scoresAreWinProbabilities:false},
-    leakageRule:'Only dataset.entry (including entryQualityV1 and auditV1), candidate.input and watches[].input are valid entry-time derived inputs. dataset.timeline, candidate transitions, issuedAt, endedAt, cancellation reasons, path1m, context1m, v2Followup, outcome, result, review, summaryV3 and auditEvaluationV1 are post-entry observations/labels and must not be used as entry-time predictors.',
+    leakageRule:'Only dataset.entry (including entryQualityV1 and auditV2), candidate.input and watches[].input are valid entry-time derived inputs. dataset.timeline, candidate transitions, issuedAt, endedAt, cancellation reasons, path1m, context1m, v2Followup, outcome, result, review, summaryV3 and auditEvaluationV2 are post-entry observations/labels and must not be used as entry-time predictors.',
     config:CFG,versionProfile:VERSION_PROFILE,versionSettings,
     signals:engine.signals.map(sig=>({...sig,journalSummary:tradeDiagnostics(sig)})),
     auditReport,
@@ -4214,18 +4214,18 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function exportTrainingCsv(){
    refreshTradeSummaries();
    globalThis.EntryScoreV1?.update?.(engine.signals);
-   globalThis.AuditEngineV1?.update?.(engine.signals);
+   globalThis.AuditEngineV2?.update?.(engine.signals);
    const cols=['id','version','arisRevision','journalSchema','entryTime','direction','type','entryPrice','entryQualityScore','auditScore','auditConfidence','auditGrade','auditBand','v2State','v2Playbook','entryEvidence','fibRetracement','fibExtension','fibZone','rangePosition','trend','momentum','flow','roomAtr','timelineCount','result','exitPrice','directionalMoveAtr','mfeAtr','maeAtr','summaryHeadline','weaknessTags','strengthTags','auditPenalties','auditRisks','reviewTags'];
    const rows=engine.signals.map(sig=>{const e=sig.dataset?.entry||{},o=sig.dataset?.outcome||{},d=tradeDiagnostics(sig),fib=e.v2Fib||{};return {
     id:sig.id,version:sig.version,arisRevision:e.arisRevision||'',journalSchema:sig.dataset?.journalSchema||'',entryTime:new Date(sig.entryTime).toISOString(),
     direction:sig.direction,type:sig.type,entryPrice:sig.entryPrice,
-    entryQualityScore:e.entryQualityV1?.score??'',auditScore:e.auditV1?.score??'',auditConfidence:e.auditV1?.confidence??'',auditGrade:e.auditV1?.grade??'',auditBand:e.auditV1?.calibrationBand??'',
+    entryQualityScore:e.entryQualityV1?.score??'',auditScore:e.auditV2?.score??'',auditConfidence:e.auditV2?.confidence??'',auditGrade:e.auditV2?.grade??'',auditBand:e.auditV2?.calibrationBand??'',
     v2State:e.v2State||'',v2Playbook:e.v2Playbook||'',entryEvidence:e.v2EntryEvidence??e.evidenceScore??'',
     fibRetracement:fib.retracement??'',fibExtension:fib.extension??'',fibZone:fib.extension>1?fib.extensionZone||'':fib.retraceZone||'',rangePosition:e.rangePosition??'',
     trend:e.trend??sig.features?.trend??'',momentum:e.momentum??sig.features?.momentum??'',flow:e.flow??sig.features?.flow??'',roomAtr:d.metrics.roomAtr??'',
     timelineCount:d.metrics.timelineCount,result:sig.result,exitPrice:sig.exitPrice??'',directionalMoveAtr:o.directionalMoveAtr??'',mfeAtr:o.mfeAtr??d.metrics.mfeAtr??'',maeAtr:o.maeAtr??d.metrics.maeAtr??'',
     summaryHeadline:d.headline,weaknessTags:d.weaknessTags,strengthTags:d.strengthTags,
-    auditPenalties:(e.auditV1?.penalties||[]).map(x=>x.code),auditRisks:e.auditV1?.risks||[],reviewTags:sig.dataset?.review?.tags||[]};
+    auditPenalties:(e.auditV2?.criticalAdjustments||[]).map(x=>x.code),auditRisks:(e.auditV2?.riskFlags||[]).map(x=>x.code),reviewTags:sig.dataset?.review?.tags||[]};
    });
    const csv=[cols.map(csvValue).join(','),...rows.map(row=>cols.map(k=>csvValue(row[k])).join(','))].join('\n');
    downloadText('\ufeff'+csv,'BTC-T10-training-'+Date.now()+'.csv','text/csv;charset=utf-8');
@@ -4577,7 +4577,7 @@ function openReport(){
   function renderEvent(v){
    const tf=state.analysisTf,tfLabel=TF_LABELS[tf]||tf,contextMode=tf!=='1m';
    globalThis.EntryScoreV1?.update?.(engine.signals);
-   globalThis.AuditEngineV1?.update?.(engine.signals);
+   globalThis.AuditEngineV2?.update?.(engine.signals);
    const e=v.event,modelD=e?.d||0,freshSignal=v.status==='new',preview=e?(CFG.version==='ARIS-2.0.0'?{direction:modelD>0?'HIGH':'LOW',reason:v.reason}:selectOutputDecision(e.type,modelD,v.f,v.phase)):null;
    const watchD=v.watch?.direction==='HIGH'?1:v.watch?.direction==='LOW'?-1:0,continuousD=state.continuousView?.direction==='HIGH'?1:state.continuousView?.direction==='LOW'?-1:0;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:watchD||continuousD;
