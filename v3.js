@@ -249,21 +249,21 @@ function shockLabel(s){return ({
 function marketDescription(r){
  const d=sideThai(r.dir);
  return ({
- SHOCK_UNRESOLVED:'ราคาและปริมาณซื้อขายขยายผิดปกติ แต่ 3.0 ยังไม่ถือว่าเป็นจุดเข้า ต้องรอดูว่าแรงนี้ยืนราคาได้ ถูกดูดซับ หมดแรง หรือถูกตีกลับ',
- BREAKOUT_ATTEMPT:'ราคาพ้นขอบเดิมแล้ว แต่การยอมรับราคายังไม่ครบ จึงยังแยกไม่ได้ว่าเป็นการทะลุกรอบจริง หรือเป็นการกวาดราคาแล้วกลับเข้ากรอบ',
- BREAKOUT_ACCEPTED:'ราคาพ้นกรอบและแท่งเริ่มยอมรับราคานอกกรอบแล้ว ขั้นต่อไปคือเช็กตำแหน่ง พื้นที่ก่อนชนแนว และแรงซื้อขายสดก่อนเข้า',
- EXHAUSTION:'ราคายืดจากฐานและพฤติกรรมแท่งเริ่มชะลอหรือถูกดูดซับ จึงหยุดไล่ราคาและเฝ้าดูว่าจะสร้างฐานใหม่หรือกลับตัว',
- REVERSAL_DEVELOPING:'โครงสร้างเดิมเริ่มเสียและมีพฤติกรรมสวน แต่ยังต้องให้โครงสร้างแตกจริงและแรงซื้อขายระยะสั้นยืนยันฝั่งใหม่ก่อน',
- COMPRESSION:'ช่วงแท่งล่าสุดหดตัวเมื่อเทียบกับก่อนหน้า ตลาดกำลังสะสมแรง จึงรอการขยายตัวที่มีการยอมรับราคามากกว่าคาดเดาทิศ',
- PULLBACK:'โครงสร้างหลักยังเอียง'+d+' แต่ราคากำลังย่อกลับฐาน ระบบรอให้การย่อจบและกลับมายืนฐานก่อนพิจารณาไม้ใหม่',
- TREND_ADVANCE:'จุดสวิงและประสิทธิภาพการเดินราคายังรองรับฝั่ง'+d+' แต่ 3.0 จะไม่ไล่ทุกแท่ง ต้องรอตำแหน่งหรือฐานใหม่',
- RANGE_EDGE:'ราคาอยู่ใกล้ขอบกรอบ แต่ 3.0 จะไม่สวนจากขอบกรอบอัตโนมัติ ต้องเห็นการยอมรับหรือการปฏิเสธราคา พร้อมโครงสร้างที่ชัด',
- RANGE_CHOP:'ราคาเดินสลับและประสิทธิภาพการเดินราคาต่ำ จุดนี้เสี่ยงถูกหลอกทั้งสองฝั่ง ระบบจึงเน้นเฝ้าดูมากกว่าออกไม้',
- TRANSITION:'องค์ประกอบของตลาดยังไม่เรียงเป็นเรื่องเดียวกันชัด ระบบกำลังอ่านจุดสวิง แท่งเทียน กรอบเวลาใหญ่ และแรงซื้อขายต่อ'
+ SHOCK_UNRESOLVED:'มีแรงซื้อขายเข้ามาแรงกว่าปกติ แต่ยังบอกไม่ได้ว่าจะไปต่อหรือโดนตีกลับ ตอนนี้รอให้ราคายืนฝั่งเดิมได้ก่อน',
+ BREAKOUT_ATTEMPT:'ราคาเพิ่งออกจากกรอบ แต่ยังยืนไม่ชัด จุดนี้ยังมีโอกาสเป็นเบรกหลอก จึงยังไม่รีบตาม',
+ BREAKOUT_ACCEPTED:'ราคาออกจากกรอบและเริ่มยืนได้แล้ว ตอนนี้ดูต่อว่ามีพื้นที่ไปต่อพอไหม และแรงซื้อขายยังหนุนอยู่หรือไม่',
+ EXHAUSTION:'ราคาเดินมาค่อนข้างไกลและแรงเริ่มช้าลง จุดนี้ไม่ไล่ราคา รอดูว่าจะพักสร้างฐานหรือเริ่มกลับตัว',
+ REVERSAL_DEVELOPING:'โครงสร้างเดิมเริ่มเสียและมีแรงสวนกลับ แต่ยังต้องเห็นฝั่งใหม่ยืนราคาได้ชัดกว่านี้',
+ COMPRESSION:'ช่วงแท่งเริ่มแคบและราคาอัดตัวอยู่ ตลาดกำลังเลือกทาง รอให้หลุดกรอบแล้วดูว่ายืนได้จริงหรือไม่',
+ PULLBACK:'ภาพหลักยังเอนฝั่ง'+d+' แต่ราคากำลังย่อ ตอนนี้รอให้การย่อจบและกลับมายืนฐานก่อน',
+ TREND_ADVANCE:'แนวโน้มยังเดินฝั่ง'+d+' แต่ราคาไม่ได้อยู่ในจุดได้เปรียบสำหรับไล่ตาม รอฐานหรือจังหวะใหม่ก่อน',
+ RANGE_EDGE:'ราคาอยู่ใกล้ขอบกรอบ จุดนี้ยังไม่สวนทันที ต้องดูว่าขอบกรอบรับอยู่หรือถูกทะลุจริง',
+ RANGE_CHOP:'ราคาสลับขึ้นลงในกรอบและยังไม่มีฝั่งคุมชัด จุดนี้เสี่ยงโดนหลอกทั้ง HIGH และ LOW จึงเน้นรอ',
+ TRANSITION:'ตลาดกำลังเปลี่ยนจังหวะ ภาพจากโครงสร้าง แท่งเทียน และแรงซื้อขายยังไม่ตรงกันพอ'
  })[r.state]||'กำลังอ่านตลาด';
 }
 
-/* ---------- Shock / Episode ---------- */
+/* ---------- Shock / Episode ---------- *//* ---------- Shock / Episode ---------- */
 function shockSnapshot(reader,x,existing){
  if(!existing)return null;
  const s=existing,a=reader.atr,b=reader.behavior,d=s.d,age=x.ts-s.startedAt,flow=d*(x.flow||0),progress=d*(x.price-s.mid)/a;
@@ -482,31 +482,34 @@ function entryBundle(reader,thesis,z,x,ep){
 }
 function story(reader,ep,thesis,bundle){
  const e=reader.evidence,d=thesis.d||reader.dir,supports=[],warnings=[],g=bundle?.gates||{};
- if(g.structure?.state==='PASS')supports.push('Structure: '+g.structure.summary);
- else if(g.structure)warnings.push('Structure: '+g.structure.reason);
- if(g.location?.state==='PASS')supports.push('Location: room '+(finite(g.location.room)?g.location.room.toFixed(2):'∞')+' ATR · extension '+g.location.extension.toFixed(2)+' ATR');
- else if(g.location)warnings.push('Location: '+g.location.reason);
- if(g.behavior?.state==='PASS')supports.push('Behavior: '+unique(g.behavior.tags).join(', '));
- else if(g.behavior)warnings.push('Behavior: '+g.behavior.reason);
- if(g.micro?.state==='PASS')supports.push('Micro: '+g.micro.reason);
- else if(g.micro)warnings.push('Micro: '+g.micro.reason);
- const fib=reader.fib;if(fib?.valid)supports.push('Fib: '+(fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone)+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
- else warnings.push('Fib: '+(fib?.reason||'ยังไม่มีขาสวิงที่ยืนยัน'));
+ if(g.structure?.state==='PASS')supports.push('โครงสร้างราคา: '+g.structure.summary);
+ else if(g.structure)warnings.push('โครงสร้างราคา: '+g.structure.reason);
+ if(g.location?.state==='PASS')supports.push('ตำแหน่งราคา: มีพื้นที่ไปต่อ '+(finite(g.location.room)?g.location.room.toFixed(2):'∞')+' ATR · ห่างฐาน '+g.location.extension.toFixed(2)+' ATR');
+ else if(g.location)warnings.push('ตำแหน่งราคา: '+g.location.reason);
+ if(g.behavior?.state==='PASS')supports.push('พฤติกรรมแท่ง: '+(unique(g.behavior.tags).join(', ')||g.behavior.reason));
+ else if(g.behavior)warnings.push('พฤติกรรมแท่ง: '+g.behavior.reason);
+ if(g.micro?.state==='PASS')supports.push('แรงซื้อขายระยะสั้น: '+g.micro.reason);
+ else if(g.micro)warnings.push('แรงซื้อขายระยะสั้น: '+g.micro.reason);
+ const fib=reader.fib;
+ if(fib?.valid)supports.push('ฟิโบนัชชี: '+(fib.extension>1?'ราคาอยู่ช่วงต่อขา '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'ย่อกลับ '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone)+(fib.confluence?' · มีแนวสำคัญซ้อนกัน':''));
+ else warnings.push('ฟิโบนัชชี: '+(fib?.reason||'ยังไม่มีขาสวิงที่ชัดพอ'));
  const m5=reader.htf.m5,m15=reader.htf.m15;
- if(m5.available)(m5.dir===d?supports:warnings).push('5m '+(m5.dir===d?'หนุน':'เอนสวน/กลาง')+' · '+m5.structure.highTag+'/'+m5.structure.lowTag);
- if(m15.available)(m15.dir===d?supports:warnings).push('15m '+(m15.dir===d?'หนุน':'เอนสวน/กลาง')+' · '+m15.structure.highTag+'/'+m15.structure.lowTag);
+ if(m5.available)(m5.dir===d?supports:warnings).push('กรอบ 5 นาที: '+(m5.dir===d?'หนุนทางเดียวกัน':'ยังไม่หนุนทางเดียวกัน')+' · '+m5.structure.highTag+'/'+m5.structure.lowTag);
+ if(m15.available)(m15.dir===d?supports:warnings).push('กรอบ 15 นาที: '+(m15.dir===d?'หนุนทางเดียวกัน':'ยังไม่หนุนทางเดียวกัน')+' · '+m15.structure.highTag+'/'+m15.structure.lowTag);
  const gateText=bundle?.gates?Object.entries(bundle.gates).map(([k,v])=>k.toUpperCase()+' '+v.state).join(' · '):'Observe';
  const sameLeg=ep&&(ep.issuedLegKeys||[]).includes(ep.legKey);
- const summary=marketLabel(reader.state)+' · '+thesis.why+(sameLeg?' · เหตุการณ์ตลาดนี้ออกไม้ในขาปัจจุบันแล้ว':'');
+ const summary=marketLabel(reader.state)+' · '+thesis.why+(sameLeg?' · ขานี้มีจุดเข้าไปแล้ว รอฐานหรือขาใหม่':'');
+ const episodeDescription=ep?('ภาพยังต่อเนื่องจากเหตุการณ์ตลาดเดิม ฝั่ง'+sideThai(ep.d)+(sameLeg?' · ขานี้ใช้จุดเข้าไปแล้ว ต้องรอฐานหรือขาใหม่':' · ถ้าโครงสร้างเปลี่ยน ระบบจะเริ่มอ่านเหตุการณ์ใหม่')):'กำลังสร้างภาพตลาด';
  return {schema:'aris-v3-story-v3',state:reader.state,stateLabel:marketLabel(reader.state),stateDescription:marketDescription(reader),direction:dirLabel(d||reader.evidence.d),
   highEvidence:e.high,lowEvidence:e.low,evidenceParts:e.parts,episodeId:ep?.id||null,episodeFamily:ep?.family||null,episodeDirection:dirLabel(ep?.d||0),
-  structuralLegKey:ep?.legKey||null,legIndex:ep?.legIndex||0,episodeDescription:ep?'Episode '+ep.family+' · '+sideThai(ep.d)+' · ระบบถือเป็นเรื่องเดียวกันจนกว่าโครงสร้างจะรีเซ็ต ไม้ใหม่ต้องมีขาโครงสร้างหรือฐานใหม่':'กำลังสร้างเหตุการณ์ตลาด',
+  structuralLegKey:ep?.legKey||null,legIndex:ep?.legIndex||0,episodeDescription,
   shockState:ep?.shock?.state||null,shockLabel:shockLabel(ep?.shock?.state),shockReason:ep?.shock?.why||null,structure:reader.structure,behavior:reader.behavior,htf:reader.htf,fib,
   thesis,playbook:thesis.playbook,playbookLabel:playbookLabel(thesis.playbook),entryState:bundle?.state||'OBSERVE',gatePassed:bundle?.passed||0,gateTotal:bundle?.total||4,gates:g,
   blocked:unique([...(bundle?.blocked||[]),...(bundle?.developing||[])]),supports:unique(supports).slice(0,10),warnings:unique(warnings).slice(0,10),
   trigger:thesis.trigger,invalidation:thesis.invalidation,nextPlan:thesis.nextPlan,summary,gateText,sameLeg};
 }
-function invalidationLevel(reader,d,thesis){
+
+function invalidationLevel(reader,d,thesis){function invalidationLevel(reader,d,thesis){
  const s=reader.structure,a=reader.atr;
  if(thesis.playbook==='confirmed_reversal')return d>0?(s.lastLow?.price??reader.price-a):(s.lastHigh?.price??reader.price+a);
  return d>0?(s.bullProtected??Math.min(...reader._f.b.slice(-5).map(q=>q.low))):(s.bearProtected??Math.max(...reader._f.b.slice(-5).map(q=>q.high)));
