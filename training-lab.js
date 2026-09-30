@@ -4,8 +4,11 @@
   const ENGINE_BLOB_SHA='8fe96438fc1b73b7440372baba44edc0552625c5';
   const DAY=86_400_000;
   const MINUTE=60_000;
+  const TRAINING_VERSION_STORE='btc-training-engine-version-v1';
+  const TRAINING_ENGINE_BUILD='training-registry-20261001-r1';
   let activeController=null;
   let selectedPreset=30;
+  let selectedTrainingVersion='ARIS-2.0.0';
   let latestSession=null;
 
   const byId=id=>document.getElementById(id);
@@ -114,6 +117,84 @@
       .analytics-note{margin-top:7px!important;color:#748d8e!important}.analytics-empty{font-size:7px;color:#72878a}
       @media(max-width:760px){.train-grid{grid-template-columns:1fr}.train-fields{grid-template-columns:1fr 1fr}.train-fields .train-field:last-child{grid-column:1/-1}.train-preview{grid-template-columns:1fr 1fr}.feature-grid{grid-template-columns:1fr}.replay-kpis{grid-template-columns:repeat(3,1fr)}.analytics-grid{grid-template-columns:repeat(2,1fr)}.analytics-panels{grid-template-columns:1fr}}
       @media(max-width:560px){.training-lab-open{height:28px;padding:0 7px;font-size:8px}#training-lab-dialog{width:calc(100vw - 8px);max-height:96vh}.training-lab-shell{max-height:96vh}.training-lab-head{padding:11px}.training-lab-body{padding:9px}.train-card{padding:9px}.quality-stats{grid-template-columns:1fr 1fr}}
+
+      /* 2026 Training Lab redesign: action-first, technical detail hidden by default */
+      #training-lab-dialog{width:min(900px,calc(100vw - 20px));border-color:#29384c;border-radius:20px;background:#090f17}
+      .training-lab-shell{grid-template-rows:auto 1fr}
+      .training-lab-head{align-items:center;padding:17px 20px;background:#0c141f;border-bottom-color:#1e2b3b}
+      .training-lab-head h2{margin:0;font-size:19px;letter-spacing:-.2px;color:#eef4fb}
+      .training-kicker{display:block!important;margin-bottom:3px;font-size:7px!important;letter-spacing:1.3px!important;color:#8878cb!important}
+      .training-guide-open{min-height:34px;padding:0 13px;border-color:#3a4560;background:#111a27;color:#bdc9d9;border-radius:9px}
+      .training-lab-close{width:34px;height:34px;border-radius:9px}
+      .training-lab-body{padding:16px 18px 22px;gap:12px}
+      .train-card{padding:15px;border:1px solid #202f40;border-radius:15px;background:#0d1621}
+      .train-card h3{margin:0;font-size:13px;font-weight:650;color:#e0e9f4}
+      .train-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+      .train-section-head>div{min-width:0}
+      .train-section-sub{display:block;margin-top:2px;font-size:7px;color:#6e8299}
+      .train-status-badge{padding:4px 8px;font-size:7px;border-radius:999px}
+      .training-start-card{background:linear-gradient(145deg,#11182a 0%,#0d1721 58%,#0d191d 100%);border-color:#343658}
+      .training-engine-block{display:grid;gap:7px}
+      .training-engine-label{font-size:8px;color:#8394aa}
+      .train-version-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+      .train-version-btn{min-height:42px;border:1px solid #293a4e;border-radius:10px;background:#0b141f;color:#899bb0;font-size:9px;font-weight:650}
+      .train-version-btn.active{border-color:#715fc4;background:#262044;color:#eeeaff;box-shadow:inset 0 0 0 1px #715fc433}
+      .train-version-btn small{display:block;margin-top:1px;font-size:6px;font-weight:500;color:#71849c}
+      .train-version-btn.active small{color:#a99ed7}
+      .train-range-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:13px}
+      .train-presets{margin:0}
+      .train-presets button{min-height:32px;padding:0 12px;border-radius:9px;font-size:8px}
+      .train-range-summary{margin-left:auto;font-size:7px;color:#71849b}.train-range-summary b{font-size:10px;color:#c9d6e6}
+      .train-more{margin-top:10px;border-top:1px solid #1d2a39;padding-top:8px}
+      .train-more summary{cursor:pointer;list-style:none;color:#7f91a8;font-size:8px}.train-more summary::-webkit-details-marker{display:none}
+      .train-more[open] summary{margin-bottom:9px;color:#a9b8ca}
+      .train-fields{grid-template-columns:1fr 1fr 100px}
+      .train-field input{height:36px;border-radius:9px;font-size:10px}
+      .train-load-actions{margin-top:13px}
+      .train-primary{min-height:40px;padding:0 16px;border-radius:10px;border-color:#7763cf;background:#6a57be;color:#fff;font-size:9px}
+      .train-primary:hover{background:#7764cc}
+      .train-secondary{min-height:38px;border-radius:9px}
+      .train-progress-wrap{margin-top:10px}.train-progress-line{height:6px;border:0;background:#162233}.train-progress-line i{background:linear-gradient(90deg,#7a65cf,#55a697)}
+      .technical-meta{display:none!important}
+      .quality-card{background:#0c1717;border-color:#243b3a}
+      .quality-card[hidden]{display:none!important}
+      .quality-hero{justify-content:flex-start}.quality-grade{width:38px;height:38px;border-radius:10px;font-size:18px}
+      .quality-stats{grid-template-columns:repeat(2,minmax(0,1fr));max-width:360px}
+      .quality-stat:nth-child(n+3){display:none}
+      .quality-details{margin-top:8px;border-top:1px solid #1c302f;padding-top:7px}
+      .quality-details summary{font-size:7px;color:#728b89;cursor:pointer}
+      .session-card{background:#0b141e}
+      .session-list{gap:6px}.session-row{padding:9px 10px;border-radius:10px;background:#0a121c;border-color:#1f3042}
+      .session-row strong{font-size:8.5px}.session-row small{font-size:6.7px;line-height:1.45}
+      .session-row button{min-height:30px;border-radius:8px}
+      .replay-card{background:#101322;border-color:#343450}
+      .replay-session{margin-top:0;padding:9px 10px;border-radius:10px;background:#0a111c;border-color:#272f45;font-size:7px}
+      .replay-controls{margin-top:10px}.replay-controls select{height:38px;border-radius:9px}
+      .replay-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+      .replay-kpi{padding:8px;border-radius:9px;background:#0a121c;border-color:#202e40}
+      .replay-kpi span{font-size:6px}.replay-kpi b{font-size:12px}
+      .replay-kpi.optional-kpi{display:none}
+      .replay-result{border-radius:10px}
+      .analytics-card{background:#0c1717;border-color:#24413d}
+      .analytics-actions{margin:0}
+      .analytics-grid{margin-top:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
+      .analytics-kpi{padding:9px;border-radius:9px}.analytics-kpi:nth-child(3){display:none}
+      .analytics-panels-wrap{margin-top:9px;border-top:1px solid #1d3230;padding-top:8px}
+      .analytics-panels-wrap summary{cursor:pointer;font-size:7px;color:#718e8a}
+      .analytics-panels{margin-top:8px}
+      @media(max-width:760px){
+        #training-lab-dialog{width:calc(100vw - 10px);border-radius:14px}
+        .training-lab-head{padding:13px 12px}.training-lab-body{padding:10px 10px 16px}
+        .train-version-grid{grid-template-columns:repeat(2,1fr)}
+        .train-fields{grid-template-columns:1fr}.train-fields .train-field:last-child{grid-column:auto}
+        .train-range-summary{width:100%;margin-left:0}
+        .analytics-grid{grid-template-columns:repeat(2,1fr)}
+      }
+      @media(max-width:430px){
+        .training-lab-head h2{font-size:16px}.training-guide-open{padding:0 9px;font-size:7px}
+        .train-card{padding:12px}.train-version-btn{min-height:40px}
+        .replay-kpis{grid-template-columns:repeat(2,1fr)}
+      }
     `;
     document.head.append(style);
   }
@@ -125,65 +206,71 @@
     dialog.innerHTML=`
       <div class="training-lab-shell">
         <header class="training-lab-head">
-          <div><h2>ARIS TRAINING LAB</h2></div>
+          <div><span class="training-kicker">HISTORICAL TRAINING</span><h2>Training Lab</h2></div>
           <div class="training-head-actions">
-            <button type="button" class="training-guide-open" id="training-guide-open">คู่มือการเทรน</button>
+            <button type="button" class="training-guide-open" id="training-guide-open">คู่มือ</button>
             <button type="button" class="training-lab-close" id="training-lab-close">×</button>
           </div>
         </header>
+
         <div class="training-lab-body">
-          <div class="train-grid">
-            <section class="train-card">
-              <h3>1 · ตั้งค่าชุดข้อมูล</h3>
+          <section class="train-card training-start-card">
+            <div class="train-section-head">
+              <div><h3>ตั้งค่าการเทรน</h3><span class="train-section-sub">เลือกเวอร์ชันและช่วงข้อมูล</span></div>
+              <span class="train-status-badge" id="train-load-status">พร้อม</span>
+            </div>
+
+            <div class="training-engine-block">
+              <span class="training-engine-label">เวอร์ชันที่ใช้เทรน</span>
+              <div class="train-version-grid" id="train-version-grid">
+                <button type="button" class="train-version-btn" data-train-engine="6.6.0">V6.6<small>Legacy</small></button>
+                <button type="button" class="train-version-btn" data-train-engine="7.2.0">V7.2<small>Market Phase</small></button>
+                <button type="button" class="train-version-btn" data-train-engine="ARIS-1.2.0">ARIS 1.2<small>ARIS V1</small></button>
+                <button type="button" class="train-version-btn active" data-train-engine="ARIS-2.0.0">ARIS 2.0<small>Current</small></button>
+              </div>
+            </div>
+
+            <div class="train-range-row">
               <div class="train-presets">
                 <button type="button" data-train-days="7">7 วัน</button>
                 <button type="button" data-train-days="30" class="active">30 วัน</button>
                 <button type="button" data-train-days="90">90 วัน</button>
                 <button type="button" data-train-days="custom">กำหนดเอง</button>
               </div>
-              <div class="train-fields">
-                <label class="train-field"><span>เริ่มช่วงทดสอบ</span><input id="train-start" type="datetime-local"></label>
-                <label class="train-field"><span>สิ้นสุดช่วงทดสอบ</span><input id="train-end" type="datetime-local"></label>
-                <label class="train-field"><span>Warm-up (แท่ง)</span><input id="train-warmup" type="number" min="100" max="5000" step="100" value="500"></label>
-              </div>
-              <div class="train-preview">
-                <div class="train-kpi"><span>Test bars</span><b id="train-preview-bars">—</b></div>
-                <div class="train-kpi"><span>รวม Warm-up</span><b id="train-preview-total">—</b></div>
-                <div class="train-kpi"><span>ประมาณ Requests</span><b id="train-preview-requests">—</b></div>
-                <div class="train-kpi"><span>ขนาดโดยประมาณ</span><b id="train-preview-size">—</b></div>
-              </div>
-              <div class="train-load-actions">
-                <button type="button" class="train-primary" id="train-load">โหลดข้อมูลย้อนหลัง</button>
-                <button type="button" class="train-secondary train-danger" id="train-cancel" hidden>ยกเลิกโหลด</button>
-                <span class="train-status-badge" id="train-load-status">ยังไม่ได้โหลด</span>
-              </div>
-              <div class="train-progress-wrap" id="train-progress-wrap">
-                <div class="train-progress-line"><i id="train-progress-bar"></i></div>
-                <div class="train-progress-text"><span id="train-progress-left">0 / 0 bars</span><span id="train-progress-right">0%</span></div>
-              </div>
-            </section>
+              <div class="train-range-summary">ประมาณ <b id="train-preview-bars">—</b> แท่ง</div>
+            </div>
 
-            <section class="train-card">
-              <h3>2 · แหล่งข้อมูลและ Storage</h3>
-              <div class="train-data-source">
-                <div class="train-data-row"><span>Source</span><b>Binance Futures REST</b></div>
-                <div class="train-data-row"><span>Symbol / TF</span><b>BTCUSDT · 1m</b></div>
-                <div class="train-data-row"><span>Training DB</span><b>btc-training-lab-v1</b></div>
-                <div class="train-data-row"><span>Live Journal</span><b>แยกฐาน · ไม่เขียนปน</b></div>
-                <div class="train-data-row"><span>Engine snapshot</span><b id="train-engine-meta">ARIS 2.0</b></div>
-                <div class="train-data-row"><span>Audit</span><b id="train-audit-meta">Audit V2</b></div>
-                <div class="train-data-row"><span>Browser storage</span><b id="train-storage-meta">กำลังตรวจ</b></div>
+            <details class="train-more" id="train-range-details">
+              <summary>ช่วงเวลา / Warm-up</summary>
+              <div class="train-fields">
+                <label class="train-field"><span>เริ่ม</span><input id="train-start" type="datetime-local"></label>
+                <label class="train-field"><span>สิ้นสุด</span><input id="train-end" type="datetime-local"></label>
+                <label class="train-field"><span>Warm-up</span><input id="train-warmup" type="number" min="100" max="5000" step="100" value="500"></label>
               </div>
-            </section>
+            </details>
+            <span id="train-preview-total" hidden></span><span id="train-preview-requests" hidden></span><span id="train-preview-size" hidden></span>
+
+            <div class="train-load-actions">
+              <button type="button" class="train-primary" id="train-load">โหลดข้อมูล</button>
+              <button type="button" class="train-secondary train-danger" id="train-cancel" hidden>ยกเลิก</button>
+            </div>
+            <div class="train-progress-wrap" id="train-progress-wrap">
+              <div class="train-progress-line"><i id="train-progress-bar"></i></div>
+              <div class="train-progress-text"><span id="train-progress-left">0 / 0 bars</span><span id="train-progress-right">0%</span></div>
+            </div>
+          </section>
+
+          <div class="technical-meta" hidden>
+            <b id="train-engine-meta"></b><b id="train-audit-meta"></b><b id="train-storage-meta"></b>
           </div>
 
-          <section class="train-card">
-            <h3>3 · Data Quality</h3>
+          <section class="train-card quality-card" id="train-quality-card" hidden>
+            <div class="train-section-head"><div><h3>คุณภาพข้อมูล</h3></div></div>
             <div id="train-quality-empty"></div>
             <div id="train-quality-result" hidden>
               <div class="quality-hero">
                 <div class="quality-grade" id="train-quality-grade">—</div>
-                <div class="quality-copy"><b id="train-quality-title">Data Quality</b><span id="train-quality-note"></span></div>
+                <div class="quality-copy"><b id="train-quality-title">Data Quality</b><span id="train-quality-note" hidden></span></div>
               </div>
               <div class="quality-stats">
                 <div class="quality-stat"><span>Loaded</span><b id="train-quality-loaded">—</b></div>
@@ -191,64 +278,69 @@
                 <div class="quality-stat"><span>Duplicate</span><b id="train-quality-duplicate">—</b></div>
                 <div class="quality-stat"><span>Invalid OHLC</span><b id="train-quality-invalid">—</b></div>
               </div>
-              <div class="feature-grid" id="train-feature-grid"></div>
+              <details class="quality-details"><summary>รายละเอียดข้อมูล</summary><div class="feature-grid" id="train-feature-grid"></div></details>
             </div>
           </section>
 
-          <section class="train-card">
-            <h3>4 · Training Sessions ล่าสุด</h3>
-            <div class="session-list" id="training-session-list"><div class="session-row"><div><strong>กำลังอ่าน Training DB</strong></div></div></div>
+          <section class="train-card session-card">
+            <div class="train-section-head"><div><h3>ชุดข้อมูลของฉัน</h3></div></div>
+            <div class="session-list" id="training-session-list"><div class="session-row"><div><strong>กำลังโหลด</strong></div></div></div>
           </section>
 
           <section class="train-card replay-card">
-            <div class="replay-head">
-              <div><h3>5 · Phase 2 · Historical Replay Engine</h3></div>
+            <div class="train-section-head">
+              <div><h3>Replay</h3><span class="train-section-sub">จำลองสัญญาณจากข้อมูลย้อนหลัง</span></div>
+              <span class="train-status-badge" id="train-replay-status">รอชุดข้อมูล</span>
             </div>
-            <div class="replay-session" id="train-replay-session"><b>ยังไม่ได้เลือก Session</b></div>
+            <div class="replay-session" id="train-replay-session"><b>ยังไม่ได้เลือกชุดข้อมูล</b></div>
             <div class="replay-controls">
-              <select id="train-replay-speed" aria-label="ความเร็ว Replay"><option value="fast">FAST</option><option value="balanced">BALANCED</option><option value="safe">SAFE</option></select>
+              <select id="train-replay-speed" aria-label="ความเร็ว Replay"><option value="fast">เร็ว</option><option value="balanced">กลาง</option><option value="safe">ช้า</option></select>
               <button type="button" class="train-primary" id="train-replay-start" disabled>เริ่ม Replay</button>
-              <button type="button" class="train-secondary" id="train-replay-pause" disabled>Pause</button>
-              <button type="button" class="train-secondary" id="train-replay-resume" disabled>Resume</button>
-              <button type="button" class="train-secondary train-danger" id="train-replay-stop" disabled>Stop</button>
-              <span class="train-status-badge" id="train-replay-status">รอ Session</span>
+              <button type="button" class="train-secondary" id="train-replay-pause" hidden>Pause</button>
+              <button type="button" class="train-secondary" id="train-replay-resume" hidden>Resume</button>
+              <button type="button" class="train-secondary train-danger" id="train-replay-stop" hidden>Stop</button>
             </div>
             <div class="replay-progress">
               <div class="replay-progress-line"><i id="train-replay-progress-bar"></i></div>
-              <div class="replay-progress-meta"><span id="train-replay-progress-left">0 / 0 bars</span><span id="train-replay-clock">Replay clock —</span><span id="train-replay-progress-right">0%</span></div>
+              <div class="replay-progress-meta"><span id="train-replay-progress-left">0 / 0 bars</span><span id="train-replay-clock">—</span><span id="train-replay-progress-right">0%</span></div>
             </div>
             <div class="replay-kpis">
               <div class="replay-kpi"><span>Signals</span><b id="train-replay-signals">0</b></div>
               <div class="replay-kpi"><span>Settled</span><b id="train-replay-settled">0</b></div>
               <div class="replay-kpi"><span>Win</span><b id="train-replay-win">0</b></div>
               <div class="replay-kpi"><span>Loss</span><b id="train-replay-loss">0</b></div>
-              <div class="replay-kpi"><span>Pending</span><b id="train-replay-pending">0</b></div>
-              <div class="replay-kpi"><span>Speed</span><b id="train-replay-bps">—</b></div>
+              <div class="replay-kpi optional-kpi"><span>Pending</span><b id="train-replay-pending">0</b></div>
+              <div class="replay-kpi optional-kpi"><span>Speed</span><b id="train-replay-bps">—</b></div>
             </div>
             <div class="replay-result" id="train-replay-result" hidden><strong id="train-replay-result-title">Replay complete</strong><span id="train-replay-result-copy"></span></div>
           </section>
 
           <section class="train-card analytics-card">
-            <h3>6 · Phase 3 · Training Analytics</h3>
+            <div class="train-section-head">
+              <div><h3>วิเคราะห์ผล</h3></div>
+              <span class="train-status-badge" id="train-analytics-status">รอ Replay</span>
+            </div>
             <div class="analytics-actions">
-              <button type="button" class="train-primary" id="train-analytics-build" disabled>วิเคราะห์ Phase 3</button>
-              <button type="button" class="train-secondary" id="train-analytics-export" disabled>Export JSON แบบย่อ</button>
-              <span class="train-status-badge" id="train-analytics-status">รอผล Replay</span>
+              <button type="button" class="train-primary" id="train-analytics-build" disabled>วิเคราะห์</button>
+              <button type="button" class="train-secondary" id="train-analytics-export" disabled>Export</button>
             </div>
             <div id="train-analytics-empty" class="analytics-empty">ยังไม่มีผลวิเคราะห์</div>
             <div id="train-analytics-result" hidden>
               <div class="analytics-grid">
-                <div class="analytics-kpi"><span>Scored trades</span><b id="analytics-trades">—</b></div>
+                <div class="analytics-kpi"><span>Trades</span><b id="analytics-trades">—</b></div>
                 <div class="analytics-kpi"><span>Win rate</span><b id="analytics-wr">—</b></div>
                 <div class="analytics-kpi"><span>Audit samples</span><b id="analytics-audit-n">—</b></div>
-                <div class="analytics-kpi"><span>Calibration order</span><b id="analytics-order">—</b></div>
+                <div class="analytics-kpi"><span>Calibration</span><b id="analytics-order">—</b></div>
               </div>
-              <div class="analytics-panels">
-                <div class="analytics-panel"><h4>Audit Calibration</h4><div id="analytics-calibration"></div></div>
-                <div class="analytics-panel"><h4>State / Playbook</h4><div id="analytics-context"></div></div>
-                <div class="analytics-panel"><h4>รูปแบบที่เจอบ่อย</h4><div id="analytics-patterns"></div></div>
-                <div class="analytics-panel"><h4>MFE / MAE + Audit miss</h4><div id="analytics-quality"></div></div>
-              </div>
+              <details class="analytics-panels-wrap">
+                <summary>ดูรายละเอียด</summary>
+                <div class="analytics-panels">
+                  <div class="analytics-panel"><h4>Audit Calibration</h4><div id="analytics-calibration"></div></div>
+                  <div class="analytics-panel"><h4>State / Playbook</h4><div id="analytics-context"></div></div>
+                  <div class="analytics-panel"><h4>รูปแบบที่เจอบ่อย</h4><div id="analytics-patterns"></div></div>
+                  <div class="analytics-panel"><h4>MFE / MAE + Audit miss</h4><div id="analytics-quality"></div></div>
+                </div>
+              </details>
               <p class="analytics-note" id="analytics-note" hidden></p>
             </div>
           </section>
@@ -302,7 +394,9 @@
   function setPreset(days){
     selectedPreset=days;
     document.querySelectorAll('[data-train-days]').forEach(b=>b.classList.toggle('active',String(days)===b.dataset.trainDays));
-    if(days==='custom')return;
+    const details=byId('train-range-details');
+    if(days==='custom'){if(details)details.open=true;return;}
+    if(details)details.open=false;
     const end=globalThis.HistoricalDataV1?.lastClosedOpenTime?.()??(Date.now()-MINUTE);
     const bars=Number(days)*1440;
     const start=end-(bars-1)*MINUTE;
@@ -333,7 +427,7 @@
   function setBusy(busy){
     byId('train-load').disabled=busy;
     byId('train-cancel').hidden=!busy;
-    document.querySelectorAll('[data-train-days],#train-start,#train-end,#train-warmup').forEach(el=>el.disabled=busy);
+    document.querySelectorAll('[data-train-days],[data-train-engine],#train-start,#train-end,#train-warmup').forEach(el=>el.disabled=busy);
     byId('train-progress-wrap').classList.toggle('active',busy||!!latestSession);
   }
 
@@ -348,6 +442,7 @@
 
   function showQuality(session){
     const q=session?.quality;if(!q)return;
+    const card=byId('train-quality-card');if(card)card.hidden=false;
     byId('train-quality-empty').hidden=true;
     byId('train-quality-result').hidden=false;
     const grade=byId('train-quality-grade');
@@ -373,12 +468,12 @@
     const list=byId('training-session-list');if(!list)return;
     try{
       const rows=await globalThis.HistoricalDataV1.listSessions(8);
-      if(!rows.length){list.innerHTML='<div class="session-row"><div><strong>ยังไม่มี Training Session</strong><small>โหลดข้อมูลย้อนหลังครั้งแรกได้เลยค่ะ</small></div></div>';return;}
+      if(!rows.length){list.innerHTML='<div class="session-row"><div><strong>ยังไม่มีชุดข้อมูล</strong></div></div>';return;}
       list.innerHTML=rows.map(s=>{
         const q=s.quality,range=`${humanTime(s.analysisStart)} → ${humanTime(s.analysisEnd)}`;
         return `<div class="session-row" data-session-id="${esc(s.id)}">
-          <div><strong>${esc(s.id)} · ${esc(s.status)}</strong><small>${esc(range)}<br>${fmtInt(s.loadedBars)} bars · Warm-up ${fmtInt(s.warmupBars)} · Quality ${esc(q?.grade||'—')} · Engine SHA ${esc((s.engineBlobSha||'—').slice(0,10))}</small></div>
-          <div class="session-row-actions"><button type="button" data-train-view="${esc(s.id)}">ดู</button><button type="button" class="train-danger" data-train-delete="${esc(s.id)}">ลบ</button></div>
+          <div><strong>${esc(range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')}</small></div>
+          <div class="session-row-actions"><button type="button" data-train-view="${esc(s.id)}">เลือก</button><button type="button" class="train-danger" data-train-delete="${esc(s.id)}">ลบ</button></div>
         </div>`;
       }).join('');
     }catch(err){
@@ -387,8 +482,31 @@
   }
 
   async function showStorage(){
+    const target=byId('train-storage-meta');if(!target)return;
     const e=await globalThis.HistoricalDataV1.storageEstimate();
-    byId('train-storage-meta').textContent=e.quota?fmtBytes(e.usage)+' / '+fmtBytes(e.quota):'IndexedDB พร้อม';
+    target.textContent=e.quota?fmtBytes(e.usage)+' / '+fmtBytes(e.quota):'IndexedDB พร้อม';
+  }
+
+  function setTrainingVersion(version,{silent=false}={}){
+    const supported=globalThis.TrainingEngineRegistryV1?.versions||['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0'];
+    if(!supported.includes(version))return false;
+    selectedTrainingVersion=version;
+    document.querySelectorAll('[data-train-engine]').forEach(b=>{
+      const active=b.dataset.trainEngine===version;
+      b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false');
+    });
+    try{localStorage.setItem(TRAINING_VERSION_STORE,version);}catch{}
+    if(!silent){
+      updateReplayPanel(latestSession);
+      document.dispatchEvent(new CustomEvent('training-version-change',{detail:{version}}));
+    }
+    return true;
+  }
+
+  function restoreTrainingVersion(){
+    let saved=null;try{saved=localStorage.getItem(TRAINING_VERSION_STORE);}catch{}
+    const supported=globalThis.TrainingEngineRegistryV1?.versions||[];
+    setTrainingVersion(supported.includes(saved)?saved:(globalThis.TrainingEngineRegistryV1?.defaultVersion||'ARIS-2.0.0'),{silent:true});
   }
 
   async function startDownload(){
@@ -405,6 +523,7 @@
     activeController=new AbortController();
     setBusy(true);latestSession=null;status('กำลังโหลด','warn');
     byId('train-progress-bar').style.width='0%';
+    const qualityCard=byId('train-quality-card');if(qualityCard)qualityCard.hidden=true;
     byId('train-quality-empty').hidden=false;byId('train-quality-result').hidden=true;
 
     try{
@@ -412,8 +531,8 @@
         symbol:'BTCUSDT',interval:'1m',startTime:start,endTime:safeEnd,warmupBars:warmup,
         signal:activeController.signal,
         engineMeta:{
-          engineVersion:globalThis.EventSignalV6?.CFG?.version||'ARIS-2.0.0',
-          engineBlobSha:ENGINE_BLOB_SHA,
+          engineVersion:selectedTrainingVersion,
+          engineBlobSha:TRAINING_ENGINE_BUILD,
           auditSchema:globalThis.AuditEngineV2?.schema||'trade-audit-v2'
         },
         onProgress:showProgress
@@ -479,9 +598,9 @@
     const start=byId('train-replay-start'),pause=byId('train-replay-pause'),resume=byId('train-replay-resume'),stop=byId('train-replay-stop');
     const selected=!!latestSession,ready=!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status);
     start.disabled=!selected||!ready||mode==='running'||mode==='paused';
-    pause.disabled=mode!=='running';
-    resume.disabled=mode!=='paused';
-    stop.disabled=!['running','paused'].includes(mode);
+    pause.disabled=mode!=='running';pause.hidden=mode!=='running';
+    resume.disabled=mode!=='paused';resume.hidden=mode!=='paused';
+    stop.disabled=!['running','paused'].includes(mode);stop.hidden=!['running','paused'].includes(mode);
   }
 
   async function updateReplayPanel(session=latestSession){
@@ -491,11 +610,12 @@
       replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);await updateAnalyticsPanel(null);return;
     }
     latestSession=session;
-    const cp=await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id);
+    const cp=await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id,selectedTrainingVersion);
     const range=humanTime(session.analysisStart)+' → '+humanTime(session.analysisEnd);
-    box.innerHTML='<b>'+esc(session.id)+'</b><br>'+esc(range)+' · '+fmtInt(session.loadedBars)+' bars · Quality '+esc(session.quality?.grade||'—')+
-      ' · Engine '+esc((session.engineBlobSha||'—').slice(0,10))+(cp?' · มี Checkpoint':'');
-    const report=await globalThis.HistoricalDataV1.getReport(session.id);
+    box.innerHTML='<b>'+esc(globalThis.TrainingEngineRegistryV1?.label?.(selectedTrainingVersion)||selectedTrainingVersion)+'</b> · '+esc(range)+
+      ' · '+fmtInt(session.loadedBars)+' แท่ง'+(cp?' · มี Checkpoint':'');
+    const sameVersion=session.engineVersion===selectedTrainingVersion;
+    const report=sameVersion?await globalThis.HistoricalDataV1.getReport(session.id):null;
     showReplayReport(report);
     const running=globalThis.HistoricalReplayV1?.current?.();
     const same=running?.session?.id===session.id;
@@ -503,8 +623,9 @@
     else if(same&&running.running){replayStatus('กำลัง Replay','warn');setReplayButtons('running');}
     else{
       const can=!!session.replayReady||['paused','stopped','replay_complete','replaying'].includes(session.status);
-      replayStatus(session.status==='replay_complete'?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม Replay':'Dataset ยังไม่พร้อม',session.status==='replay_complete'||can?'ready':'warn');
-      byId('train-replay-start').textContent=cp?'ทำต่อจาก Checkpoint':session.status==='replay_complete'?'Replay ใหม่':'เริ่ม Replay';
+      const completedSame=session.status==='replay_complete'&&session.engineVersion===selectedTrainingVersion;
+      replayStatus(completedSame?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม':'Dataset ยังไม่พร้อม',completedSame||can?'ready':'warn');
+      byId('train-replay-start').textContent=cp?'ทำต่อ':completedSame?'Replay ใหม่':'เริ่ม Replay';
       setReplayButtons('idle');
       if(session.replayProcessedBars&&session.loadedBars)renderReplayProgress({
         processedBars:session.replayProcessedBars,totalBars:session.loadedBars,progress:session.replayProgress||0,
@@ -516,19 +637,17 @@
 
   async function startReplay(){
     if(!latestSession||!globalThis.HistoricalReplayV1)return;
-    if(globalThis.EventSignalV6?.CFG?.version!=='ARIS-2.0.0'){
-      replayStatus('ต้องเลือก ARIS V2.0 ก่อน','error');return;
-    }
     const running=globalThis.HistoricalReplayV1.current();
     if(running?.running){
       if(running.paused){globalThis.HistoricalReplayV1.resume();setReplayButtons('running');replayStatus('ทำต่อแล้ว','warn');}
       return;
     }
-    const resume=await globalThis.HistoricalReplayV1.hasCheckpoint(latestSession.id);
+    const resume=await globalThis.HistoricalReplayV1.hasCheckpoint(latestSession.id,selectedTrainingVersion);
     setReplayButtons('running');replayStatus(resume?'กำลัง Resume':'กำลังเริ่ม Replay','warn');showReplayReport(null);
     try{
       const report=await globalThis.HistoricalReplayV1.start(latestSession.id,{
         speed:byId('train-replay-speed').value||'fast',
+        engineVersion:selectedTrainingVersion,
         resume,
         onProgress:renderReplayProgress
       });
@@ -603,9 +722,10 @@
   async function updateAnalyticsPanel(session=latestSession){
     const buildBtn=byId('train-analytics-build'),exportBtn=byId('train-analytics-export');
     if(!session){buildBtn.disabled=true;exportBtn.disabled=true;analyticsStatus('รอ Session');renderAnalytics(null);return;}
-    const hasSettled=Number(session.replayReport?.settled||0)>0;
+    const sameVersion=session.engineVersion===selectedTrainingVersion;
+    const hasSettled=sameVersion&&Number(session.replayReport?.settled||0)>0;
     buildBtn.disabled=!hasSettled;
-    const report=await globalThis.TrainingAnalyticsV1?.get?.(session.id);
+    const report=sameVersion?await globalThis.TrainingAnalyticsV1?.get?.(session.id):null;
     exportBtn.disabled=!report;
     if(report){renderAnalytics(report);analyticsStatus('Analytics พร้อม','ready');}
     else{renderAnalytics(null);analyticsStatus(hasSettled?'พร้อมวิเคราะห์':'รอผล Replay',hasSettled?'ready':'');}
@@ -677,6 +797,7 @@
     byId('training-guide-close').addEventListener('click',()=>guide.close());
     guide.addEventListener('click',e=>{if(e.target===guide)guide.close();});
 
+    document.querySelectorAll('[data-train-engine]').forEach(b=>b.addEventListener('click',()=>setTrainingVersion(b.dataset.trainEngine)));
     document.querySelectorAll('[data-train-days]').forEach(b=>b.addEventListener('click',()=>{
       const v=b.dataset.trainDays;setPreset(v==='custom'?'custom':Number(v));
     }));
@@ -703,21 +824,22 @@
       if(del)await removeSession(del.dataset.trainDelete);
     });
 
-    byId('train-engine-meta').textContent='ARIS 2.0 · '+ENGINE_BLOB_SHA.slice(0,10);
-    byId('train-audit-meta').textContent=globalThis.AuditEngineV2?.schema||'trade-audit-v2';
+    const engineMeta=byId('train-engine-meta');if(engineMeta)engineMeta.textContent=TRAINING_ENGINE_BUILD;
+    const auditMeta=byId('train-audit-meta');if(auditMeta)auditMeta.textContent=globalThis.AuditEngineV2?.schema||'trade-audit-v2';
+    restoreTrainingVersion();
     setPreset(30);
     showStorage();
   }
 
   function init(){
-    if(!globalThis.HistoricalDataV1||!globalThis.HistoricalReplayV1||!globalThis.TrainingAnalyticsV1){
-      console.warn('Training Lab: HistoricalDataV1 / HistoricalReplayV1 / TrainingAnalyticsV1 missing');
+    if(!globalThis.HistoricalDataV1||!globalThis.HistoricalReplayV1||!globalThis.TrainingAnalyticsV1||!globalThis.TrainingEngineRegistryV1){
+      console.warn('Training Lab: historical/replay/analytics/engine registry missing');
       return;
     }
     ensureStyles();ensureDialog();ensureButton();bind();
   }
 
-  globalThis.TrainingLabV1={schema:'training-lab-v1',phase:3,engineBlobSha:ENGINE_BLOB_SHA,init,refreshSessions,updateReplayPanel,updateAnalyticsPanel};
+  globalThis.TrainingLabV1={schema:'training-lab-v1',phase:4,engineBlobSha:TRAINING_ENGINE_BUILD,init,refreshSessions,updateReplayPanel,updateAnalyticsPanel,selectedVersion:()=>selectedTrainingVersion,setTrainingVersion};
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
