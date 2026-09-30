@@ -2789,6 +2789,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     bookSocket: null,
     historyFallback: false,
     fallbackBusy: false,
+    orderHistoryRecoveryBusy: false,
+    orderHistoryRecoveryNeeded: true,
     reconnectTimer: null,
     reconnectCount: 0,
     lastMessageAt: 0,
@@ -4548,6 +4550,105 @@ function openReport(){
     }
     throw new Error(`โหลด ${interval} ไม่สำเร็จ: ${lastError?.message||'unknown error'}`);
   }
+
+  const recoverableOrderGap=s=>{
+    if(!s?.dataset||!Number.isFinite(s.entryTime)||!Number.isFinite(s.expiresAt))return false;
+    if(s.result==='pending')return true;
+    return s.result==='missing'&&/ไม่มีข้อมูล|ราคาตัดสิน/.test(String(s.reason||''));
+  };
+  async function fetchOrderRecoveryBars(signal){
+    const start=Math.floor(signal.entryTime/60000)*60000;
+    const end=Math.ceil(Math.min(Date.now(),signal.expiresAt)/60000)*60000+60000;
+    if(end<=start)return [];
+    const url=REST+'?symbol='+SYMBOL+'&interval=1m&startTime='+start+'&endTime='+end+'&limit=30';
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error('history backfill HTTP '+r.status);
+    const rows=await r.json();
+    return Array.isArray(rows)?rows.map(normalizeKline):[];
+  }
+  async function fetchOrderTargetTrade(targetMs){
+    const url=REST_BASE+'/fapi/v1/aggTrades?symbol='+SYMBOL+'&startTime='+Math.floor(targetMs)+'&endTime='+Math.floor(targetMs+5000)+'&limit=1000';
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error('target trade HTTP '+r.status);
+    const rows=await r.json();
+    if(!Array.isArray(rows))return null;
+    const row=rows.filter(x=>Number(x.T)>=targetMs).sort((a,b)=>Number(a.T)-Number(b.T))[0];
+    return row&&Number(row.p)>0?{ts:Number(row.T),price:Number(row.p)}:null;
+  }
+  function mergeRecoveredOrderPath(signal,bars){
+    if(!signal?.dataset||!bars?.length)return 0;
+    const path=signal.dataset.path1m||(signal.dataset.path1m=[]);
+    let added=0;
+    for(let minute=1;minute<=10;minute++){
+      if(path.some(x=>x.minute===minute))continue;
+      const startMs=signal.entryTime+(minute-1)*60000;
+      const endMs=Math.min(signal.entryTime+minute*60000,signal.expiresAt);
+      if(startMs>=Math.min(Date.now(),signal.expiresAt))continue;
+      const overlap=bars.filter(b=>{
+        const bs=b.time*1000,be=bs+60000;
+        return be>startMs&&bs<endMs;
+      }).sort((a,b)=>a.time-b.time);
+      if(!overlap.length)continue;
+      path.push({
+        minute,startMs,endMs,
+        open:overlap[0].open,
+        high:Math.max(...overlap.map(b=>b.high)),
+        low:Math.min(...overlap.map(b=>b.low)),
+        close:overlap.at(-1).close,
+        lastTs:Math.min(endMs,overlap.at(-1).time*1000+60000),
+        source:'binance_futures_1m_backfill',
+        approximateWindow:true
+      });
+      added++;
+    }
+    path.sort((a,b)=>a.minute-b.minute);
+    if(added){
+      signal.dataset.historyRecovery={
+        source:'Binance Futures 1m',
+        recoveredAt:Date.now(),
+        approximateMinuteWindows:true
+      };
+    }
+    return added;
+  }
+  async function recoverOrderHistory(){
+    if(state.orderHistoryRecoveryBusy)return false;
+    const pending=engine.signals.filter(s=>recoverableOrderGap(s)&&s.result==='pending');
+    const missing=engine.signals.filter(s=>recoverableOrderGap(s)&&s.result==='missing').slice(-8);
+    const candidates=[...new Map([...pending,...missing].map(s=>[s.id,s])).values()].slice(-12);
+    if(!candidates.length){state.orderHistoryRecoveryNeeded=false;return false;}
+    state.orderHistoryRecoveryBusy=true;
+    let changed=false;
+    try{
+      for(const signal of candidates){
+        try{
+          const wasMissing=signal.result==='missing',oldReason=signal.reason;
+          const bars=await fetchOrderRecoveryBars(signal);
+          if(mergeRecoveredOrderPath(signal,bars)>0)changed=true;
+          if(Date.now()>=signal.expiresAt){
+            const target=await fetchOrderTargetTrade(signal.expiresAt);
+            if(target){
+              if(wasMissing)signal.missingReason=oldReason;
+              signal.exitPrice=target.price;
+              signal.exitTime=target.ts;
+              signal.result=target.price===signal.entryPrice?'equal':((target.price>signal.entryPrice)===(signal.direction==='HIGH')?'correct':'incorrect');
+              signal.reason=signal.dataset?.entry?.setupReason||signal.dataset?.entry?.decisionReason||'ประวัติราคาเติมย้อนหลังจาก Binance Futures';
+              signal.historyRecovered=true;
+              signal.historyRecoveredAt=Date.now();
+              engine.finalizeReview(signal);
+              changed=true;
+            }
+          }
+        }catch(err){console.warn('order history recovery failed',signal.id,err);}
+      }
+      if(changed){persist(true);drawHistory();}
+      state.orderHistoryRecoveryNeeded=false;
+      return changed;
+    }finally{
+      state.orderHistoryRecoveryBusy=false;
+    }
+  }
+
   const TF_LABELS={'1m':'1 นาที','5m':'5 นาที','10m':'10 นาที','15m':'15 นาที','1h':'1 ชั่วโมง','4h':'4 ชั่วโมง','1d':'1 วัน','1w':'1 สัปดาห์'};
   const TF_SECONDS={'1m':60,'5m':300,'10m':600,'15m':900,'1h':3600,'4h':14400,'1d':86400,'1w':604800};
   const ANALYSIS_HORIZON_BARS={'1m':10,'5m':2,'10m':1,'15m':1,'1h':1,'4h':1,'1d':1,'1w':1};
@@ -4663,6 +4764,7 @@ function openReport(){
     for(const tf of ['5m','15m']){const btn=document.querySelector('[data-tf="'+tf+'"]');if(btn)btn.disabled=true;}
     try{
       state.bars['1m']=await loadHistory('1m');
+      await recoverOrderHistory();
       state.booted=true;
       renderChart(true);
       connect();
@@ -4686,7 +4788,7 @@ function openReport(){
   function ingest(data){
     const e=data.e,nowSec=Date.now()/1000;
     if(e==='aggTrade'){
-      const price=+data.p,qty=+data.q,ts=Number(data.T)/1000;if(!(price>0&&qty>0))return;if(state.quote&&Number(data.a)<=state.quote.id)return;state.quote={price,ts,id:Number(data.a)};updateLazyBars(price,ts,qty);if(engine.settle({ts:ts*1000,price})) {persist(true);drawHistory();}if(candleSettle(ts*1000,price))renderCandleBehavior(state.candleView);
+      const price=+data.p,qty=+data.q,ts=Number(data.T)/1000;if(!(price>0&&qty>0))return;if(state.quote&&Number(data.a)<=state.quote.id)return;state.quote={price,ts,id:Number(data.a)};updateLazyBars(price,ts,qty);if(state.orderHistoryRecoveryBusy)engine.captureTrade({ts:ts*1000,price});else if(engine.settle({ts:ts*1000,price})) {persist(true);drawHistory();}if(candleSettle(ts*1000,price))renderCandleBehavior(state.candleView);
       const notional=price*qty,signed=data.m?-notional:notional;state.tradeTape.push({ts,signed,notional});const cutoff=ts-300;while(state.tradeTape.length&&state.tradeTape[0].ts<cutoff)state.tradeTape.shift();
       $('last-price').textContent=money(price);$('connection-time').textContent='ซื้อขายล่าสุด '+clockMs(Number(data.T));analyseNow();return;
     }
@@ -4726,6 +4828,7 @@ function openReport(){
       (state.bars['1m']||[]).filter(b=>b.time>=bars.at(-1).time)
        .forEach(b=>merged.set(b.time,b));
       state.bars['1m']=[...merged.values()].sort((a,b)=>a.time-b.time).slice(-1000);
+      await recoverOrderHistory();
       state.booted=true;
       if(state.analysisTf!=='1m'){
        try{
@@ -5034,7 +5137,10 @@ function openReport(){
   $('latest').addEventListener('click',()=>state.chart&&state.chart.timeScale().scrollToRealTime());
   $('reconnect').addEventListener('click',()=>{state.reconnectCount=0;connect();});
   window.addEventListener('online',()=>connect());window.addEventListener('offline',()=>statusView('offline','อินเทอร์เน็ตขาดการเชื่อมต่อ'));
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-state.lastMessageAt>5000)connect();});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){state.orderHistoryRecoveryNeeded=true;persist(true);return;}
+    recoverOrderHistory().finally(()=>{if(Date.now()-state.lastMessageAt>5000)connect();});
+  });
   setInterval(()=>{if(!document.hidden&&state.lastMessageAt&&Date.now()-state.lastMessageAt>12000){statusView('stale','ไม่ได้รับข้อมูลใหม่เกิน 12 วินาที กำลังเชื่อมต่อใหม่');connect();}},3000);
   setInterval(()=>fallbackPoll(),2500);
   setInterval(()=>{updateSetupHealth();analyseNow(true);},1500);
@@ -5045,7 +5151,7 @@ function openReport(){
   state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
-  setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);},1000);
+  setInterval(()=>{if(state.booted&&!document.hidden&&!state.orderHistoryRecoveryBusy&&engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);},1000);
   window.addEventListener('pagehide',()=>{persist(true);candlePersist();});
 })();
 
