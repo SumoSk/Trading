@@ -487,7 +487,15 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .candle-lock.active{border:1px solid #374b65;border-radius:7px;background:#0c1623}
 .signal-card-candle.high .candle-lock.active{border-color:#2d6f5d}
 .signal-card-candle.low .candle-lock.active{border-color:#7d3d50}
-.candle-stats{margin-top:auto;padding-top:5px;border-top:1px solid #202d3e;font-size:7.5px;color:#7388a2}
+.candle-stats{margin-top:0;padding-top:5px;border-top:1px solid #202d3e;font-size:7.5px;color:#7388a2}
+.candle-market-mini{margin-top:8px;padding-top:8px;border-top:1px solid #26364a;min-width:0}
+.candle-market-mini-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.candle-market-mini-title span{font-size:8px;font-weight:650;letter-spacing:.25px;color:#8ea2ba}
+.candle-market-mini .analysis-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important;margin:0!important}
+.candle-market-mini .analysis-grid>div{min-width:0;padding:5px 6px!important;border:1px solid #223247!important;border-radius:6px!important;background:#0d1723!important}
+.candle-market-mini .analysis-grid span{display:block;font-size:7px!important;line-height:1.2;color:#71859f;margin:0 0 2px!important;white-space:normal}
+.candle-market-mini .analysis-grid b{display:block;font-size:9px!important;line-height:1.2;color:#cbd8e7;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:560px){.candle-market-mini{margin-top:6px;padding-top:6px}.candle-market-mini .analysis-grid{gap:3px!important}.candle-market-mini .analysis-grid>div{padding:4px!important}.candle-market-mini .analysis-grid span{font-size:6.5px!important}.candle-market-mini .analysis-grid b{font-size:8px!important}}
 
 @media(max-width:900px){
  .signal-panel>.signal-card-main,.signal-panel>.signal-card-candle{grid-column:span 3!important}
@@ -780,6 +788,22 @@ main{padding-top:10px}
     </div>
 
     <div class="candle-stats" id="candle-stats">Candle Engine · ยังไม่มีผลที่จบครบ 10 นาที</div>
+
+    <div class="candle-market-mini signal-card-market">
+      <div class="candle-market-mini-title"><span id="market-analysis-title">สภาพตลาด</span></div>
+      <div class="analysis-grid">
+        <div><span id="analysis-regime-label">สภาพตลาด</span><b id="analysis-regime">—</b></div>
+        <div><span>ตำแหน่งราคา</span><b id="analysis-position">—</b></div>
+        <div><span id="analysis-trend-label">แนวโน้ม</span><b id="analysis-trend">—</b></div>
+        <div><span>แรงส่งราคา</span><b id="analysis-momentum">—</b></div>
+        <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
+        <div><span>สมุดคำสั่ง</span><b id="analysis-book">—</b></div>
+        <div><span id="analysis-volatility-label">ความผันผวน</span><b id="analysis-volatility">—</b></div>
+        <div><span>ระยะก่อนชนแนว</span><b id="analysis-room">—</b></div>
+        <div><span>ช่วงการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
+        <div><span>Volume เทียบปกติ</span><b id="analysis-relvol">—</b></div>
+      </div>
+    </div>
   </section>
 
 <section class="setup-profile-compact" id="setup-profile-compact" aria-live="polite">
@@ -817,22 +841,6 @@ main{padding-top:10px}
 
   <small class="setup-compact-health warning" id="setup-compact-health">รอ Futures สด</small>
 </section>
-
-  <section class="signal-card signal-card-market">
-    <div class="signal-card-title"><span id="market-analysis-title">ตลาดตอนนี้</span></div>
-    <div class="analysis-grid">
-      <div><span id="analysis-regime-label">สภาพตลาด</span><b id="analysis-regime">—</b></div>
-      <div><span>ตำแหน่งราคาในกรอบ</span><b id="analysis-position">—</b></div>
-      <div><span id="analysis-trend-label">แนวโน้ม</span><b id="analysis-trend">—</b></div>
-      <div><span>แรงส่งของราคา</span><b id="analysis-momentum">—</b></div>
-      <div><span>แรงซื้อขายจริง</span><b id="analysis-flow">—</b></div>
-      <div><span>แรงจากสมุดคำสั่ง</span><b id="analysis-book">—</b></div>
-      <div><span id="analysis-volatility-label">ความผันผวน</span><b id="analysis-volatility">—</b></div>
-      <div><span>ระยะก่อนชนแนวสำคัญ</span><b id="analysis-room">—</b></div>
-      <div><span>ช่วงของการเคลื่อนไหว</span><b id="analysis-phase">—</b></div>
-      <div><span>ปริมาณซื้อขายเทียบปกติ</span><b id="analysis-relvol">—</b></div>
-    </div>
-  </section>
 
   <div class="last-entry" id="last-entry" hidden>
     <div class="last-entry-head"><span>สัญญาณล่าสุด · ราคาล็อก</span><b id="last-entry-direction">—</b></div>
