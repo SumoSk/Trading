@@ -104,12 +104,20 @@
     };
   }
 
+  function displayRuleKey(v){
+    return ({
+      SHOCK_UNRESOLVED:'แรงกระแทก · ยังไม่เฉลย',BREAKOUT_ATTEMPT:'กำลังลองทะลุกรอบ',BREAKOUT_ACCEPTED:'ทะลุกรอบเริ่มถูกยอมรับ',
+      EXHAUSTION:'ปลายขา / แรงเริ่มหมด',REVERSAL_DEVELOPING:'กำลังสร้างโครงกลับตัว',COMPRESSION:'บีบตัวสะสมแรง',
+      PULLBACK:'กำลังย่อในโครงสร้างเดิม',TREND_ADVANCE:'เทรนด์กำลังเดิน',RANGE_EDGE:'อยู่ขอบกรอบ',RANGE_CHOP:'แกว่งสลับในกรอบ',TRANSITION:'ช่วงเปลี่ยนจังหวะ',
+      breakout_continuation:'ทะลุกรอบแล้วไปต่อ',shock_resolution:'รอผลหลังแรงกระแทก',pullback_reclaim:'ย่อสร้างฐานแล้วกลับมายืน',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว'
+    })[String(v)]||String(v);
+  }
   function rulesLabel(r){
     const parts=[];
     if(num(r.auditMin)!==null)parts.push('Audit ≥ '+Number(r.auditMin));
-    if(r.excludeState)parts.push('ตัด State '+r.excludeState);
-    if(r.excludePlaybook)parts.push('ตัด Playbook '+r.excludePlaybook);
-    return parts.length?parts.join(' · '):'Baseline เดิม ไม่เพิ่ม filter';
+    if(r.excludeState)parts.push('ตัดสถานะ '+displayRuleKey(r.excludeState));
+    if(r.excludePlaybook)parts.push('ตัดแผน '+displayRuleKey(r.excludePlaybook));
+    return parts.length?parts.join(' · '):'กติกาเดิม · ไม่เพิ่มตัวกรอง';
   }
 
   function applyRules(rows,rules={}){
