@@ -215,7 +215,8 @@ function observe(engine,f,x,z,regime,phase){
  if(absorption)warnings.push((absorption>0?'แรงขาย':'แรงซื้อ')+'มากแต่ราคาไปต่อได้น้อย · possible absorption');
  if(Math.abs(speed)>=.055)supports.push('ความเร็วราคาเปลี่ยนชัด · behavior shift');
  if(fib.valid&&fib.nearest&&fib.nearest.distanceAtr<=(CFG.v2FibZoneAtr||.15))supports.push('ใกล้ Fib '+(fib.nearest.ratio*100).toFixed(1)+'%'+(fib.confluence?' + zone confluence':''));
- if(fib.valid&&fib.extension>=1.272)warnings.push('เกิน Fib extension 127.2% · เพิ่ม exhaustion watch');
+ if(fib.valid&&fib.extension>=1.618)warnings.push('เกิน Fib extension 161.8% · ขาเดินไกลมาก เพิ่ม exhaustion / reversal watch');
+ else if(fib.valid&&fib.extension>=1.272)warnings.push('เกิน Fib extension 127.2% · เพิ่ม exhaustion watch');
  if(zone.nearResistance)warnings.push('ใกล้ resistance '+zone.resistance.distanceAtr.toFixed(2)+' ATR');
  if(zone.nearSupport)warnings.push('ใกล้ support '+zone.support.distanceAtr.toFixed(2)+' ATR');
  if(h15.available&&d>0&&h15.roomUp>=0&&h15.roomUp<=.30)warnings.push('15m resistance อยู่ใกล้ทาง HIGH');
@@ -269,9 +270,14 @@ function v2Step(x){
  if(x.id===this.lastId)return {...(this.lastView||base),status:this.lastView?.status==='new'?'issued':this.lastView?.status,signal:null};
  this.lastId=x.id;const prev=this.previous;this.previous={price:x.price,ts:x.ts};if(!prev||x.ts-prev.ts>5000){this.v2Candidate=null;return this.lastView={...base,status:'warming',reason:'ARIS V2 · กำลังต่อเรื่องราวจากข้อมูลสด'};}
  let opp=entryOpportunity(f,x,story),cand=this.v2Candidate;
- if(opp&&(!cand||cand.key!==opp.key)){if(cand&&!cand.issued)this.log('cancelled',x.ts,{id:cand.id||cand.key,reason:'ARIS V2 · playbook/trigger เปลี่ยน'});cand=this.v2Candidate={...opp,id:'V2-C:'+this.session+':'+x.ts+':'+opp.key,startedAt:x.ts,startPrice:x.price,extreme:x.price,evidenceSince:0,ticks:0,issued:false,logged:false};}
+ if(opp&&(!cand||cand.key!==opp.key)){if(cand&&!cand.issued)this.log('cancelled',x.ts,{id:cand.id||cand.key,reason:'ARIS V2 · playbook/trigger เปลี่ยน'});cand=this.v2Candidate={...opp,id:'V2-C:'+this.session+':'+x.ts+':'+opp.key,startedAt:x.ts,startPrice:x.price,extreme:x.price,
+   entryLow:opp.d>0?opp.level-f.atr*.04:opp.level-f.atr*.35,entryHigh:opp.d>0?opp.level+f.atr*.35:opp.level+f.atr*.04,
+   evidenceSince:0,ticks:0,issued:false,logged:false};}
  if(cand&&!opp&&x.ts-cand.startedAt>(CFG.v2CandidateMaxAgeMs||25000)){if(!cand.issued)this.log('cancelled',x.ts,{id:cand.id,reason:'ARIS V2 · candidate หมดอายุ'});this.v2Candidate=null;cand=null;}
- if(cand){cand.extreme=cand.d>0?Math.max(cand.extreme,x.price):Math.min(cand.extreme,x.price);opp=opp||cand;}
+ if(cand){
+  cand.extreme=cand.d>0?Math.max(cand.extreme,x.price):Math.min(cand.extreme,x.price);
+  if(!opp)opp={...cand,ready:false,enter:false,score:Math.min(cand.score||0,(CFG.v2EntryReady||58)-1),reasons:[...(cand.reasons||[]),'behavior ปัจจุบันไม่ยืนยัน candidate เดิมแล้ว']};
+ }
  const d=opp?.d||story.playDirection||story.stateDirection||story.evidenceDirection||0,direction=dirLabel(d),watchScore=d>0?story.highEvidence:d<0?story.lowEvidence:Math.max(story.highEvidence,story.lowEvidence);
  const watch={direction:direction==='BALANCED'?null:direction,d,score:watchScore,state:opp?.ready?'READY':'WATCH',reasons:[story.stateLabel,story.playbookLabel,story.trigger],reason:story.summary};
  if(cand&&!cand.logged){cand.logged=true;this.log('detected',x.ts,{id:cand.id,key:cand.key,type:cand.type,detectedAt:x.ts,direction:dirLabel(cand.d),price:x.price,level:cand.level,candidate:{schema:'aris-v2-candidate-v1',story,entry:opp}});}
@@ -280,7 +286,11 @@ function v2Step(x){
  if(!opp.enter){cand.evidenceSince=0;cand.ticks=0;return this.lastView={...base,event:{...cand},watch,status:opp.ready?'confirming':'tracking',reason:'ARIS V2 · '+story.playbookLabel+' · Entry evidence '+opp.score+'/100 · '+story.summary,gate:{state:opp.ready?'READY':'WATCH',direction:dirLabel(opp.d),code:'v2_entry_evidence',blocker:opp.ready?'บริบทผ่านแล้ว · รอ entry evidence':'จุดเข้ายังไม่คมพอ',waitingFor:['Entry evidence '+opp.score+'/'+(CFG.v2EntryEnter||66),story.trigger,'ถ้าผิด: '+story.nextPlan],metrics:{evidence:opp.score,flow:opp.d*(x.flow||0),progress:opp.progress,extensionAtr:opp.d*(x.price-f.ema21)/Math.max(f.atr,1e-9),stateConfidence:story.stateConfidence}}};}
  if(!cand.evidenceSince)cand.evidenceSince=x.ts;cand.ticks=(cand.ticks||0)+1;
  if(cand.ticks<(CFG.v2ConfirmTicks||2)||x.ts-cand.evidenceSince<(CFG.v2ConfirmMs||350))return this.lastView={...base,event:{...cand},watch,status:'confirming',reason:'ARIS V2 · Entry ผ่าน · ยืนยันข้อมูลสดสั้น ๆ',gate:{state:'READY',direction:dirLabel(opp.d),code:'v2_live_confirm',blocker:'เงื่อนไขผ่านแล้ว',waitingFor:['ยืนยัน '+Math.min(cand.ticks,CFG.v2ConfirmTicks||2)+'/'+(CFG.v2ConfirmTicks||2)+' ครั้ง','คง behavior อย่างน้อย '+(CFG.v2ConfirmMs||350)+' ms'],metrics:{evidence:opp.score,flow:opp.d*(x.flow||0),progress:opp.progress,extensionAtr:opp.d*(x.price-f.ema21)/Math.max(f.atr,1e-9),stateConfidence:story.stateConfidence}}};
- const dup=[...this.signals].reverse().find(q=>q.version===CFG.version&&q.dataset?.entry?.v2SetupKey===cand.key&&x.ts-q.entryTime<180000);
+ const dup=[...this.signals].reverse().find(q=>q.version===CFG.version&&x.ts-q.entryTime<90000&&(
+  q.dataset?.entry?.v2SetupKey===cand.key||(
+   q.direction===dirLabel(opp.d)&&q.dataset?.entry?.v2Playbook===story.playbook&&Math.abs(q.entryPrice-x.price)<=f.atr*.60
+  )
+ ));
  if(dup){cand.evidenceSince=0;cand.ticks=0;return this.lastView={...base,event:{...cand},watch,status:'tracking',reason:'ARIS V2 · trigger เรื่องเดิมเพิ่งใช้ · รอ story/level ใหม่',gate:{state:'WAIT',direction:dirLabel(opp.d),code:'v2_same_story',blocker:'ไม่ยิงซ้ำ trigger เดิม',waitingFor:['รอ level ใหม่ / state shift / retest ใหม่'],metrics:{evidence:opp.score}}};}
  const out=dirLabel(opp.d),id='ARIS2:'+this.session+':'+x.ts+':'+cand.key,a=Math.max(f.atr,1e-9),entryLow=opp.d>0?opp.level-a*.04:opp.level-a*.35,entryHigh=opp.d>0?opp.level+a*.35:opp.level+a*.04;
  const signal={id,version:CFG.version,type:opp.type,direction:out,modelDirection:out,decisionPolicy:'aris_v2_story_playbook_entry',entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+CFG.horizonMs,result:'pending',lastObserved:x.ts,event:{...cand},
