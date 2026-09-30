@@ -10,6 +10,7 @@ const clip=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
 const sign=(v,dead=0)=>v>dead?1:v<-dead?-1:0;
 const dirLabel=d=>d>0?'HIGH':d<0?'LOW':'BALANCED';
+const fibRatios=[.236,.382,.5,.618,.786];
 
 function ema(a,n){let x=a[0]||0;return a.map(v=>(x+=2/(n+1)*(v-x)));}
 function compactBars(bars,n=20){return (bars||[]).filter(q=>q.closed).slice(-n).map(q=>[q.time,q.open,q.high,q.low,q.close,q.volume]);}
@@ -33,13 +34,47 @@ function higherRead(bars){
  const a=Math.max(tr/Math.max(n,1),c.at(-1)*.00008,1e-9),sep=(e8.at(-1)-e21.at(-1))/a,dir=sign(sep,.10);
  return {available:true,dir,eff,sep};
 }
-function fibContext(f,p){
- const b=f.b.slice(-60);if(b.length<12)return {valid:false};
- let hi=-Infinity,lo=Infinity,hiI=-1,loI=-1;
- b.forEach((q,i)=>{if(q.high>hi){hi=q.high;hiI=i;}if(q.low<lo){lo=q.low;loI=i;}});
- const move=hi-lo;if(!(move>f.atr*.7))return {valid:false};
- const d=loI<hiI?1:-1,retr=d>0?(hi-p)/move:(p-lo)/move,ext=d>0?(p-lo)/move:(hi-p)/move;
- return {valid:true,d,high:hi,low:lo,moveAtr:move/f.atr,retracement:retr,extension:ext,healthy:retr>=.236&&retr<=.618,deep:retr>.618&&retr<=.786};
+function fibContext(f,p,z=[]){
+ const a=Math.max(f.atr,1e-9),b=f.b.slice(-60);if(b.length<12)return {valid:false,reason:'แท่งยังไม่พอหา Swing Fib'};
+ const piv=[];
+ for(let i=2;i<b.length-2;i++){
+  const q=b[i],l=b.slice(i-2,i),r=b.slice(i+1,i+3);
+  if(l.every(v=>q.high>v.high)&&r.every(v=>q.high>=v.high))piv.push({i,type:'H',price:q.high,time:q.time});
+  if(l.every(v=>q.low<v.low)&&r.every(v=>q.low<=v.low))piv.push({i,type:'L',price:q.low,time:q.time});
+ }
+ piv.sort((m,n)=>m.i-n.i);
+ const alternating=[];
+ for(const q of piv){
+  const last=alternating.at(-1);
+  if(last?.i===q.i)continue;
+  if(last?.type===q.type){
+   if(q.type==='H'?q.price>last.price:q.price<last.price)alternating[alternating.length-1]=q;
+  }else alternating.push(q);
+ }
+ let leg=null;
+ for(let i=1;i<alternating.length;i++){
+  const a0=alternating[i-1],a1=alternating[i],m=Math.abs(a1.price-a0.price);
+  if(a0.type===a1.type||m<a*.8)continue;
+  leg={start:a0,end:a1,d:a1.price>a0.price?1:-1,move:m};
+ }
+ if(!leg)return {valid:false,reason:'ยังไม่มี Swing leg ที่ยืนยัน'};
+ if(b.length-1-leg.end.i>(CFG.v3FibMaxAgeBars||25))return {valid:false,reason:'Swing Fib ล่าสุดเก่าเกินไป'};
+ const d=leg.d,start=leg.start.price,end=leg.end.price,m=leg.move;
+ const retr=d>0?(end-p)/m:(p-end)/m,ext=d*(p-start)/m;
+ const levels=fibRatios.map(r=>({ratio:r,price:end-d*m*r}));
+ let nearest=null;
+ for(const q of levels){
+  const distanceAtr=Math.abs(p-q.price)/a;
+  if(!nearest||distanceAtr<nearest.distanceAtr)nearest={...q,distanceAtr};
+ }
+ const extensions=[1.272,1.618].map(r=>({ratio:r,price:start+d*m*r,distanceAtr:Math.abs(p-(start+d*m*r))/a}));
+ const nearestExtension=[...extensions].sort((u,v)=>u.distanceAtr-v.distanceAtr)[0]||null;
+ const confluence=!!(nearest&&nearest.distanceAtr<=(CFG.v3FibZoneAtr||.15)&&(z||[]).some(q=>Math.abs(q.price-nearest.price)/a<=(CFG.v3FibZoneAtr||.15)));
+ const retraceZone=retr<.20?'ตื้นกว่า 23.6%':retr<=.382?'23.6–38.2%':retr<=.50?'38.2–50%':retr<=.618?'50–61.8%':retr<=.786?'61.8–78.6%':'ลึกเกิน 78.6%';
+ const extensionZone=ext<1?'ยังไม่พ้น Swing เดิม':ext<1.272?'100–127.2%':ext<1.618?'127.2–161.8%':'เกิน 161.8%';
+ return {valid:true,d,start,end,startTime:leg.start.time,endTime:leg.end.time,confirmedAt:b[leg.end.i+2]?.time,
+  high:Math.max(start,end),low:Math.min(start,end),moveAtr:m/a,retracement:retr,extension:ext,levels,nearest,extensions,nearestExtension,confluence,
+  healthy:retr>=.236&&retr<=.618,deep:retr>.618&&retr<=.786,retraceZone,extensionZone};
 }
 function swingKey(f,d){
  const b=f.b.slice(-35);let lastH=null,lastL=null;
@@ -171,10 +206,38 @@ function choosePlaybook(f,x,state,ep,shock,bias){
  if(state.state==='REVERSAL_WATCH'&&reversalDir)return {playbook:'confirmed_reversal',d:reversalDir};
  return {playbook:null,d};
 }
+function stateLabel(s){return ({
+ TRANSITION:'กำลังเปลี่ยนจังหวะ',SHOCK_UNRESOLVED:'เกิด Shock · ยังไม่เฉลย',BREAKOUT:'กำลังทะลุกรอบ',
+ REVERSAL_WATCH:'เฝ้ากลับตัว',CHOP:'แกว่งสลับ / ไม่มีโครงสร้างชัด',TREND:'เทรนด์มีโครงสร้าง',RANGE_EDGE:'อยู่บริเวณขอบกรอบ'
+})[s]||String(s||'Observe').replaceAll('_',' ');}
+function stateDescription(s,state,f){
+ const d=state?.d>0?'ขึ้น':state?.d<0?'ลง':'ยังไม่ชัด';
+ return ({
+ TRANSITION:'โครงสร้างหลายส่วนยังไม่เรียงไปทางเดียวกัน ระบบจึงอ่านบริบทต่อและยังไม่รีบสร้างไม้',
+ SHOCK_UNRESOLVED:'แท่งราคาและ Volume ขยายผิดปกติ แต่ 3.0 ยังไม่ตีความว่าเป็นจุดเข้า ต้องรอดูว่าราคาจะ HOLD, RETEST หรือ FAIL ก่อน',
+ BREAKOUT:'ราคากำลังพ้นกรอบเดิม ต้องตรวจว่าการทะลุถูกยอมรับจริง มีพื้นที่ต่อ และไม่ใช่การไล่ปลายแท่ง',
+ REVERSAL_WATCH:'ราคายืดจากฐานหรือ Phase เริ่มหมดแรง จึงเปิดโหมดเฝ้ากลับตัว แต่ยังห้ามสวนจน Structure break และพฤติกรรมยืนยัน',
+ CHOP:'ราคาเดินสลับและประสิทธิภาพการเคลื่อนที่ต่ำ จังหวะนี้เสี่ยงถูกหลอกทั้งสองฝั่ง จึงเน้นรอรูปแบบใหม่',
+ TREND:'ราคาเดินเป็นโครงสร้างฝั่ง'+d+'ได้ค่อนข้างต่อเนื่อง ระบบจะรอ Pullback/Reclaim หรือการต่อขาที่มีตำแหน่งเหมาะสม',
+ RANGE_EDGE:'ราคาอยู่ใกล้ขอบกรอบ แต่ 3.0 ไม่ใช้ Range Edge Fade แบบเดิมเป็นจุดเข้าอัตโนมัติ ต้องรอการยอมรับ/ปฏิเสธที่ชัด'
+ })[s]||'กำลังอ่านโครงสร้างตลาดปัจจุบัน';}
 function playbookLabel(p){return ({breakout_continuation:'Breakout Continuation',shock_resolution:'Shock Resolution',pullback_reclaim:'Pullback / Reclaim',confirmed_reversal:'Confirmed Reversal'})[p]||'Observe only';}
+function playbookDescription(p,d){
+ const side=d>0?'ขึ้น':d<0?'ลง':'';
+ return ({
+  breakout_continuation:'ตามการทะลุกรอบฝั่ง'+side+'เมื่อ Structure, Location, Behavior และ Micro ยืนยันพร้อมกัน',
+  shock_resolution:'รอ Shock ฝั่ง'+side+'ถูกยอมรับและรักษาราคาได้ก่อนตาม ไม่ใช้ Volume spike เป็น Trigger โดยตรง',
+  pullback_reclaim:'รอราคาย่อสร้างฐานแล้ว reclaim กลับตามโครงสร้างเดิมฝั่ง'+side+' ไม่ไล่ราคาเมื่อวิ่งห่างฐาน',
+  confirmed_reversal:'อนุญาตสวนเฉพาะหลังโครงสร้างเดิมเสียจริง มี rejection/structure break และ Flow ยืนยันฝั่งใหม่'
+ })[p]||'ยังไม่มีรูปแบบที่อนุญาตให้เข้า ระบบกำลัง Observe';}
+function episodeDescription(ep){
+ if(!ep)return 'กำลังสร้าง Market Episode แรกจากข้อมูลสด';
+ const side=ep.d>0?'ขาขึ้น':ep.d<0?'ขาลง':'ไม่เลือกฝั่ง';
+ return 'Episode '+ep.family+' · '+side+' · ระบบถือการเคลื่อนไหวนี้เป็นเรื่องเดียวกันจนกว่าจะเกิด structural leg ใหม่หรือโครงสร้างเดิมถูกยกเลิก';
+}
 function typeFor(p){return ({breakout_continuation:'v3_breakout_continuation',shock_resolution:'v3_shock_resolution',pullback_reclaim:'v3_pullback_reclaim',confirmed_reversal:'v3_confirmed_reversal'})[p]||'v3_observer';}
 function gateBundle(f,x,z,playbook,d,state,shock){
- const higher={m5:higherRead(x.five),m15:higherRead(x.fifteen)},fib=fibContext(f,x.price);
+ const higher={m5:higherRead(x.five),m15:higherRead(x.fifteen)},fib=fibContext(f,x.price,z);
  const structure=structureInfo(f,x,d,state,shock),location=locationInfo(f,x,z,d,playbook,higher,fib),behavior=behaviorInfo(f,x,d,playbook,state,shock),micro=microInfo(x,d);
  const gates={structure,location,behavior,micro};
  const pass=structure.pass&&location.pass&&behavior.pass&&micro.pass;
@@ -186,13 +249,46 @@ function shouldIssueInEpisode(ep,legKey){
  return !(ep.issuedLegKeys||[]).includes(legKey);
 }
 function v3Story(f,x,phase,state,bias,ep,playbook,d,bundle,shock){
- const high=bias.high,low=bias.low,blocked=[];
- if(!playbook)blocked.push('ยังไม่มี playbook ที่อนุญาตเข้า');
- if(bundle&&!bundle.gates.structure.pass)blocked.push(bundle.gates.structure.reason);
- if(bundle&&!bundle.gates.location.pass)blocked.push(bundle.gates.location.reason);
- if(bundle&&!bundle.gates.behavior.pass)blocked.push(bundle.gates.behavior.reason);
- if(bundle&&!bundle.gates.micro.pass)blocked.push(bundle.gates.micro.reason);
- return {schema:'aris-v3-story-v1',state:state.state,stateLabel:state.state.replaceAll('_',' '),episodeId:ep?.id||null,episodeFamily:ep?.family||null,structuralLegKey:ep?.legKey||null,direction:dirLabel(d||bias.d),highEvidence:high,lowEvidence:low,playbook,playbookLabel:playbookLabel(playbook),shockState:shock?.state||null,quality:bundle?.quality||0,gates:bundle?.gates||null,higher:bundle?.higher||null,fib:bundle?.fib||null,blocked,summary:(ep?ep.family+' episode · ':'')+(playbook?playbookLabel(playbook):'Observe')+(blocked.length?' · รอ '+blocked[0]:' · gates ผ่านครบ')};
+ const high=bias.high,low=bias.low,blocked=[],supports=[],warnings=[],g=bundle?.gates||{},fib=bundle?.fib||null,higher=bundle?.higher||null;
+ if(!playbook)blocked.push('ยังไม่มี Playbook ที่อนุญาตเข้า');
+ if(bundle&&!g.structure.pass)blocked.push(g.structure.reason);
+ if(bundle&&!g.location.pass)blocked.push(g.location.reason);
+ if(bundle&&!g.behavior.pass)blocked.push(g.behavior.reason);
+ if(bundle&&!g.micro.pass)blocked.push(g.micro.reason);
+ if(g.structure?.pass)supports.push('Structure PASS · efficiency '+Number(g.structure.eff||0).toFixed(2)+' · trend '+Number(g.structure.trend||0).toFixed(2));
+ else if(g.structure)warnings.push('Structure: '+g.structure.reason);
+ if(g.location?.pass)supports.push('Location PASS'+(Number.isFinite(g.location.room)?' · room '+g.location.room.toFixed(2)+' ATR':'')+' · extension '+Number(g.location.extension||0).toFixed(2)+' ATR');
+ else if(g.location)warnings.push('Location: '+g.location.reason);
+ if(g.behavior?.pass)supports.push('Behavior PASS · ราคาแสดงพฤติกรรมตรงกับ '+playbookLabel(playbook));
+ else if(g.behavior)warnings.push('Behavior: '+g.behavior.reason);
+ if(g.micro?.pass)supports.push('Micro PASS · flow '+Number(g.micro.flow||0).toFixed(2)+(Number.isFinite(g.micro.book)?' · book '+g.micro.book.toFixed(2):''));
+ else if(g.micro)warnings.push('Micro: '+g.micro.reason);
+ if(higher?.m5?.available)supports.push('5m '+(higher.m5.dir===(d||bias.d)?'หนุนทิศเดียวกัน':higher.m5.dir===0?'ยังกลาง':'เอนสวน')+' · eff '+Number(higher.m5.eff||0).toFixed(2));
+ if(higher?.m15?.available)supports.push('15m '+(higher.m15.dir===(d||bias.d)?'หนุนทิศเดียวกัน':higher.m15.dir===0?'ยังกลาง':'เอนสวน')+' · eff '+Number(higher.m15.eff||0).toFixed(2));
+ if(fib?.valid){
+  const fibMetric=fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone;
+  supports.push('Fib '+fibMetric+' · leg '+fib.moveAtr.toFixed(2)+' ATR'+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
+  if(fib.deep)warnings.push('Fib ย่อลึก 61.8–78.6% · โครงสร้างเดิมต้องยืนยันให้ชัด');
+  if(fib.extension>=1.618)warnings.push('Fib extension เกิน 161.8% · ระวังปลายขา/หมดแรง');
+ }else warnings.push('Fib: '+(fib?.reason||'ยังไม่มี Swing leg ที่ยืนยัน'));
+ const side=(d||bias.d)>0?'ขึ้น':(d||bias.d)<0?'ลง':'';
+ const trigger=playbook==='breakout_continuation'?'รอ Breakout ยืนพ้นกรอบ + แท่งรับราคา + Micro ยืนยัน':
+  playbook==='shock_resolution'?'รอ Shock เปลี่ยนจาก UNRESOLVED/RETEST เป็น HOLD พร้อม Flow ตาม':
+  playbook==='pullback_reclaim'?'รอย่อแตะฐาน/EMA แล้ว reclaim กลับฝั่ง'+side+' พร้อม Flow':
+  playbook==='confirmed_reversal'?'รอ Structure เดิมแตก + rejection/engulf + Micro ยืนยันฝั่งใหม่':'รอ Episode สร้าง Playbook ที่อนุญาตเข้า';
+ const invalidation='ยกเลิกมุมมองเมื่อ Structure boss gate เสีย หรือเกิด structural leg ฝั่งตรงข้ามที่ยืนยัน';
+ const nextPlan=state.state==='SHOCK_UNRESOLVED'?'แยก Shock เป็น HOLD / RETEST / FAIL ก่อนเลือกแผน':
+  state.state==='CHOP'?'รอ Compression/Breakout หรือ Trend structure ใหม่':
+  state.state==='RANGE_EDGE'?'รอขอบกรอบถูกยอมรับหรือปฏิเสธชัด ไม่ Fade อัตโนมัติ':
+  state.state==='REVERSAL_WATCH'?'ถ้า Structure ยังไม่แตก ให้กลับไปตามโครงสร้างเดิม; ถ้าแตกจริงจึงเปิด Confirmed Reversal':
+  'ติดตาม Episode เดิมจนเกิดฐาน/leg ใหม่ หรือโครงสร้างถูกยกเลิก';
+ const label=stateLabel(state.state),desc=stateDescription(state.state,state,f);
+ return {schema:'aris-v3-story-v2',state:state.state,stateLabel:label,stateDescription:desc,
+  episodeId:ep?.id||null,episodeFamily:ep?.family||null,episodeDescription:episodeDescription(ep),structuralLegKey:ep?.legKey||null,
+  direction:dirLabel(d||bias.d),highEvidence:high,lowEvidence:low,playbook,playbookLabel:playbookLabel(playbook),playbookDescription:playbookDescription(playbook,d||bias.d),
+  shockState:shock?.state||null,quality:bundle?.quality||0,gates:g,higher,fib,blocked,supports:[...new Set(supports)].slice(0,9),warnings:[...new Set(warnings)].slice(0,9),
+  trigger,invalidation,nextPlan,
+  summary:label+' · '+(playbook?playbookLabel(playbook):'Observe')+(blocked.length?' · รอ '+blocked[0]:' · Gate ผ่านครบ')};
 }
 
 class V3Engine extends BaseEngine{
