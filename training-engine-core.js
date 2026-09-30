@@ -134,6 +134,7 @@ const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3FibZoneAtr:.15,v3FibMaxAgeBars:25,
  v3SwingBreakAtr:.08,v3BaseReclaimAtr:.03,v3NewLegReclaimAtr:.18,
  v3ReplayMinFlow:.025,v3ShockExhaustExtension:2.10,v3AbsorbProgressAtr:.12,
+ v3ShockMaxResolveMs:15000,v3ShockReleaseMs:30000,
  v3HtfObstacleAtr:.45,v3BreakoutMaxChaseAtr:.75
 });
 const V650_SELECT_CONFIG=Object.freeze({
