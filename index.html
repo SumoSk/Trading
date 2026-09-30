@@ -2827,8 +2827,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
 <script src="audit-engine.js?v=20261001-r2"></script>\n<script src="historical-data.js?v=20261001-r2"></script>
-<script src="training-engine-registry.js?v=20261001-r3"></script>
-<script src="replay-engine.js?v=20261001-r4"></script>
+<script src="training-engine-registry.js?v=20261001-r4"></script>
+<script src="replay-engine.js?v=20261001-r5"></script>
 <script src="training-analytics.js?v=20261001-r1"></script>\n<script src="training-lab.js?v=20261001-r7"></script>\n<script src="training-validation.js?v=20261001-r3"></script>
 <script>
 'use strict';
@@ -4659,7 +4659,7 @@ function openReport(){
     :v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม'
     :v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';
    $('entry-state').textContent=e?cleanReportText(`${typeName[e.type]||v.v2Story?.playbookLabel||e.type} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`)
-    :v.watch?(CFG.version==='ARIS-2.0.0'?`${v.watch.state} ${v.watch.direction||'—'} · คะแนน ${Math.round(v.watch.score)}/100`:CFG.version.startsWith('ARIS-')?`${v.watch.state} ${v.watch.direction} · คะแนน ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
+    :v.watch?(CFG.version==='ARIS-2.0.0'?`${v.watch.state} ${v.watch.direction||'—'} · คะแนน ${Math.round(v.watch.score)}/100`:CFG.version==='ARIS-3.0.0'?`${v.watch.state} ${v.watch.direction||'—'} · ${v.v3Story?.stateLabel||'กำลังอ่าน Episode'}`:CFG.version.startsWith('ARIS-')?`${v.watch.state} ${v.watch.direction} · คะแนน ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
     :d?`มุมมอง ${d>0?'HIGH':'LOW'} · Entry ยังรอ trigger`
     :contextMode?'บริบท '+tf+' · '+idle:idle;
 
