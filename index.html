@@ -4005,17 +4005,21 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    if(CFG.version==='ARIS-3.0.0'&&v?.v3Story){
     const st=v.v3Story,dir=st.direction==='HIGH'?'HIGH':st.direction==='LOW'?'LOW':null,g=st.gates||{},th=st.thesis||{};
     target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
-    $('setup-compact-next').textContent=cleanReportText((st.stateLabel||'กำลังอ่านตลาด')+' · '+(st.episodeFamily||'Episode'));$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
-    $('setup-compact-name').textContent=cleanReportText((st.playbookLabel||'Observe only')+(dir?' · '+directionThai(dir):''));
-    $('setup-compact-status').textContent=cleanReportText(v3GateThai(st.entryState||'OBSERVE')+' · เงื่อนไข '+(st.gatePassed||0)+'/'+(st.gateTotal||4)+(st.shockState?' · แรงกระแทก: '+(st.shockLabel||v3ShockThai(st.shockState)):''));
-    $('setup-compact-desc').textContent=cleanReportText((st.stateDescription||'')+' · '+(st.episodeDescription||''));
+    $('setup-compact-next').textContent=cleanReportText(st.stateLabel||'กำลังอ่านตลาด');$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
+    $('setup-compact-name').textContent=cleanReportText((st.playbookLabel||'เฝ้าดูตลาด')+(dir?' · '+directionThai(dir):''));
+    $('setup-compact-status').textContent=cleanReportText(v3GateThai(st.entryState||'OBSERVE')+' · ผ่าน '+(st.gatePassed||0)+'/'+(st.gateTotal||4)+' เงื่อนไข'+(st.shockState?' · แรงกระแทก '+(st.shockLabel||v3ShockThai(st.shockState)):''));
+    const explain=[];if(st.stateDescription)explain.push(st.stateDescription);
+    if(dir&&st.entryState!=='READY')explain.push('ตอนนี้น้ำหนักเอนฝั่ง'+directionThai(dir)+' แต่ยังรอเงื่อนไขให้ครบ');
+    if(st.entryState==='READY')explain.push('เงื่อนไขหลักครบแล้ว กำลังรอข้อมูลสดยืนยันจุดเข้า');
+    if(Array.isArray(st.blocked)&&st.blocked.length)explain.push('ยังขาด: '+st.blocked.slice(0,2).join(' / '));
+    $('setup-compact-desc').textContent=cleanReportText(explain.join(' · '));
     const title=$('signal-title')?.textContent||'กำลังเฝ้ากราฟ',es=$('entry-state')?.textContent||'WATCH';$('setup-compact-entry').textContent=cleanReportText(title+' · '+es);
-    $('setup-compact-entry-reason').textContent=cleanReportText('มุมมอง: '+(th.why||st.summary||'กำลังเฝ้าดู')+' · รอเงื่อนไข: '+(st.trigger||th.trigger||'รอหลักฐานเพิ่ม')+' · ยกเลิกเมื่อ: '+(st.invalidation||th.invalidation||'โครงสร้างเสีย')+' · ต่อไป: '+(st.nextPlan||th.nextPlan||'ประเมินเหตุการณ์ตลาดต่อ'));
+    $('setup-compact-entry-reason').textContent=cleanReportText('เหตุผล: '+(th.why||st.summary||'กำลังเฝ้าดู')+' · รอ: '+(st.trigger||th.trigger||'รอหลักฐานเพิ่ม')+' · มุมมองเสียเมื่อ: '+(st.invalidation||th.invalidation||'โครงสร้างเสีย')+' · ถัดไป: '+(st.nextPlan||th.nextPlan||'ประเมินตลาดต่อ'));
     const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=cleanReportText(t);ul.append(li);}};
     const sup=[...(st.supports||[])],warn=[...(st.warnings||[])],fib=st.fib;
-    if(st.structure?.summary)sup.unshift('โครงสร้าง · '+st.structure.summary+(Number.isFinite(st.structure.bullProtected)?' · จุดป้องกันฝั่งขึ้น '+money(st.structure.bullProtected):'')+(Number.isFinite(st.structure.bearProtected)?' · จุดป้องกันฝั่งลง '+money(st.structure.bearProtected):''));
-    if(fib?.valid){sup.push('Fibonacci · '+(fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone)+(fib.confluence?' · ซ้อนแนวสำคัญ':''));if(fib.nearest)sup.push('Fib ใกล้สุด '+(fib.nearest.ratio*100).toFixed(1).replace('.0','')+'% ที่ '+money(fib.nearest.price)+' · ห่าง '+Number(fib.nearest.distanceAtr).toFixed(2)+' ATR');}
-    if(g.structure)warn.push('เงื่อนไขโครงสร้าง · '+v3GateThai(g.structure.state)+' · '+g.structure.reason);if(g.location)warn.push('เงื่อนไขตำแหน่งราคา · '+v3GateThai(g.location.state)+' · '+g.location.reason);if(g.behavior)warn.push('เงื่อนไขพฤติกรรมราคา · '+v3GateThai(g.behavior.state)+' · '+g.behavior.reason);if(g.micro)warn.push('เงื่อนไขแรงซื้อขายระยะสั้น · '+v3GateThai(g.micro.state)+' · '+g.micro.reason);
+    if(st.structure?.summary)sup.unshift('โครงสร้างราคา · '+st.structure.summary+(Number.isFinite(st.structure.bullProtected)?' · จุดสำคัญฝั่งขึ้น '+money(st.structure.bullProtected):'')+(Number.isFinite(st.structure.bearProtected)?' · จุดสำคัญฝั่งลง '+money(st.structure.bearProtected):''));
+    if(fib?.valid){sup.push('ฟิโบนัชชี · '+(fib.extension>1?'ช่วงต่อขา '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'ย่อกลับ '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone)+(fib.confluence?' · มีแนวสำคัญซ้อนกัน':''));if(fib.nearest)sup.push('ระดับฟิโบนัชชีใกล้สุด '+(fib.nearest.ratio*100).toFixed(1).replace('.0','')+'% ที่ '+money(fib.nearest.price)+' · ห่าง '+Number(fib.nearest.distanceAtr).toFixed(2)+' ATR');}
+    if(g.structure)warn.push('โครงสร้างราคา · '+v3GateThai(g.structure.state)+' · '+g.structure.reason);if(g.location)warn.push('ตำแหน่งราคา · '+v3GateThai(g.location.state)+' · '+g.location.reason);if(g.behavior)warn.push('พฤติกรรมแท่ง · '+v3GateThai(g.behavior.state)+' · '+g.behavior.reason);if(g.micro)warn.push('แรงซื้อขายระยะสั้น · '+v3GateThai(g.micro.state)+' · '+g.micro.reason);
     fill('setup-compact-support',[...new Set(sup)].slice(0,10),'ยังไม่มีแรงหนุนที่ยืนยัน');fill('setup-compact-warning',[...new Set(warn)].slice(0,10),'ยังไม่พบข้อขัดแย้งสำคัญ');return;
    }
    if(CFG.version==='ARIS-2.0.0'&&v?.v2Story){
