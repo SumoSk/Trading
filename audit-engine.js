@@ -1,14 +1,14 @@
 (() => {
   'use strict';
 
-  const SCHEMA='trade-audit-v1';
+  const SCHEMA='trade-audit-v2';
   const TARGET_VERSION='ARIS-2.0.0';
   const clamp=(v,lo=0,hi=100)=>Math.max(lo,Math.min(hi,Number(v)||0));
   const finite=v=>Number.isFinite(Number(v));
   const round=v=>Math.round(clamp(v));
   const W=Object.freeze({
-    entry:15,state:12,playbook:12,structure:12,location:12,
-    fib:10,priceAction:10,flow:10,timing:7
+    entry:18,state:12,playbook:12,structure:12,location:10,
+    fib:10,priceAction:9,flow:10,timing:7
   });
 
   const RANGE_STATES=new Set(['FRESH_RANGE','BALANCED_RANGE','RANGE_COMPRESSION','EDGE_PRESSURE','CHOP']);
@@ -20,6 +20,7 @@
   function entry(signal){return signal?.dataset?.entry||null;}
   function text(v){return String(v??'').toLowerCase();}
   function hasAny(v,parts){const s=text(v);return parts.some(x=>s.includes(x));}
+  function riskText(e){return text(e?.v2TrendChangeRisk);}
 
   function nearestRoom(e,d){
     const q=d>0?e?.zones?.nearestResistance:e?.zones?.nearestSupport;
@@ -27,121 +28,150 @@
   }
 
   function scoreEntryEvidence(signal,e){
-    return round(finite(e.v2EntryEvidence)?e.v2EntryEvidence:signal.features?.v2Evidence??50);
+    const v=finite(e.v2EntryEvidence)?Number(e.v2EntryEvidence):Number(signal.features?.v2Evidence);
+    return round(Number.isFinite(v)?v:65);
   }
 
   function scoreState(e){
-    const conf=finite(e.v2StateConfidence)?Number(e.v2StateConfidence):50;
+    const conf=finite(e.v2StateConfidence)?Number(e.v2StateConfidence):65;
     let score=conf;
-    if(['CONFLICT','TRANSITION'].includes(e.v2State))score-=15;
-    if(e.v2State==='CHOP')score-=10;
+    if(e.v2State==='CONFLICT')score-=10;
+    else if(e.v2State==='TRANSITION')score-=6;
+    else if(e.v2State==='CHOP')score-=5;
     return round(score);
   }
 
   function playbookFit(e){
     const state=String(e.v2State||''),p=String(e.v2Playbook||e.setupType||'');
-    if(!state||!p)return {score:55,label:'State/Playbook ไม่ครบ'};
-    let fit=58;
+    if(!state||!p)return {score:65,label:'State/Playbook ข้อมูลไม่ครบ'};
+    let fit=68;
+
     if(RANGE_STATES.has(state)){
       if(hasAny(p,['range_edge_fade','range_rotation']))fit=90;
       else if(state==='RANGE_COMPRESSION'&&hasAny(p,['compression_breakout']))fit=92;
       else if(state==='EDGE_PRESSURE'&&hasAny(p,['edge_pressure_breakout']))fit=92;
-      else if(hasAny(p,['breakout']))fit=68;
+      else if(hasAny(p,['breakout']))fit=72;
     }else if(BREAK_STATES.has(state)){
-      if(state==='FALSE_BREAK'&&hasAny(p,['failed_break_reversal','breakout_trap_reversal']))fit=95;
-      else if(hasAny(p,['breakout_follow','breakout_micro_pullback','breakout_retest']))fit=90;
-      else if(hasAny(p,['reversal']))fit=70;
+      if(state==='FALSE_BREAK'&&hasAny(p,['failed_break_reversal','breakout_trap_reversal']))fit=94;
+      else if(hasAny(p,['breakout_follow','breakout_micro_pullback','breakout_retest']))fit=89;
+      else if(hasAny(p,['reversal']))fit=72;
     }else if(TREND_STATES.has(state)){
-      if(hasAny(p,['trend_pullback','fib_pullback','trend_reacceleration','continuation','mature_recovery','shock_follow']))fit=91;
-      else if(hasAny(p,['reversal']))fit=55;
+      if(hasAny(p,['trend_pullback','fib_pullback','trend_reacceleration','continuation','mature_recovery','shock_follow']))fit=90;
+      else if(hasAny(p,['reversal']))fit=58;
     }else if(REV_STATES.has(state)){
-      if(hasAny(p,['exhaustion_reversal','reversal_follow','shock_failure','failed_break_reversal']))fit=94;
-      else if(hasAny(p,['continuation','trend_reacceleration']))fit=42;
+      if(hasAny(p,['exhaustion_reversal','reversal_follow','shock_failure','failed_break_reversal']))fit=93;
+      else if(hasAny(p,['continuation','trend_reacceleration']))fit=48;
     }else if(state==='CONFLICT'){
-      fit=hasAny(p,['observe_conflict'])?82:48;
+      fit=hasAny(p,['observe_conflict'])?78:52;
     }else if(state==='TRANSITION'){
-      fit=60;
+      fit=64;
     }
-    return {score:round(fit),label:fit>=85?'State กับ Playbook เข้ากัน':fit>=65?'State/Playbook พอใช้':'State/Playbook มีความขัดแย้ง'};
+    return {score:round(fit),label:fit>=85?'State กับ Playbook สอดคล้อง':fit>=65?'State/Playbook ใช้ได้':'State/Playbook ขัดกัน'};
   }
 
   function structureScore(e){
-    let score=e.v2StructuralReady===true?94:e.v2StructuralReady===false?48:62;
+    let score=e.v2StructuralReady===true?92:e.v2StructuralReady===false?58:68;
     const checks=Array.isArray(e.v2Checks)?e.v2Checks:[];
     if(checks.length){
       const known=checks.filter(q=>typeof q?.ok==='boolean'||typeof q?.pass==='boolean'||typeof q?.ready==='boolean');
       if(known.length){
         const passed=known.filter(q=>q.ok===true||q.pass===true||q.ready===true).length;
-        score=score*.65+(passed/known.length*100)*.35;
+        score=score*.70+(passed/known.length*100)*.30;
       }
     }
-    if(!finite(e.v2InvalidationPrice))score-=5;
     return round(score);
   }
 
   function locationScore(e,d){
     const roomAtr=nearestRoom(e,d);
-    let roomScore=roomAtr===null?52:roomAtr>=.55?96:roomAtr>=.40?86:roomAtr>=.30?75:roomAtr>=.20?58:roomAtr>=.12?38:20;
+    let score=roomAtr===null?66:
+      roomAtr>=.55?92:
+      roomAtr>=.40?85:
+      roomAtr>=.30?78:
+      roomAtr>=.20?70:
+      roomAtr>=.12?61:50;
+
     const rp=Number(e.rangePosition);
-    let locationBonus=0,label='ตำแหน่งกลาง';
+    let label='ตำแหน่งใช้ได้';
     if(Number.isFinite(rp)){
       const favorable=d>0?1-rp:rp;
-      if(favorable>=.70){locationBonus=8;label='ตำแหน่งเริ่มฝั่งที่มีพื้นที่';}
-      else if(favorable<=.20){locationBonus=-12;label='ตำแหน่งปลายฝั่ง/ใกล้ขอบเป้าหมาย';}
-      else if(favorable<=.35){locationBonus=-5;label='ตำแหน่งเริ่มตึง';}
+      if(favorable>=.70){score+=5;label='มีพื้นที่จากตำแหน่งราคา';}
+      else if(favorable<=.20){score-=7;label='ใกล้ปลายฝั่งเป้าหมาย';}
+      else if(favorable<=.35){score-=3;label='พื้นที่เริ่มจำกัด';}
     }
-    return {score:round(roomScore+locationBonus),roomAtr,label};
+    return {score:round(score),roomAtr,label};
   }
 
   function fibScore(e){
     const fib=e.v2Fib;
-    if(!fib?.valid)return {score:55,label:'Fib ยังไม่ยืนยัน'};
+    if(!fib?.valid)return {score:65,label:'Fib ยังไม่ยืนยัน'};
     const ext=Number(fib.extension),ret=Number(fib.retracement);
-    if(fib.confluence&&fib.healthy)return {score:96,label:'Fib healthy + confluence'};
-    if(fib.healthy)return {score:88,label:'Fib healthy'};
-    if(fib.deep)return {score:55,label:'Fib deep pullback'};
-    if(Number.isFinite(ext)&&ext>=1.618)return {score:20,label:'Fib extension >161.8%'};
-    if(Number.isFinite(ext)&&ext>=1.272)return {score:35,label:'Fib extension >127.2%'};
-    if(Number.isFinite(ext)&&ext>1)return {score:66,label:'ราคาเลย swing เดิม'};
-    if(Number.isFinite(ret)&&ret<.20)return {score:62,label:'Fib pullback ตื้น'};
-    return {score:74,label:'Fib ปกติ'};
+    if(fib.confluence&&fib.healthy)return {score:94,label:'Fib healthy + confluence'};
+    if(fib.healthy)return {score:87,label:'Fib healthy'};
+    if(fib.deep)return {score:67,label:'Fib deep pullback'};
+    if(Number.isFinite(ext)&&ext>=1.618)return {score:48,label:'Fib extension >161.8%'};
+    if(Number.isFinite(ext)&&ext>=1.272)return {score:58,label:'Fib extension >127.2%'};
+    if(Number.isFinite(ext)&&ext>1)return {score:70,label:'ราคาเลย swing เดิม'};
+    if(Number.isFinite(ret)&&ret<.20)return {score:64,label:'Fib pullback ตื้น'};
+    return {score:75,label:'Fib อยู่บริบทปกติ'};
   }
 
   function priceActionScore(e,d){
     const c=e.v2CandleBehavior||{};
-    let score=70;
+    let score=72;
     const tags=[];
-    if(c.bodyDecay){score-=18;tags.push('body decay');}
-    if(c.failedExpansion){score-=14;tags.push('failed expansion');}
-    if(c.contraction){score-=4;tags.push('contraction');}
+    if(c.bodyDecay){score-=8;tags.push('body decay');}
+    if(c.failedExpansion){score-=8;tags.push('failed expansion');}
+    if(c.contraction){score-=3;tags.push('contraction');}
     if(c.shock){score+=4;tags.push('shock');}
     if(c.marubozu){score+=5;tags.push('marubozu');}
+
     const pressure=Number(c.pressureDir??c.pressure);
     if(Number.isFinite(pressure)){
-      if(Math.sign(pressure)===d)score+=8;else if(Math.sign(pressure)===-d)score-=10;
+      if(Math.sign(pressure)===d)score+=5;
+      else if(Math.sign(pressure)===-d)score-=7;
     }
+
     const rejection=Number(c.rejectionDir??c.rejection);
     if(Number.isFinite(rejection)){
-      if(Math.sign(rejection)===d)score+=7;else if(Math.sign(rejection)===-d)score-=10;
+      if(Math.sign(rejection)===d)score+=5;
+      else if(Math.sign(rejection)===-d)score-=7;
     }
+
     if(Array.isArray(c.tags))tags.push(...c.tags.slice(0,3));
     return {score:round(score),tags:[...new Set(tags)].slice(0,5)};
   }
 
   function flowScore(e,d){
     const aligned=finite(e.flow)?d*Number(e.flow):null;
-    let flow=aligned===null?50:aligned>=.08?95:aligned>=.05?85:aligned>=.025?72:aligned>=0?58:aligned>=-.025?42:aligned>=-.05?28:15;
-    let volume=finite(e.relativeVolume)?clamp(45+Number(e.relativeVolume)*25):55;
-    volume=Math.min(volume,95);
-    let book=55;
+    const flow=aligned===null?60:
+      aligned>=.08?90:
+      aligned>=.05?82:
+      aligned>=.025?74:
+      aligned>=0?66:
+      aligned>=-.025?58:
+      aligned>=-.05?50:42;
+
+    let volume=60;
+    if(finite(e.relativeVolume)){
+      const rv=Number(e.relativeVolume);
+      volume=rv>=1.6?84:rv>=1.2?76:rv>=.9?68:rv>=.6?60:54;
+    }
+
+    let book=60;
     if(e.bookValid&&finite(e.book)){
       const ab=d*Number(e.book);
-      book=ab>=.20?85:ab>=.05?70:ab>=-.05?55:ab>=-.20?40:25;
+      book=ab>=.20?82:ab>=.05?72:ab>=-.05?62:ab>=-.20?52:44;
     }
-    const coverage=finite(e.coverage)?Number(e.coverage):0;
-    let score=flow*.60+volume*.25+book*.15;
-    if(coverage<8)score-=7;
-    return {score:round(score),alignedFlow:aligned,volume:finite(e.relativeVolume)?Number(e.relativeVolume):null,book:e.bookValid&&finite(e.book)?Number(e.book):null,coverage};
+
+    const score=flow*.65+volume*.22+book*.13;
+    return {
+      score:round(score),
+      alignedFlow:aligned,
+      volume:finite(e.relativeVolume)?Number(e.relativeVolume):null,
+      book:e.bookValid&&finite(e.book)?Number(e.book):null,
+      coverage:finite(e.coverage)?Number(e.coverage):0
+    };
   }
 
   function repeatStory(signal,all){
@@ -158,21 +188,28 @@
   function timingScore(signal,e,all,d){
     const ext=finite(signal.features?.extensionAtr)?Number(signal.features.extensionAtr):
       finite(e.ema21)&&finite(e.atr)?d*(Number(e.price)-Number(e.ema21))/Math.max(Number(e.atr),1e-9):null;
-    let score=82;
+
+    let score=80;
     if(Number.isFinite(ext)){
-      if(ext>=3.25)score-=42;
-      else if(ext>=2.40)score-=28;
-      else if(ext>=1.75)score-=15;
-      else if(ext<=-.30)score-=8;
-      else if(ext>=.20&&ext<=1.20)score+=5;
+      if(ext>=3.25)score=52;
+      else if(ext>=2.40)score=60;
+      else if(ext>=1.75)score=68;
+      else if(ext>=1.20)score=75;
+      else if(ext>=.20)score=84;
+      else if(ext<-.30)score=66;
     }
-    const risk=text(e.v2TrendChangeRisk);
-    if(risk.includes('สูง')||risk.includes('high'))score-=25;
-    else if(risk.includes('กลาง')||risk.includes('medium'))score-=10;
-    if(e.v2CandleBehavior?.bodyDecay)score-=10;
+
+    const risk=riskText(e);
+    if(risk.includes('สูง')||risk.includes('high'))score-=12;
+    else if(risk.includes('กลาง')||risk.includes('medium'))score-=5;
+
+    if(e.v2CandleBehavior?.bodyDecay)score-=4;
+
     const rep=repeatStory(signal,all);
-    if(rep.repeat)score-=Math.min(14,5+rep.count*3);
-    if(['MATURE_TREND','EXHAUSTION'].includes(e.v2State)&&hasAny(e.v2Playbook,['continuation','trend_reacceleration']))score-=14;
+    if(rep.repeat)score-=Math.min(8,2+rep.count*2);
+
+    if(['MATURE_TREND','EXHAUSTION'].includes(e.v2State)&&hasAny(e.v2Playbook,['continuation','trend_reacceleration']))score-=6;
+
     return {score:round(score),extensionAtr:Number.isFinite(ext)?ext:null,repeat:rep};
   }
 
@@ -194,50 +231,83 @@
     return round(checks.reduce((sum,[ok,w])=>sum+(ok?w:0),0));
   }
 
-  function buildPenalties(signal,e,ctx){
-    const penalties=[];
-    const add=(code,points,label)=>penalties.push({code,points:-Math.abs(points),label});
+  function riskFlags(signal,e,ctx){
+    const out=[];
+    const add=(code,label,severity='medium')=>out.push({code,label,severity});
     const ext=ctx.timing.extensionAtr,room=ctx.location.roomAtr,fib=e.v2Fib||{};
-    if(Number.isFinite(ext)&&ext>=3.25)add('hard_late_extension',12,'ขาเดิมยืดมาก');
-    else if(Number.isFinite(ext)&&ext>=2.40)add('late_extension',8,'ขาเดิมยืดไกล');
-    else if(Number.isFinite(ext)&&ext>=1.75)add('soft_late_extension',4,'ขาเดิมเริ่มยืด');
-    if(Number.isFinite(room)&&room<.12)add('critical_low_room',12,'Room ก่อนชนแนวต่ำมาก');
-    else if(Number.isFinite(room)&&room<.20)add('low_room',8,'Room ข้างหน้าแคบ');
-    else if(Number.isFinite(room)&&room<.30)add('soft_low_room',4,'Room เริ่มจำกัด');
-    if(Number(fib.extension)>=1.618)add('fib_1618',10,'Fib extension เกิน 161.8%');
-    else if(Number(fib.extension)>=1.272)add('fib_1272',6,'Fib extension เกิน 127.2%');
-    if(e.v2CandleBehavior?.bodyDecay)add('body_decay',5,'Body เริ่มอ่อน');
-    if(e.v2CandleBehavior?.failedExpansion)add('failed_expansion',5,'Expansion ล้มเหลว');
-    const tr=text(e.v2TrendChangeRisk);
-    if(tr.includes('สูง')||tr.includes('high'))add('trend_change_high',8,'Trend-change risk สูง');
-    else if(tr.includes('กลาง')||tr.includes('medium'))add('trend_change_medium',3,'Trend-change risk กลาง');
-    if(ctx.timing.repeat.repeat)add('repeat_story',Math.min(8,3+ctx.timing.repeat.count*2),'ไม้ซ้ำใน Story เดิม');
-    if(ctx.playbook.score<55)add('state_playbook_conflict',7,'State กับ Playbook ขัดกัน');
+
+    if(Number.isFinite(ext)&&ext>=3.25)add('hard_late_extension','ขาเดิมยืดมาก','high');
+    else if(Number.isFinite(ext)&&ext>=2.40)add('late_extension','ขาเดิมยืดไกล','medium');
+    else if(Number.isFinite(ext)&&ext>=1.75)add('soft_late_extension','ขาเดิมเริ่มยืด','low');
+
+    if(Number.isFinite(room)&&room<.08)add('critical_low_room','Room ก่อนชนแนวต่ำมาก','high');
+    else if(Number.isFinite(room)&&room<.20)add('low_room','Room ข้างหน้าแคบ','medium');
+    else if(Number.isFinite(room)&&room<.30)add('soft_low_room','Room เริ่มจำกัด','low');
+
+    if(Number(fib.extension)>=1.618)add('fib_1618','Fib extension เกิน 161.8%','high');
+    else if(Number(fib.extension)>=1.272)add('fib_1272','Fib extension เกิน 127.2%','medium');
+
+    if(e.v2CandleBehavior?.bodyDecay)add('body_decay','Body เริ่มอ่อน','medium');
+    if(e.v2CandleBehavior?.failedExpansion)add('failed_expansion','Expansion ล้มเหลว','medium');
+
+    const tr=riskText(e);
+    if(tr.includes('สูง')||tr.includes('high'))add('trend_change_high','Trend-change risk สูง','high');
+    else if(tr.includes('กลาง')||tr.includes('medium'))add('trend_change_medium','Trend-change risk กลาง','medium');
+
+    if(ctx.timing.repeat.repeat)add('repeat_story','ไม้ซ้ำใน Story เดิม','medium');
+    if(ctx.playbook.score<55)add('state_playbook_conflict','State กับ Playbook ขัดกัน','high');
+
     const primary=e.v2PrimaryHypothesis?.direction;
-    if(primary&&['HIGH','LOW'].includes(primary)&&primary!==signal.direction)add('primary_hypothesis_conflict',6,'Primary hypothesis สวนฝั่งเข้า');
-    return penalties;
+    if(primary&&['HIGH','LOW'].includes(primary)&&primary!==signal.direction)add('primary_hypothesis_conflict','Primary hypothesis สวนฝั่งเข้า','high');
+
+    return out;
   }
 
-  function deriveReasons(ctx,penalties){
+  function criticalAdjustments(signal,e,ctx,flags){
+    const out=[];
+    const add=(code,points,label)=>out.push({code,points:-Math.abs(points),label});
+
+    if(ctx.playbook.score<45)add('critical_state_playbook_conflict',5,'State/Playbook ขัดกันรุนแรง');
+
+    if(Number.isFinite(ctx.location.roomAtr)&&ctx.location.roomAtr<.08){
+      add('critical_room',5,'แทบไม่มี Room ก่อนชนแนว');
+    }
+
+    const primary=e.v2PrimaryHypothesis?.direction;
+    if(primary&&['HIGH','LOW'].includes(primary)&&primary!==signal.direction){
+      add('critical_primary_conflict',5,'Primary hypothesis สวนฝั่งเข้า');
+    }
+
+    const fibExt=Number(e.v2Fib?.extension);
+    const highRisk=riskText(e).includes('สูง')||riskText(e).includes('high');
+    if(Number.isFinite(fibExt)&&fibExt>=1.618&&(highRisk||['MATURE_TREND','EXHAUSTION'].includes(e.v2State))){
+      add('critical_overextension_combo',4,'ปลายขามากพร้อมความเสี่ยงกลับตัว');
+    }
+
+    return out.slice(0,3);
+  }
+
+  function deriveReasons(ctx,flags){
     const positives=[],risks=[];
     const c=ctx.components;
+
     if(c.entry>=82)positives.push('Entry evidence แข็ง');
     if(c.state>=80)positives.push('State ชัด');
     if(c.playbook>=85)positives.push('Playbook เหมาะกับ State');
     if(c.structure>=85)positives.push('Structure พร้อม');
-    if(c.location>=80)positives.push('ตำแหน่งและ Room ดี');
+    if(c.location>=80)positives.push('Location/Room ดี');
     if(c.fib>=85)positives.push('Fib สนับสนุน');
     if(c.priceAction>=80)positives.push('Price action สนับสนุน');
     if(c.flow>=80)positives.push('Flow/Volume สนับสนุน');
-    if(c.timing>=82)positives.push('Timing ยังไม่ปลายขา');
+    if(c.timing>=80)positives.push('Timing ยังดี');
 
-    if(c.structure<60)risks.push('Structure ไม่แข็ง');
-    if(c.location<55)risks.push('Location/Room เสี่ยง');
-    if(c.fib<50)risks.push('Fib อยู่โซนเสี่ยง');
-    if(c.priceAction<55)risks.push('แท่งเทียนเริ่มขัด');
-    if(c.flow<50)risks.push('Flow ไม่หนุน');
-    if(c.timing<55)risks.push('Timing เสี่ยง/ปลายขา');
-    for(const p of penalties.slice(0,4))risks.push(p.label);
+    for(const f of flags.filter(x=>x.severity!=='low').slice(0,4))risks.push(f.label);
+    if(!risks.length){
+      if(c.flow<58)risks.push('Flow ไม่เด่น');
+      if(c.location<62)risks.push('Room ค่อนข้างจำกัด');
+      if(c.timing<62)risks.push('Timing เริ่มตึง');
+    }
+
     return {positives:[...new Set(positives)].slice(0,5),risks:[...new Set(risks)].slice(0,5)};
   }
 
@@ -264,34 +334,38 @@
       timing:timing.score
     };
 
-    let weighted=0;
-    for(const [k,w] of Object.entries(W))weighted+=components[k]*w/100;
+    let rawComposite=0;
+    for(const [k,w] of Object.entries(W))rawComposite+=components[k]*w/100;
+    rawComposite=Math.round(rawComposite*10)/10;
 
     const ctx={components,playbook,location,fib,priceAction:pa,flow,timing};
-    const penalties=buildPenalties(signal,e,ctx);
-    const penaltyTotal=penalties.reduce((sum,p)=>sum+Math.abs(p.points),0);
-    const score=round(weighted-Math.min(30,penaltyTotal));
+    const flags=riskFlags(signal,e,ctx);
+    const adjustments=criticalAdjustments(signal,e,ctx,flags);
+    const adjustmentTotal=adjustments.reduce((sum,x)=>sum+Math.abs(x.points),0);
+    const score=round(rawComposite-Math.min(12,adjustmentTotal));
     const confidence=auditConfidence(e);
-    const rr=deriveReasons(ctx,penalties);
-    const calibrationBand=globalThis.AuditCalibrationV1?.bandFor?.(score)?.key||null;
+    const rr=deriveReasons(ctx,flags);
 
     return {
       schema:SCHEMA,
-      version:1,
+      version:2,
       targetVersion:TARGET_VERSION,
       inputScope:'entry_only',
       notWinProbability:true,
       frozen:true,
       score,
+      rawComposite,
       confidence,
-      grade:score>=88?'แข็งแรงมาก':score>=80?'แข็งแรง':score>=70?'ดี':score>=60?'กลาง':'เสี่ยง',
+      grade:score>=88?'แข็งแรงมาก':score>=80?'แข็งแรง':score>=70?'ดี':score>=60?'พอใช้':'เสี่ยง',
       weights:{...W},
       components,
-      penalties,
-      penaltyTotal,
+      riskFlags:flags,
+      criticalAdjustments:adjustments,
+      adjustmentTotal,
       positives:rr.positives,
       risks:rr.risks,
-      calibrationBand,
+      calibrationBand:globalThis.AuditCalibrationV2?.bandFor?.(score)?.key||null,
+      scoreOrigin:signal.result==='pending'?'prospective':'backfilled_entry_snapshot',
       context:{
         state:e.v2State||null,
         stateConfidence:finite(e.v2StateConfidence)?Number(e.v2StateConfidence):null,
@@ -318,10 +392,10 @@
 
   function ensureAudit(signal,allSignals){
     if(!signal?.dataset?.entry)return null;
-    const existing=signal.dataset.entry.auditV1;
+    const existing=signal.dataset.entry.auditV2;
     if(existing?.schema===SCHEMA&&finite(existing.score))return existing;
     const audit=auditSignal(signal,allSignals);
-    if(audit)signal.dataset.entry.auditV1=audit;
+    if(audit)signal.dataset.entry.auditV2=audit;
     return audit;
   }
 
@@ -337,7 +411,7 @@
     panel.className='audit-v1-panel empty';
     panel.innerHTML=`
       <div class="audit-v1-head">
-        <div><span>AUDIT ไม้ล่าสุด</span><small>ตรวจหลัง 2.0 ออกไม้ · ไม่แตะเครื่องยนต์</small></div>
+        <div><span>AUDIT V2 · ไม้ล่าสุด</span><small>ตรวจหลัง 2.0 ออกไม้ · ไม่แตะเครื่องยนต์</small></div>
         <b id="audit-v1-status">รอไม้</b>
       </div>
       <div class="audit-v1-main">
@@ -351,7 +425,7 @@
       </div>
       <p id="audit-v1-reasons">เมื่อ 2.0 ออกไม้ Auditor จะตรวจคุณภาพจากข้อมูลตอนเข้า</p>
       <div class="audit-v1-calibration">
-        <span id="audit-v1-band">Calibration · รอข้อมูล</span>
+        <span id="audit-v1-band">Calibration V2 · รอข้อมูล</span>
         <b id="audit-v1-history">—</b>
       </div>
       <small id="audit-v1-note">คะแนน Audit เป็น quality score ไม่ใช่ % โอกาสชนะ</small>
@@ -394,8 +468,8 @@
   }
 
   function calibrationFor(audit,signals){
-    const report=globalThis.AuditCalibrationV1?.report?.(signals||[]);
-    const bandKey=globalThis.AuditCalibrationV1?.bandFor?.(audit?.score)?.key;
+    const report=globalThis.AuditCalibrationV2?.report?.(signals||[]);
+    const bandKey=globalThis.AuditCalibrationV2?.bandFor?.(audit?.score)?.key;
     const band=report?.bands?.find(x=>x.key===bandKey)||null;
     return {report,band};
   }
@@ -413,7 +487,7 @@
       $('audit-v1-confidence').textContent='Confidence —/100';
       $('audit-v1-structure').textContent='—';$('audit-v1-flow').textContent='—';$('audit-v1-timing').textContent='—';
       $('audit-v1-reasons').textContent='เมื่อ 2.0 ออกไม้ Auditor จะตรวจคุณภาพจากข้อมูลตอนเข้า';
-      $('audit-v1-band').textContent='Calibration · รอข้อมูล';
+      $('audit-v1-band').textContent='Calibration V2 · รอข้อมูล';
       $('audit-v1-history').textContent='—';
       return;
     }
@@ -431,8 +505,9 @@
     $('audit-v1-reasons').textContent=reasonBits.length?reasonBits.join(' · '):'ยังไม่มีธงเด่นเป็นพิเศษ';
 
     const cal=calibrationFor(audit,signals);
-    const label=globalThis.AuditCalibrationV1?.bandFor?.(audit.score)?.label||'ช่วงคะแนน';
-    $('audit-v1-band').textContent='Calibration '+label;
+    const label=globalThis.AuditCalibrationV2?.bandFor?.(audit.score)?.label||'ช่วงคะแนน';
+    $('audit-v1-band').textContent='Calibration V2 '+label;
+
     if(cal.band?.n>=5&&Number.isFinite(cal.band.winRate)){
       $('audit-v1-history').textContent='ชนะ '+cal.band.winRate.toFixed(1)+'% · '+cal.band.w+'/'+cal.band.n+' ไม้';
     }else if(cal.band?.n){
@@ -444,13 +519,13 @@
     const health=cal.report?.health;
     $('audit-v1-note').textContent=health?.samples>=20&&Number.isFinite(health.score)
       ?'Audit calibration '+health.score+'/100 · '+health.note
-      :'คะแนน Audit เป็น quality score ไม่ใช่ % ชนะ · กำลังสะสม Calibration';
+      :'คะแนน Audit เป็น quality score ไม่ใช่ % ชนะ · กำลังสะสม Calibration V2';
   }
 
   function update(signals=[]){
     const rows=Array.isArray(signals)?signals:[];
     for(const s of rows)if(s?.version===TARGET_VERSION&&s.dataset?.entry)ensureAudit(s,rows);
-    globalThis.AuditCalibrationV1?.update?.(rows);
+    globalThis.AuditCalibrationV2?.update?.(rows);
     const latest=[...rows].reverse().find(s=>s?.version===TARGET_VERSION&&s.dataset?.entry);
     const audit=latest?ensureAudit(latest,rows):null;
     render(audit,latest,rows);
@@ -465,13 +540,13 @@
       targetVersion:TARGET_VERSION,
       generatedAt:new Date().toISOString(),
       weights:{...W},
-      totalAudited:rows.filter(s=>s?.dataset?.entry?.auditV1?.schema===SCHEMA).length,
-      calibration:globalThis.AuditCalibrationV1?.report?.(rows)||null,
-      history:globalThis.AuditCalibrationV1?.history?.(rows)||[]
+      totalAudited:rows.filter(s=>s?.dataset?.entry?.auditV2?.schema===SCHEMA).length,
+      calibration:globalThis.AuditCalibrationV2?.report?.(rows)||null,
+      history:globalThis.AuditCalibrationV2?.history?.(rows)||[]
     };
   }
 
-  globalThis.AuditEngineV1={
+  globalThis.AuditEngineV2={
     schema:SCHEMA,
     targetVersion:TARGET_VERSION,
     weights:{...W},
