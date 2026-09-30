@@ -145,13 +145,19 @@ function behaviorSequence(f,x,structure){
  const postShockHold=priorShock?(prev.d>0&&x.price>=prev.close-Math.abs(prev.close-prev.open)*.35?1:prev.d<0&&x.price<=prev.close+Math.abs(prev.close-prev.open)*.35?-1:0):0;
  const absorption=unusualVolume&&live.rangeAtr>=.45&&live.bodyRatio<=.32&&(live.upper>=.30||live.lower>=.30);
  const extension=Math.abs((x.price-f.ema21)/a),exhaustion=extension>=CFG.v3ExhaustionExtension&&(bodyDecay||absorption||rejection===-sign(x.price-f.ema21));
- const pullbackUp=closed.slice(-4).some(q=>q.low<=f.ema8+a*.12)&&x.price>=f.ema8-a*.03;
- const pullbackDown=closed.slice(-4).some(q=>q.high>=f.ema8-a*.12)&&x.price<=f.ema8+a*.03;
+ const recent4=closed.slice(-4),recentLow=recent4.length?Math.min(...recent4.map(q=>q.low)):x.price,recentHigh=recent4.length?Math.max(...recent4.map(q=>q.high)):x.price;
+ const pullbackNear=CFG.v3PullbackNearAtr||.55;
+ const pullbackUp=recentLow<=f.ema8+a*.12&&x.price<=f.ema8+a*pullbackNear&&x.price>=f.ema21-a*.20;
+ const pullbackDown=recentHigh>=f.ema8-a*.12&&x.price>=f.ema8-a*pullbackNear&&x.price<=f.ema21+a*.20;
  const reclaimUp=pullbackUp&&x.price>=f.ema8+a*(CFG.v3BaseReclaimAtr||.03)&&live.d>=0&&live.closeLoc>=.55;
  const reclaimDown=pullbackDown&&x.price<=f.ema8-a*(CFG.v3BaseReclaimAtr||.03)&&live.d<=0&&live.closeLoc<=.45;
  const baseFormed=(pullbackUp||pullbackDown)&&recentRange<=Math.max(priorRange*.95,.65);
  const prior=f.b.slice(-13,-1),hi=prior.length?Math.max(...prior.map(q=>q.high)):f.high,lo=prior.length?Math.min(...prior.map(q=>q.low)):f.low;
- const breakoutUp=x.price>=hi+a*(CFG.v3BreakBuffer||.06),breakoutDown=x.price<=lo-a*(CFG.v3BreakBuffer||.06);
+ const priorPath=prior.slice(1).reduce((s,q,i)=>s+Math.abs(q.close-prior[i].close),0);
+ const priorEff=priorPath?Math.abs(prior.at(-1).close-prior[0].open)/priorPath:0;
+ const priorWidthAtr=(hi-lo)/a;
+ const breakoutContext=compression||priorEff<=(CFG.v3BreakoutBaseEffMax||.58)||priorWidthAtr<=(CFG.v3BreakoutBaseWidthAtr||4.2)||(f.sideCrosses||0)>=1;
+ const breakoutUp=breakoutContext&&x.price>=hi+a*(CFG.v3BreakBuffer||.06),breakoutDown=breakoutContext&&x.price<=lo-a*(CFG.v3BreakBuffer||.06);
  const acceptedUp=breakoutUp&&live.closeLoc>=CFG.v3BreakCloseMin&&live.d>=0&&!upperReject;
  const acceptedDown=breakoutDown&&live.closeLoc<=1-CFG.v3BreakCloseMin&&live.d<=0&&!lowerReject;
  const recapturedUp=x.price<hi-a*.02,recapturedDown=x.price>lo+a*.02;
@@ -160,7 +166,7 @@ function behaviorSequence(f,x,structure){
  if(bodyDecay)tags.push('Body decay');if(failedExpansion)tags.push('Failed expansion');if(rejection)tags.push(rejection>0?'Lower rejection':'Upper rejection');
  if(engulf)tags.push(engulf>0?'Bullish engulf':'Bearish engulf');if(exhaustion)tags.push('Exhaustion');if(baseFormed)tags.push('Base forming');
  return {live,metrics:ms,pressure,pace,compression,bodyDecay,expansion,unusualVolume,shock,absorption,exhaustion,rejection,engulf,oneSided,failedExpansion,postShockHold,
-  pullbackUp,pullbackDown,reclaimUp,reclaimDown,baseFormed,rangeHigh:hi,rangeLow:lo,breakoutUp,breakoutDown,acceptedUp,acceptedDown,recapturedUp,recapturedDown,tags};
+  pullbackUp,pullbackDown,reclaimUp,reclaimDown,baseFormed,rangeHigh:hi,rangeLow:lo,priorEff,priorWidthAtr,breakoutContext,breakoutUp,breakoutDown,acceptedUp,acceptedDown,recapturedUp,recapturedDown,tags};
 }
 
 /* ---------- Microstructure ---------- */
@@ -213,21 +219,24 @@ function readMarket(f,x,z,phase){
  const structure=structureSnapshot(f,x),behavior=behaviorSequence(f,x,structure);
  const provisionalDir=structure.structuralDir||sign(f.trend,.08)||sign(f.mom,.12)||behavior.live.d;
  const fib=fibContext(f,x.price,z,structure),htf=higherContext(x,x.price,provisionalDir||1),evidence=directionalEvidence(f,x,structure,behavior,htf);
- const a=Math.max(f.atr,1e-9),dir=evidence.d||provisionalDir,extension=dir?dir*(x.price-f.ema21)/a:Math.abs((x.price-f.ema21)/a);
+ const a=Math.max(f.atr,1e-9);let dir=evidence.d||provisionalDir;
+ const extension=dir?dir*(x.price-f.ema21)/a:Math.abs((x.price-f.ema21)/a);
  const rangePos=f.rangePosition,nearEdge=rangePos<=.25||rangePos>=.75;
+ const reverseUpConfirm=structure.reverseUp&&(behavior.rejection===1||behavior.failedExpansion===1||behavior.engulf===1);
+ const reverseDownConfirm=structure.reverseDown&&(behavior.rejection===-1||behavior.failedExpansion===-1||behavior.engulf===-1);
  let state='TRANSITION';
  if(behavior.shock)state='SHOCK_UNRESOLVED';
+ else if(reverseUpConfirm||reverseDownConfirm){state='REVERSAL_DEVELOPING';dir=reverseUpConfirm?1:-1;}
+ else if(behavior.exhaustion||phase?.phase==='EXHAUSTION')state='EXHAUSTION';
  else if(behavior.acceptedUp||behavior.acceptedDown)state='BREAKOUT_ACCEPTED';
  else if(behavior.breakoutUp||behavior.breakoutDown)state='BREAKOUT_ATTEMPT';
- else if(behavior.exhaustion||phase?.phase==='EXHAUSTION')state='EXHAUSTION';
- else if((structure.reverseUp||structure.reverseDown)&&behavior.rejection)state='REVERSAL_DEVELOPING';
  else if(behavior.compression&&f.eff<.34)state='COMPRESSION';
  else if(structure.dir&&f.eff>=CFG.v3TrendEffMin&&(behavior.pullbackUp||behavior.pullbackDown))state='PULLBACK';
  else if(structure.dir&&f.eff>=CFG.v3TrendEffMin)state='TREND_ADVANCE';
  else if(f.eff<=CFG.v3ChopEffMax&&f.sideCrosses>=1)state=nearEdge?'RANGE_EDGE':'RANGE_CHOP';
  else if(nearEdge)state='RANGE_EDGE';
  return {state,dir,evidence,structure,behavior,fib,htf,phase:phase?.phase||'TRANSITION',extension,rangePosition:rangePos,
-  relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,atr:a,price:x.price};
+  relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,atr:a,price:x.price,reverseUpConfirm,reverseDownConfirm};
 }
 function marketLabel(s){return ({
  SHOCK_UNRESOLVED:'เกิดแรงกระแทก · ตลาดยังไม่เฉลย',BREAKOUT_ATTEMPT:'กำลังลองทะลุกรอบ',BREAKOUT_ACCEPTED:'การทะลุกรอบเริ่มถูกยอมรับ',
