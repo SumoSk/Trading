@@ -285,31 +285,88 @@ function observe(engine,f,x,z,regime,phase){
 function entryOpportunity(f,x,s){
  const a=Math.max(f.atr,1e-9),p=x.price,d=s.playDirection,flow=d?d*(x.flow||0):0,c=s.candle,r=s.range,fib=s.fib;
  if(!d||['observe_conflict','range_rotation','mature_recovery'].includes(s.playbook))return null;
- const ext=d*(p-f.ema21)/a;if(ext>=(CFG.v2HardExtension||3.25)&&['breakout_follow','compression_breakout','edge_pressure_breakout','continuation','shock_follow'].includes(s.playbook))return null;
- let score=42,reasons=[],level=p,mode='Immediate',progress=0;const add=(ok,pts,msg)=>{if(ok){score+=pts;reasons.push(msg);}};
- add((d>0?s.highEvidence:s.lowEvidence)>=60,8,'Market hypothesis ชัด');add(flow>=(CFG.v2MinFlow||.02),8,'flow หนุน');add(flow>=(CFG.v2StrongFlow||.04),4,'flow หนุนแรง');
- add(c.oneSided===d||c.pressure*d>=.18,6,'candle sequence หนุน');add(c.rejection===d,5,'rejection หนุน');add(c.engulf===d,4,'engulf หนุน');
- add(s.higher.m5.available&&(!s.higher.m5.dir||s.higher.m5.dir===d),3,'5m ไม่ขวาง');add(s.higher.m15.available&&(!s.higher.m15.dir||s.higher.m15.dir===d),2,'15m ไม่ขวาง');
+ const ext=d*(p-f.ema21)/a;
+ if(ext>=(CFG.v2HardExtension||3.25)&&['breakout_follow','compression_breakout','edge_pressure_breakout','continuation','shock_follow','trend_reacceleration'].includes(s.playbook))return null;
 
- if(s.playbook==='range_edge_fade'){level=d>0?r.lo:r.hi;progress=d*(p-level)/a;add(d>0?r.pos<=.24:r.pos>=.76,10,'อยู่ขอบ Sideway');add(c.rejection===d||flow>=.03,8,'มีแรงกลับเข้ากรอบ');mode='Rejection';}
- else if(['compression_breakout','edge_pressure_breakout','breakout_follow'].includes(s.playbook)){level=d>0?r.hi:r.lo;progress=d*(p-level)/a;add(r.breakDir===d,10,'พ้นขอบจริง');add(progress>=(CFG.v2BreakBuffer||.04)&&progress<=.36,8,'ยัง follow ได้');const ca=d>0?c.liveCloseLoc:1-c.liveCloseLoc;add(ca>=.62,6,'แท่งสดปิดใกล้ปลาย');add(c.shock||c.liveRangeAtr>=.42,5,'มี expansion');mode='Immediate Follow';}
+ let score=42,reasons=[],level=p,mode='Immediate',progress=0,structuralReady=true,waiting='รอ trigger ของแผนให้เกิดจริง';
+ const add=(ok,pts,msg)=>{if(ok){score+=pts;reasons.push(msg);}};
+ add((d>0?s.highEvidence:s.lowEvidence)>=60,8,'Market hypothesis ชัด');
+ add(flow>=(CFG.v2MinFlow||.02),8,'flow หนุน');
+ add(flow>=(CFG.v2StrongFlow||.04),4,'flow หนุนแรง');
+ add(c.oneSided===d||c.pressure*d>=.18,6,'candle sequence หนุน');
+ add(c.rejection===d,5,'rejection หนุน');
+ add(c.engulf===d,4,'engulf หนุน');
+ add(s.higher.m5.available&&(!s.higher.m5.dir||s.higher.m5.dir===d),3,'5m ไม่ขวาง');
+ add(s.higher.m15.available&&(!s.higher.m15.dir||s.higher.m15.dir===d),2,'15m ไม่ขวาง');
+
+ if(s.playbook==='range_edge_fade'){
+  level=d>0?r.lo:r.hi;progress=d*(p-level)/a;
+  const atEdge=d>0?r.pos<=.24:r.pos>=.76;
+  const rejectOK=c.rejection===d||c.engulf===d||(c.liveDir===d&&flow>=.03);
+  add(atEdge,10,'อยู่ขอบ Sideway');add(rejectOK,8,'มีแรงกลับเข้ากรอบ');
+  structuralReady=atEdge&&rejectOK;waiting='รอ rejection/flow กลับจากขอบจริง';mode='Rejection';
+ }
+ else if(['compression_breakout','edge_pressure_breakout','breakout_follow'].includes(s.playbook)){
+  level=d>0?r.hi:r.lo;progress=d*(p-level)/a;
+  const broken=r.breakDir===d&&progress>=(CFG.v2BreakBuffer||.04)&&progress<=(CFG.v2BreakMaxChaseAtr||.36);
+  const alignedClose=d>0?c.liveCloseLoc:1-c.liveCloseLoc;
+  add(r.breakDir===d,10,'พ้นขอบจริง');add(broken,8,'ยังอยู่ในช่วง follow ที่ไม่ chase');
+  add(alignedClose>=.62,6,'แท่งสดปิดใกล้ปลายฝั่ง breakout');add(c.shock||c.liveRangeAtr>=.42,5,'มี expansion');
+  structuralReady=broken&&(alignedClose>=.58||flow>=.035);
+  waiting='เฝ้า breakout ได้ล่วงหน้า แต่ ENTER เมื่อพ้นขอบจริง + flow/แท่งยังรับราคา';mode='Immediate Follow';
+ }
  else if(s.playbook==='breakout_micro_pullback'){
   const bm=s.breakoutMemory;level=bm?.pivot??(d>0?r.hi:r.lo);progress=bm?bm.rebound:d*(p-level)/a;
-  add(!!bm&&bm.maxRetreat>=.07&&bm.maxRetreat<=.65,10,'เกิด micro pullback จริง');
-  add(!!bm&&bm.rebound>=.02&&bm.rebound<=.35,9,'เริ่ม reclaim จาก pullback pivot');
-  add(flow>=.025||c.rejection===d||c.liveDir===d,8,'flow/แท่งกลับตาม breakout');
-  add(d*(p-(bm?.level??level))/a>=-.04,5,'ยังรักษาฝั่ง breakout');
-  mode='Breakout Micro Pullback';
+  const pulled=!!bm&&bm.maxRetreat>=.07&&bm.maxRetreat<=.65;
+  const reclaimed=!!bm&&bm.rebound>=.02&&bm.rebound<=.35;
+  const followBack=flow>=.025||c.rejection===d||c.liveDir===d;
+  add(pulled,10,'เกิด micro pullback จริง');add(reclaimed,9,'เริ่ม reclaim จาก pivot ใหม่');add(followBack,8,'flow/แท่งกลับตาม breakout');
+  structuralReady=pulled&&reclaimed&&followBack;waiting='รอย่อจริงก่อน แล้วค่อย reclaim ตาม breakout';mode='Breakout Micro Pullback';
  }
- else if(s.playbook==='breakout_retest'){level=s.breakoutRetest?.level??(d>0?r.hi:r.lo);progress=d*(p-level)/a;add(Math.abs(p-level)/a<=.16,10,'กลับมาทดสอบ breakout level');add(d*(p-level)/a>=-.06,7,'ยังยืนฝั่ง breakout');add(flow>=.025||c.rejection===d,8,'flow/rejection รับ retest');mode='Breakout Retest';}
- else if(['failed_break_reversal','breakout_trap_reversal','shock_failure'].includes(s.playbook)){level=r.fakeLevel??(s.breakoutRetest?.level??(d>0?r.lo:r.hi));progress=d*(p-level)/a;add(r.fakeDir===-d||c.failedExpansion===d,12,'failure/trap ยืนยัน');add(c.rejection===d||c.failedExpansion===d||flow>=.04,8,'มี flow/rejection ฝั่งสวน');mode=s.playbook==='shock_failure'?'Shock Failure':'Failed Break Reversal';}
- else if(['trend_pullback','fib_pullback'].includes(s.playbook)){level=fib.valid&&fib.nearest?fib.nearest.price:f.ema8;progress=d*(p-level)/a;add(fib.valid&&fib.retracement>=.20&&fib.retracement<=.786,8,'อยู่ retracement zone');add(fib.confluence,5,'Fib + zone');add(d*(p-f.ema8)/a>=-.12,5,'เริ่ม reclaim ฐาน');mode=fib.valid?'Fib Reclaim':'Pullback Reclaim';}
- else if(['continuation','shock_follow','trend_reacceleration'].includes(s.playbook)){level=f.b.at(-1)?.close??p;progress=d*(p-level)/a;add(ext<=(CFG.v2MaxFollowExtension||1.75),7,'ยังไม่ยืดเกิน');add(c.shock||d*(f.momAccel||0)>=.08,8,'กำลัง re-accelerate');mode=s.playbook==='shock_follow'?'Shock Follow':s.playbook==='trend_reacceleration'?'Re-Acceleration':'Continuation';}
- else if(['exhaustion_reversal','reversal_follow'].includes(s.playbook)){level=f.ema8;progress=d*(p-level)/a;const n=[c.rejection===d,c.engulf===d,flow>=.04,s.state==='REVERSAL_CONFIRMED',d*(p-f.ema8)/a>=.03].filter(Boolean).length;add(n>=(CFG.v2ReversalEvidence||3),15,'reversal มีหลายหลักฐาน');add(s.state==='REVERSAL_CONFIRMED',8,'structure reversal ยืนยัน');mode='Reversal Confirm';}
- if(s.playbook==='breakout_micro_pullback'&&(!s.breakoutMemory||s.breakoutMemory.maxRetreat<.07||s.breakoutMemory.rebound<.02))score=Math.min(score,(CFG.v2EntryReady||58)-1);
+ else if(s.playbook==='breakout_retest'){
+  level=s.breakoutRetest?.level??(d>0?r.hi:r.lo);progress=d*(p-level)/a;
+  const near=Math.abs(p-level)/a<=.16;
+  const hold=d*(p-level)/a>=-.06;
+  const returnFlow=flow>=.025||c.rejection===d||c.engulf===d;
+  add(near,10,'กลับมาทดสอบ breakout level');add(hold,7,'ยังยืนฝั่ง breakout');add(returnFlow,8,'flow/rejection รับ retest');
+  structuralReady=near&&hold&&returnFlow;waiting='รอ retest รับอยู่ + flow/แท่งกลับตามทิศเดิม';mode='Breakout Retest';
+ }
+ else if(['failed_break_reversal','breakout_trap_reversal','shock_failure'].includes(s.playbook)){
+  level=r.fakeLevel??(s.breakoutRetest?.level??(d>0?r.lo:r.hi));progress=d*(p-level)/a;
+  const failureOK=r.fakeDir===-d||c.failedExpansion===d;
+  const reverseOK=c.rejection===d||c.failedExpansion===d||flow>=.04;
+  add(failureOK,12,'failure/trap ยืนยัน');add(reverseOK,8,'มี flow/rejection ฝั่งสวน');
+  structuralReady=failureOK&&reverseOK;waiting='ยังไม่สวนเพราะเห็น fail อย่างเดียว · รอแรงสวนยืนยัน';mode=s.playbook==='shock_failure'?'Shock Failure':'Failed Break Reversal';
+ }
+ else if(['trend_pullback','fib_pullback'].includes(s.playbook)){
+  level=fib.valid&&fib.nearest?fib.nearest.price:f.ema8;progress=d*(p-level)/a;
+  const zoneOK=!fib.valid||(fib.retracement>=.20&&fib.retracement<=.786);
+  const turnOK=c.rejection===d||c.engulf===d||(c.liveDir===d&&flow>=.02&&d*(p-f.ema8)/a>=-.12);
+  add(zoneOK,8,'อยู่ retracement zone');add(fib.confluence,5,'Fib + zone');add(turnOK,8,'แรงย่อเริ่มหยุด/reclaim');
+  structuralReady=zoneOK&&turnOK;waiting='รอแรงย่อหยุดและเกิด reclaim ก่อนตามเทรนด์';mode=fib.valid?'Fib Reclaim':'Pullback Reclaim';
+ }
+ else if(['continuation','shock_follow','trend_reacceleration'].includes(s.playbook)){
+  level=f.b.at(-1)?.close??p;progress=d*(p-level)/a;
+  const accel=c.shock||d*(f.momAccel||0)>=.08||s.reacceleration;
+  const notLate=ext<=(CFG.v2MaxFollowExtension||1.75);
+  add(notLate,7,'ยังไม่ยืดเกิน');add(accel,8,'กำลัง re-accelerate');
+  structuralReady=notLate&&accel&&flow>=.015;waiting='รอแรงไปต่อคงอยู่ + flow ไม่ดับ';mode=s.playbook==='shock_follow'?'Shock Follow':s.playbook==='trend_reacceleration'?'Re-Acceleration':'Continuation';
+ }
+ else if(['exhaustion_reversal','reversal_follow'].includes(s.playbook)){
+  level=f.ema8;progress=d*(p-level)/a;
+  const n=[c.rejection===d,c.engulf===d,flow>=.04,s.state==='REVERSAL_CONFIRMED',d*(p-f.ema8)/a>=.03].filter(Boolean).length;
+  add(n>=(CFG.v2ReversalEvidence||3),15,'reversal มีหลายหลักฐาน');add(s.state==='REVERSAL_CONFIRMED',8,'structure reversal ยืนยัน');
+  structuralReady=n>=(CFG.v2ReversalEvidence||3);waiting='ไม่สวนเพราะขาเดิมวิ่งไกลอย่างเดียว · รอ rejection + flow + structure';
+  mode='Reversal Confirm';
+ }
+
  score=Math.round(clip(score,0,100));
- return {type:typeForPlaybook(s.playbook),d,level,progress,score,ready:score>=(CFG.v2EntryReady||58),enter:score>=(CFG.v2EntryEnter||66),mode,reasons,
-  key:['V2',s.playbook,d,Number(level).toFixed(1),f.b.at(-1)?.time||0].join(':'),reason:playbookLabel(s.playbook)+' · '+(reasons.join(' + ')||'รอหลักฐานเพิ่ม')};
+ const contextReady=score>=(CFG.v2EntryReady||58);
+ const ready=contextReady&&structuralReady;
+ const enter=score>=(CFG.v2EntryEnter||66)&&structuralReady;
+ return {type:typeForPlaybook(s.playbook),d,level,progress,score,contextReady,structuralReady,ready,enter,waiting,mode,reasons,
+  key:['V2',s.playbook,d,Number(level).toFixed(1),f.b.at(-1)?.time||0].join(':'),
+  reason:playbookLabel(s.playbook)+' · '+(reasons.join(' + ')||'รอหลักฐานเพิ่ม')};
 }
 function compactCandles(bars,a,n=8){
  return (bars||[]).slice(-n).map(q=>{const r=Math.max(q.high-q.low,1e-9),body=q.close-q.open;return {time:q.time,open:q.open,high:q.high,low:q.low,close:q.close,volume:q.volume,closed:!!q.closed,direction:body>0?'GREEN':body<0?'RED':'DOJI',bodyAtr:Math.abs(body)/a,rangeAtr:r/a,closeLocation:clip((q.close-q.low)/r,0,1),upperWickAtr:(q.high-Math.max(q.open,q.close))/a,lowerWickAtr:(Math.min(q.open,q.close)-q.low)/a};});
@@ -341,7 +398,7 @@ function v2Step(x){
  if(cand&&!cand.logged){cand.logged=true;this.log('detected',x.ts,{id:cand.id,key:cand.key,type:cand.type,detectedAt:x.ts,direction:dirLabel(cand.d),price:x.price,level:cand.level,candidate:{schema:'aris-v2-candidate-v1',story,entry:opp}});}
  if(cand?.issued){if(x.ts-cand.issuedAt>60000)this.v2Candidate=null;return this.lastView={...base,event:{...cand},watch,status:'issued',reason:'ARIS V2 · จุดเข้าออกแล้ว · ยังเฝ้าเรื่องราวต่อ'};}
  if(!cand||!opp)return this.lastView={...base,watch,status:'watch',reason:'ARIS V2 · '+story.summary+' · แผน '+story.playbookLabel,gate:{state:'WATCH',direction:watch.direction,code:'v2_story_watch',blocker:'กำลังเฝ้าพฤติกรรม ไม่ได้รอสัญญาณแบบเดี่ยว',waitingFor:[story.trigger,'ยกเลิกเมื่อ: '+story.invalidation,'แผนถัดไป: '+story.nextPlan],metrics:{evidence:watchScore,flow:d?d*(x.flow||0):0,extensionAtr:d?d*(x.price-f.ema21)/Math.max(f.atr,1e-9):0,stateConfidence:story.stateConfidence}}};
- if(!opp.enter){cand.evidenceSince=0;cand.ticks=0;return this.lastView={...base,event:{...cand},watch,status:opp.ready?'confirming':'tracking',reason:'ARIS V2 · '+story.playbookLabel+' · Entry evidence '+opp.score+'/100 · '+story.summary,gate:{state:opp.ready?'READY':'WATCH',direction:dirLabel(opp.d),code:'v2_entry_evidence',blocker:opp.ready?'บริบทผ่านแล้ว · รอ entry evidence':'จุดเข้ายังไม่คมพอ',waitingFor:['Entry evidence '+opp.score+'/'+(CFG.v2EntryEnter||66),story.trigger,'ถ้าผิด: '+story.nextPlan],metrics:{evidence:opp.score,flow:opp.d*(x.flow||0),progress:opp.progress,extensionAtr:opp.d*(x.price-f.ema21)/Math.max(f.atr,1e-9),stateConfidence:story.stateConfidence}}};}
+ if(!opp.enter){cand.evidenceSince=0;cand.ticks=0;return this.lastView={...base,event:{...cand},watch,status:opp.ready?'confirming':'tracking',reason:'ARIS V2 · '+story.playbookLabel+' · Entry evidence '+opp.score+'/100 · '+story.summary,gate:{state:opp.ready?'READY':'WATCH',direction:dirLabel(opp.d),code:'v2_entry_evidence',blocker:opp.ready?'บริบทผ่านแล้ว · รอ entry evidence':'จุดเข้ายังไม่คมพอ',waitingFor:[opp.waiting||('Entry evidence '+opp.score+'/'+(CFG.v2EntryEnter||66)),story.trigger,'ถ้าผิด: '+story.nextPlan],metrics:{evidence:opp.score,flow:opp.d*(x.flow||0),progress:opp.progress,extensionAtr:opp.d*(x.price-f.ema21)/Math.max(f.atr,1e-9),stateConfidence:story.stateConfidence}}};}
  if(!cand.evidenceSince)cand.evidenceSince=x.ts;cand.ticks=(cand.ticks||0)+1;
  if(cand.ticks<(CFG.v2ConfirmTicks||2)||x.ts-cand.evidenceSince<(CFG.v2ConfirmMs||350))return this.lastView={...base,event:{...cand},watch,status:'confirming',reason:'ARIS V2 · Entry ผ่าน · ยืนยันข้อมูลสดสั้น ๆ',gate:{state:'READY',direction:dirLabel(opp.d),code:'v2_live_confirm',blocker:'เงื่อนไขผ่านแล้ว',waitingFor:['ยืนยัน '+Math.min(cand.ticks,CFG.v2ConfirmTicks||2)+'/'+(CFG.v2ConfirmTicks||2)+' ครั้ง','คง behavior อย่างน้อย '+(CFG.v2ConfirmMs||350)+' ms'],metrics:{evidence:opp.score,flow:opp.d*(x.flow||0),progress:opp.progress,extensionAtr:opp.d*(x.price-f.ema21)/Math.max(f.atr,1e-9),stateConfidence:story.stateConfidence}}};
  const dup=[...this.signals].reverse().find(q=>q.version===CFG.version&&x.ts-q.entryTime<90000&&(
@@ -353,7 +410,7 @@ function v2Step(x){
  const out=dirLabel(opp.d),id='ARIS2:'+this.session+':'+x.ts+':'+cand.key,a=Math.max(f.atr,1e-9),entryLow=opp.d>0?opp.level-a*.04:opp.level-a*.35,entryHigh=opp.d>0?opp.level+a*.35:opp.level+a*.04;
  const signal={id,version:CFG.version,type:opp.type,direction:out,modelDirection:out,decisionPolicy:'aris_v2_story_playbook_entry',entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+CFG.horizonMs,result:'pending',lastObserved:x.ts,event:{...cand},
   features:{atr:f.atr,trend:f.trend,flow:x.flow,book:x.book,progress:opp.progress,regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,rangePosition:f.rangePosition,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,extensionAtr:opp.d*(x.price-f.ema21)/a,v2State:story.state,v2Playbook:story.playbook,v2Evidence:opp.score,v2StateConfidence:story.stateConfidence},
-  dataset:{schema:'btc-t10-training-v2',episodeId:'ARIS2:'+this.session+':'+Math.floor(x.ts/60000),episodeSequence:1,path1m:[],context1m:[],entry:{capturedAt:x.ts,price:x.price,outputDirection:out,modelDirection:out,decisionPolicy:'aris_v2_story_playbook_entry',decisionReason:opp.reason,strategyVersion:CFG.version,setupType:opp.type,setupReason:opp.reason,level:opp.level,entryLow,entryHigh,atr:f.atr,trend:f.trend,momentum:f.mom,momentumAccel:f.momAccel,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,phaseDir:phase.dir,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,liveVolumePace:phase.liveVolumePace,flow:x.flow,coverage:x.coverage||0,book:x.book,bookValid:!!x.bookValid,progress:opp.progress,zones:{nearestSupport:nearestZone(z,x.price,'support',a),nearestResistance:nearestZone(z,x.price,'resistance',a)},candleSequence:compactCandles(x.bars,a,8),prior1m:compactBars(x.bars,20),arisRevision:CFG.arisRevision,v2SetupKey:cand.key,v2EntryMode:opp.mode,v2EntryEvidence:opp.score,v2EntryReasons:[...opp.reasons],v2Story:story,v2State:story.state,v2StateConfidence:story.stateConfidence,v2PrimaryHypothesis:story.primary,v2AlternativeHypothesis:story.alternative,v2Playbook:story.playbook,v2Trigger:story.trigger,v2Invalidation:story.invalidation,v2NextPlan:story.nextPlan,v2Range:story.range,v2Fib:story.fib,v2CandleBehavior:story.candle,v2TrendChangeRisk:story.trendChangeRisk}},
+  dataset:{schema:'btc-t10-training-v2',episodeId:'ARIS2:'+this.session+':'+Math.floor(x.ts/60000),episodeSequence:1,path1m:[],context1m:[],entry:{capturedAt:x.ts,price:x.price,outputDirection:out,modelDirection:out,decisionPolicy:'aris_v2_story_playbook_entry',decisionReason:opp.reason,strategyVersion:CFG.version,setupType:opp.type,setupReason:opp.reason,level:opp.level,entryLow,entryHigh,atr:f.atr,trend:f.trend,momentum:f.mom,momentumAccel:f.momAccel,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,phaseDir:phase.dir,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,liveVolumePace:phase.liveVolumePace,flow:x.flow,coverage:x.coverage||0,book:x.book,bookValid:!!x.bookValid,progress:opp.progress,zones:{nearestSupport:nearestZone(z,x.price,'support',a),nearestResistance:nearestZone(z,x.price,'resistance',a)},candleSequence:compactCandles(x.bars,a,8),prior1m:compactBars(x.bars,20),arisRevision:CFG.arisRevision,v2SetupKey:cand.key,v2EntryMode:opp.mode,v2EntryEvidence:opp.score,v2StructuralReady:!!opp.structuralReady,v2EntryReasons:[...opp.reasons],v2Story:story,v2State:story.state,v2StateConfidence:story.stateConfidence,v2PrimaryHypothesis:story.primary,v2AlternativeHypothesis:story.alternative,v2Playbook:story.playbook,v2Trigger:story.trigger,v2Invalidation:story.invalidation,v2NextPlan:story.nextPlan,v2Range:story.range,v2Fib:story.fib,v2CandleBehavior:story.candle,v2TrendChangeRisk:story.trendChangeRisk}},
   reason:'ARIS V2 · '+story.stateLabel+' · '+story.playbookLabel+' · '+opp.mode+' · Entry '+opp.score+'/100 · '+opp.reason};
  this.signals.push(signal);if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(q=>q.result!=='pending');if(i>=0)this.signals.splice(i,1);}
  cand.issued=true;cand.issuedAt=x.ts;cand.signalId=id;cand.entryLow=entryLow;cand.entryHigh=entryHigh;
