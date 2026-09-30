@@ -958,9 +958,9 @@ const ARIS_V12_CONFIG=Object.freeze({...ARIS_V11_CONFIG,
  arisMacroHardExtension:3.60
 });
 const ARIS_V2_CONFIG=Object.freeze({...ARIS_V12_CONFIG,
- version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r2',
+ version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r3',
  v2RangeLookback:20,v2RangeEdgeAtr:.14,v2RangeBalancedEff:.38,v2CompressionRatio:.72,
- v2BreakBuffer:.04,v2BreakAccepted:.08,v2FakeBreakBuffer:.05,
+ v2BreakBuffer:.04,v2BreakAccepted:.08,v2BreakMaxChaseAtr:.36,v2FakeBreakBuffer:.05,
  v2FibZoneAtr:.15,v2ZoneNearAtr:.25,
  v2StateMemoryMs:3600000,v2SnapshotMemory:240,v2StoryLogCooldownMs:10000,
  v2CandidateMaxAgeMs:25000,v2EntryReady:58,v2EntryEnter:66,
@@ -2506,7 +2506,7 @@ if(root.ContinuousDirection){
 root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timingScore,detectSetup};
 })(typeof globalThis!=='undefined'?globalThis:window);
 </script>
-<script src="v2.js?v=20260930-r2"></script>
+<script src="v2.js?v=20260930-r3"></script>
 <script>
 'use strict';
 (() => {
