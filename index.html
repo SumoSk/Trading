@@ -633,6 +633,44 @@ main{padding-top:10px}
 .signal-card-main .entry-request-button.active{border-color:#d6ad5f;background:#251f17}
 .signal-card-main .entry-request-button.issued{border-color:#4b8b76;background:#11251f}
 @media(max-width:560px){.signal-card-main .entry-request-button{padding:7px 8px}.signal-card-main .entry-request-button strong{font-size:11px}.signal-card-main .entry-request-button strong small{font-size:8px}}
+
+/* UI cleanup from annotated review: crosses = remove, circles = tidy only */
+.signal-card-main .entry-request-button>span{display:none!important}
+.signal-card-main .entry-request-button{justify-content:flex-start!important;min-height:34px!important;padding:7px 9px!important}
+.signal-card-main .entry-request-button strong{display:block;width:100%;font-size:11px!important;line-height:1.2!important;white-space:nowrap!important}
+.signal-card-main .entry-request-button strong small{font-size:7.5px!important;font-weight:500!important;white-space:nowrap!important}
+
+.signal-card-main .entry-watch-head{display:none!important}
+.signal-card-main .entry-gate-detail{display:none!important}
+.signal-card-main .entry-watch{padding:7px 8px!important}
+.signal-card-main .signal-description{margin:0!important;font-size:9px!important;line-height:1.45!important}
+.signal-card-main #event-detail{margin-top:5px!important;font-size:8px!important;line-height:1.45!important}
+
+.setup-profile-compact .compact-entry-line{display:none!important}
+.setup-profile-compact .compact-brief-head{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:4px!important}
+.setup-profile-compact .compact-brief-head>div{min-width:0}
+.setup-profile-compact h3{font-size:10px!important;line-height:1.3!important;overflow-wrap:normal!important;word-break:normal!important}
+.setup-profile-compact .compact-brief-status{justify-self:start!important;font-size:7px!important;padding:2px 5px!important}
+.setup-profile-compact .compact-brief-kicker{font-size:6.5px!important;margin-bottom:2px!important}
+.setup-profile-compact .compact-next{padding:7px 8px!important;margin-bottom:6px!important}
+.setup-profile-compact .compact-next>span{font-size:7px!important}
+.setup-profile-compact .compact-next>p{font-size:9.5px!important;line-height:1.45!important;font-weight:600!important}
+.setup-profile-compact .compact-brief-summary{font-size:8px!important;line-height:1.45!important;margin:6px 0!important}
+
+.signal-card-main .probability-block{padding:8px 0 7px!important}
+.signal-card-main .probability-values{align-items:end!important}
+.signal-card-main .probability-values span{font-size:8px!important}
+.signal-card-main .probability-values strong{font-size:13px!important}
+.signal-card-main .probability-track{height:4px!important;margin-top:5px!important}
+.signal-card-main .direction-detail{display:block!important;margin-top:6px!important}
+.signal-card-main #risk-now{display:inline-block!important;padding:3px 7px!important;border:1px solid #3a4659!important;border-radius:999px!important;font-size:8px!important;line-height:1.2!important;text-align:left!important}
+.signal-card-main #direction-now,
+.signal-card-main #risk-reason,
+.signal-card-main #direction-reference{display:none!important}
+
+/* Do not leave a giant empty candle column just because the right card is taller. */
+.signal-panel>.signal-card-candle{align-self:start!important;height:auto!important}
+
 </style>
 </head>
 <body data-feed="syncing" class="toolbar-floating">
@@ -4303,11 +4341,16 @@ function openReport(){
    const btn=$('expedite-five-toggle'),label=$('expedite-five-label'),status=$('expedite-five-status');if(!btn||!label||!status)return;
    const e=state.expediteFive;
    btn.classList.remove('active','issued');
-   label.innerHTML='จุดเข้า <small>(กดเพื่อขอสัญญาณด่วน)</small>';
-   if(!e?.active){btn.setAttribute('aria-pressed','false');status.textContent=e?.lastStatus||'พร้อม';if(e?.lastStatus?.startsWith('ออกแล้ว'))btn.classList.add('issued');return;}
+   status.textContent='';
+   if(!e?.active){
+    btn.setAttribute('aria-pressed','false');
+    label.innerHTML='จุดเข้า <small>(กดเพื่อขอสัญญาณด่วน)</small>';
+    if(e?.lastStatus?.startsWith('ออกแล้ว'))btn.classList.add('issued');
+    return;
+   }
    btn.classList.add('active');btn.setAttribute('aria-pressed','true');
-   const qms=(state.quote?.ts||Date.now()/1000)*1000,current=expediteBarTime(qms),index=Math.max(1,Math.min(5,Math.floor((current-e.startBarTime)/60)+1)),left=Math.max(1,6-index);
-   status.textContent='กำลังหา · '+index+'/5 · เหลือ '+left;
+   const qms=(state.quote?.ts||Date.now()/1000)*1000,current=expediteBarTime(qms),index=Math.max(1,Math.min(5,Math.floor((current-e.startBarTime)/60)+1));
+   label.innerHTML='จุดเข้า <small>(กำลังหาสัญญาณ '+index+'/5)</small>';
   }
   function expediteStart(){
    if(state.analysisTf!=='1m'||!state.quote){state.expediteFive={active:false,lastStatus:'ใช้กับสัญญาณหลัก 1m'};expediteRender();return;}
