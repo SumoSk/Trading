@@ -94,7 +94,13 @@
       .replay-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:8px}.replay-kpi{border:1px solid #25364a;border-radius:7px;background:#0c1622;padding:6px}.replay-kpi span{display:block;font-size:5.8px;color:#6f8299}.replay-kpi b{display:block;margin-top:2px;font-size:9px;color:#bfd0e3}
       .replay-note{margin-top:8px!important;padding:7px;border:1px solid #4d452e;border-radius:7px;background:#211d13;color:#bcae82!important}
       .replay-result{margin-top:8px;padding:8px;border:1px solid #2d4d47;border-radius:8px;background:#0e211d}.replay-result strong{font-size:9px;color:#62dab3}.replay-result span{display:block;margin-top:3px;font-size:7px;color:#89a6a0}
-      @media(max-width:760px){.train-grid{grid-template-columns:1fr}.train-fields{grid-template-columns:1fr 1fr}.train-fields .train-field:last-child{grid-column:1/-1}.train-preview{grid-template-columns:1fr 1fr}.feature-grid{grid-template-columns:1fr}.replay-kpis{grid-template-columns:repeat(3,1fr)}}
+      .analytics-card{border-color:#31504b;background:#0d1c1b}.analytics-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+      .analytics-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.analytics-kpi{padding:7px;border:1px solid #29423f;border-radius:7px;background:#0b1717}.analytics-kpi span{display:block;font-size:6px;color:#718f8b}.analytics-kpi b{display:block;margin-top:2px;font-size:11px;color:#b9d7d2}
+      .analytics-panels{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.analytics-panel{border:1px solid #263a3a;border-radius:7px;background:#0b1618;padding:7px}.analytics-panel h4{margin:0 0 5px;font-size:7px;color:#9dbab6}
+      .analytics-table{width:100%;border-collapse:collapse;font-size:6.3px}.analytics-table th,.analytics-table td{padding:3px 2px;border-bottom:1px solid #1e3032;text-align:left}.analytics-table th{color:#667f80;font-weight:500}.analytics-table td{color:#a9bdbe}.analytics-table td:last-child,.analytics-table th:last-child{text-align:right}
+      .analytics-tags{display:flex;gap:4px;flex-wrap:wrap}.analytics-tags span{padding:3px 5px;border:1px solid #2b4141;border-radius:999px;background:#101d1e;color:#91aaaa;font-size:6px}
+      .analytics-note{margin-top:7px!important;color:#748d8e!important}.analytics-empty{font-size:7px;color:#72878a}
+      @media(max-width:760px){.train-grid{grid-template-columns:1fr}.train-fields{grid-template-columns:1fr 1fr}.train-fields .train-field:last-child{grid-column:1/-1}.train-preview{grid-template-columns:1fr 1fr}.feature-grid{grid-template-columns:1fr}.replay-kpis{grid-template-columns:repeat(3,1fr)}.analytics-grid{grid-template-columns:repeat(2,1fr)}.analytics-panels{grid-template-columns:1fr}}
       @media(max-width:560px){.training-lab-open{height:28px;padding:0 7px;font-size:8px}#training-lab-dialog{width:calc(100vw - 8px);max-height:96vh}.training-lab-shell{max-height:96vh}.training-lab-head{padding:11px}.training-lab-body{padding:9px}.train-card{padding:9px}.quality-stats{grid-template-columns:1fr 1fr}}
     `;
     document.head.append(style);
@@ -107,7 +113,7 @@
     dialog.innerHTML=`
       <div class="training-lab-shell">
         <header class="training-lab-head">
-          <div><span>PHASE 1–2 · HISTORICAL DATA + REPLAY</span><h2>ARIS TRAINING LAB</h2><p>ข้อมูลย้อนหลังแยกจาก Live · Replay ด้วย ARIS 2.0 แบบ 1m bar-close · ไม่แตะเครื่องยนต์จริง</p></div>
+          <div><span>PHASE 1–3 · DATA + REPLAY + ANALYTICS</span><h2>ARIS TRAINING LAB</h2><p>Historical Training แบบย่อ · Replay แยกจาก Live · วิเคราะห์หลายร้อย/หลายพันไม้โดยไม่แบกข้อมูลแท่งสดทั้งหมด</p></div>
           <button type="button" class="training-lab-close" id="training-lab-close">×</button>
         </header>
         <div class="training-lab-body">
@@ -210,10 +216,36 @@
             <p class="replay-note">Replay V1 ไม่สร้าง Order Book/Tick ปลอม: ใช้ OHLCV + Taker Buy/Sell ของแท่งที่ปิดแล้ว และยืนยัน entry ที่ราคาปิด จึงเหมาะกับการเทียบ pattern/Calibration แต่ไม่ใช่การจำลอง Live tick-for-tick ค่ะ</p>
             <div class="replay-result" id="train-replay-result" hidden><strong id="train-replay-result-title">Replay complete</strong><span id="train-replay-result-copy"></span></div>
           </section>
+
+          <section class="train-card analytics-card">
+            <h3>6 · Phase 3 · Training Analytics</h3>
+            <p>สรุปจาก Compact Training records เท่านั้น ไม่โหลด raw bars หรือ timeline รายจุดกลับมาทำรีพอร์ตค่ะ</p>
+            <div class="analytics-actions">
+              <button type="button" class="train-primary" id="train-analytics-build" disabled>วิเคราะห์ Phase 3</button>
+              <button type="button" class="train-secondary" id="train-analytics-export" disabled>Export JSON แบบย่อ</button>
+              <span class="train-status-badge" id="train-analytics-status">รอผล Replay</span>
+            </div>
+            <div id="train-analytics-empty" class="analytics-empty">เมื่อ Replay มีไม้ที่ตัดสินแล้ว กดวิเคราะห์เพื่อสร้าง Calibration และสรุป pattern ค่ะ</div>
+            <div id="train-analytics-result" hidden>
+              <div class="analytics-grid">
+                <div class="analytics-kpi"><span>Scored trades</span><b id="analytics-trades">—</b></div>
+                <div class="analytics-kpi"><span>Win rate</span><b id="analytics-wr">—</b></div>
+                <div class="analytics-kpi"><span>Audit samples</span><b id="analytics-audit-n">—</b></div>
+                <div class="analytics-kpi"><span>Calibration order</span><b id="analytics-order">—</b></div>
+              </div>
+              <div class="analytics-panels">
+                <div class="analytics-panel"><h4>Audit Calibration</h4><div id="analytics-calibration"></div></div>
+                <div class="analytics-panel"><h4>State / Playbook</h4><div id="analytics-context"></div></div>
+                <div class="analytics-panel"><h4>รูปแบบที่เจอบ่อย</h4><div id="analytics-patterns"></div></div>
+                <div class="analytics-panel"><h4>MFE / MAE + Audit miss</h4><div id="analytics-quality"></div></div>
+              </div>
+              <p class="analytics-note" id="analytics-note">Historical 1m bar-close · ใช้เพื่อวิจัย/Calibration ก่อน Phase 4 validation</p>
+            </div>
+          </section>
         </div>
         <footer class="training-lab-foot">
-          <span id="training-lab-foot-status">Phase 1–2 · Historical Data + Replay Engine</span>
-          <div class="phase-next"><b>ถัดไป Phase 3</b><button type="button" disabled>Audit Analytics + Calibration Dashboard</button></div>
+          <span id="training-lab-foot-status">Phase 1–3 · Data + Replay + Compact Analytics</span>
+          <div class="phase-next"><b>ถัดไป Phase 4</b><button type="button" disabled>Validation / Walk-forward Lab</button></div>
         </footer>
       </div>`;
     document.body.append(dialog);
@@ -423,7 +455,7 @@
     const box=byId('train-replay-session');if(!box)return;
     if(!session){
       box.innerHTML='<b>ยังไม่ได้เลือก Session</b><br>กด “ดู” ที่ Training Session ก่อนเริ่ม Replay';
-      replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);return;
+      replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);await updateAnalyticsPanel(null);return;
     }
     latestSession=session;
     const cp=await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id);
@@ -446,6 +478,7 @@
         signals:session.replayReport?.signals||0,settled:session.replayReport?.settled||0,correct:session.replayReport?.correct||0,incorrect:session.replayReport?.incorrect||0,pending:session.replayReport?.pending||0
       });
     }
+    await updateAnalyticsPanel(session);
   }
 
   async function startReplay(){
@@ -468,7 +501,7 @@
       });
       const fresh=await globalThis.HistoricalDataV1.getSession(latestSession.id);
       if(fresh)latestSession=fresh;
-      showReplayReport(report);await refreshSessions();await updateReplayPanel(latestSession);await showStorage();
+      showReplayReport(report);await refreshSessions();await updateReplayPanel(latestSession);await updateAnalyticsPanel(latestSession);await showStorage();
     }catch(err){
       console.error('Historical Replay failed',err);
       replayStatus('Replay error · '+String(err?.message||err),'error');setReplayButtons('idle');
@@ -483,6 +516,90 @@
   }
   function stopReplay(){
     if(globalThis.HistoricalReplayV1?.stop?.()){replayStatus('กำลังหยุดและบันทึก Checkpoint','warn');}
+  }
+
+
+  function analyticsStatus(text,type=''){
+    const el=byId('train-analytics-status');if(!el)return;
+    el.textContent=text;el.className='train-status-badge'+(type?' '+type:'');
+  }
+
+  function wrText(v){return Number.isFinite(Number(v))?Number(v).toFixed(1)+'%':'—';}
+
+  function rowsTable(rows,keyLabel='กลุ่ม',limit=6){
+    const a=(rows||[]).slice(0,limit);
+    if(!a.length)return '<span class="analytics-empty">ยังไม่มีข้อมูล</span>';
+    return '<table class="analytics-table"><thead><tr><th>'+esc(keyLabel)+'</th><th>N</th><th>WR</th></tr></thead><tbody>'+
+      a.map(x=>'<tr><td>'+esc(x.key)+'</td><td>'+fmtInt(x.n)+'</td><td>'+esc(wrText(x.winRate))+'</td></tr>').join('')+'</tbody></table>';
+  }
+
+  function renderAnalytics(report){
+    const result=byId('train-analytics-result'),empty=byId('train-analytics-empty');
+    if(!report){result.hidden=true;empty.hidden=false;return;}
+    empty.hidden=true;result.hidden=false;
+    byId('analytics-trades').textContent=fmtInt(report.counts?.scored||0);
+    byId('analytics-wr').textContent=wrText(report.winRate);
+    byId('analytics-audit-n').textContent=fmtInt(report.auditCalibration?.health?.samples||0);
+    byId('analytics-order').textContent=Number.isFinite(report.auditCalibration?.health?.orderingPct)?report.auditCalibration.health.orderingPct+'%':'ข้อมูลน้อย';
+
+    byId('analytics-calibration').innerHTML=rowsTable(report.auditCalibration?.bands,'Audit',5);
+
+    const states=(report.byState||[]).slice(0,4),plays=(report.byPlaybook||[]).slice(0,4);
+    byId('analytics-context').innerHTML=
+      '<div style="margin-bottom:5px">'+rowsTable(states,'State',4)+'</div>'+
+      rowsTable(plays,'Playbook',4);
+
+    const losses=(report.lossTags||[]).slice(0,5),wins=(report.winTags||[]).slice(0,5);
+    byId('analytics-patterns').innerHTML=
+      '<div class="analytics-tags">'+losses.map(x=>'<span>แพ้ · '+esc(x.tag)+' ×'+fmtInt(x.n)+'</span>').join('')+
+      wins.map(x=>'<span>ชนะ · '+esc(x.tag)+' ×'+fmtInt(x.n)+'</span>').join('')+'</div>';
+
+    const mm=report.mfeMae||{},miss=(report.auditMisses||[]).slice(0,5);
+    byId('analytics-quality').innerHTML=
+      '<div class="analytics-tags"><span>Win MFE '+esc(String(mm.winMfe??'—'))+' ATR</span><span>Win MAE '+esc(String(mm.winMae??'—'))+
+      ' ATR</span><span>Loss MFE '+esc(String(mm.lossMfe??'—'))+' ATR</span><span>Loss MAE '+esc(String(mm.lossMae??'—'))+' ATR</span>'+
+      miss.map(x=>'<span>'+esc(x.type)+' ×'+fmtInt(x.n)+'</span>').join('')+'</div>';
+
+    const h=report.auditCalibration?.health;
+    byId('analytics-note').textContent=
+      'Historical 1m bar-close · Audit ordering '+(Number.isFinite(h?.orderingPct)?h.orderingPct+'%':'ยังวัดไม่ได้')+
+      ' · Samples '+fmtInt(h?.samples||0)+' · Phase 4 จะใช้ holdout/walk-forward ยืนยันก่อนแตะ Live';
+  }
+
+  async function updateAnalyticsPanel(session=latestSession){
+    const buildBtn=byId('train-analytics-build'),exportBtn=byId('train-analytics-export');
+    if(!session){buildBtn.disabled=true;exportBtn.disabled=true;analyticsStatus('รอ Session');renderAnalytics(null);return;}
+    const hasSettled=Number(session.replayReport?.settled||0)>0;
+    buildBtn.disabled=!hasSettled;
+    const report=await globalThis.TrainingAnalyticsV1?.get?.(session.id);
+    exportBtn.disabled=!report;
+    if(report){renderAnalytics(report);analyticsStatus('Analytics พร้อม','ready');}
+    else{renderAnalytics(null);analyticsStatus(hasSettled?'พร้อมวิเคราะห์':'รอผล Replay',hasSettled?'ready':'');}
+  }
+
+  async function buildAnalytics(){
+    if(!latestSession||!globalThis.TrainingAnalyticsV1)return;
+    byId('train-analytics-build').disabled=true;analyticsStatus('กำลังวิเคราะห์','warn');
+    try{
+      const report=await globalThis.TrainingAnalyticsV1.build(latestSession.id);
+      renderAnalytics(report);byId('train-analytics-export').disabled=false;analyticsStatus('Analytics พร้อม','ready');
+    }catch(err){
+      console.error('Training analytics failed',err);analyticsStatus('วิเคราะห์ไม่สำเร็จ · '+String(err?.message||err),'error');
+    }finally{
+      const hasSettled=Number(latestSession?.replayReport?.settled||0)>0;
+      byId('train-analytics-build').disabled=!hasSettled;
+    }
+  }
+
+  async function exportAnalytics(){
+    if(!latestSession||!globalThis.TrainingAnalyticsV1)return;
+    analyticsStatus('กำลังสร้าง JSON','warn');
+    try{
+      await globalThis.TrainingAnalyticsV1.download(latestSession.id);
+      analyticsStatus('Export JSON แล้ว','ready');
+    }catch(err){
+      console.error('Training export failed',err);analyticsStatus('Export ไม่สำเร็จ · '+String(err?.message||err),'error');
+    }
   }
 
   async function showSession(id){
@@ -539,6 +656,8 @@
     byId('train-replay-pause').addEventListener('click',pauseReplay);
     byId('train-replay-resume').addEventListener('click',resumeReplay);
     byId('train-replay-stop').addEventListener('click',stopReplay);
+    byId('train-analytics-build').addEventListener('click',buildAnalytics);
+    byId('train-analytics-export').addEventListener('click',exportAnalytics);
 
     byId('training-session-list').addEventListener('click',async e=>{
       const view=e.target.closest('[data-train-view]'),del=e.target.closest('[data-train-delete]');
@@ -553,14 +672,14 @@
   }
 
   function init(){
-    if(!globalThis.HistoricalDataV1||!globalThis.HistoricalReplayV1){
-      console.warn('Training Lab: HistoricalDataV1 / HistoricalReplayV1 missing');
+    if(!globalThis.HistoricalDataV1||!globalThis.HistoricalReplayV1||!globalThis.TrainingAnalyticsV1){
+      console.warn('Training Lab: HistoricalDataV1 / HistoricalReplayV1 / TrainingAnalyticsV1 missing');
       return;
     }
     ensureStyles();ensureDialog();ensureButton();bind();
   }
 
-  globalThis.TrainingLabV1={schema:'training-lab-v1',phase:2,engineBlobSha:ENGINE_BLOB_SHA,init,refreshSessions,updateReplayPanel};
+  globalThis.TrainingLabV1={schema:'training-lab-v1',phase:3,engineBlobSha:ENGINE_BLOB_SHA,init,refreshSessions,updateReplayPanel,updateAnalyticsPanel};
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
