@@ -3715,7 +3715,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 
    if(!snap.hasConfirmedEntry)warning.unshift('ยังไม่มีจุดเข้าที่ผ่านการยืนยันจากเครื่องยนต์ · ข้อมูลนี้ใช้ดูประกอบ');
    if(live.chartBasis)warning.push('ผลกราฟย้อนหลังจำลองจากราคาปิดแท่ง '+tfLabel+' · ตัวอย่างเว้นอย่างน้อย '+horizonText+' · ไม่ใช่ไม้จริง');
-   else if(live.isReference)warning.push('ใช้ไม้ V7.1.0 เป็นข้อมูลอ้างอิงจนกว่า V7.1.1 มีตัวอย่างเพียงพอ');
+   else if(live.isReference)warning.push('ใช้ข้อมูลจากรุ่นก่อนเป็นข้อมูลอ้างอิงชั่วคราว จนกว่ารุ่นปัจจุบันจะมีตัวอย่างเพียงพอ');
    if(live.marketLeading&&live.leading&&live.marketLeading!==live.leading)
     warning.unshift('ข้อมูลขัดกัน: โมเดลสดเอนเอียง'+directionThai(live.marketLeading)+' แต่ย้อนหลังเอนเอียง'+directionThai(live.leading));
    if(!live.leading&&!live.chartBasis)warning.push('ข้อมูลย้อนหลังสองฝั่งยังไม่พอ · สีอ้างอิงน้ำหนักโมเดลสด');
@@ -3724,7 +3724,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    $('setup-profile-foot').textContent=`Futures ล่าสุด ${clockMs((state.quote?.ts||0)*1000)}
     · วิเคราะห์จาก ${tfLabel} · เป้าหมายสังเกต ${horizon}
     · ตัวเลขหลัก = น้ำหนักโมเดล ไม่ใช่อัตราชนะ
-    · ${live.chartBasis?'กราฟย้อนหลังเป็นการจำลอง ไม่ใช่ไม้เข้า':primary?'ผลไม้จริง V'+live.version:'โหมดบริบทไม่บันทึกเป็นไม้จริง'}
+    · ${live.chartBasis?'กราฟย้อนหลังเป็นการจำลอง ไม่ใช่ไม้เข้า':primary?'ผลไม้จริงย้อนหลัง':'โหมดบริบทไม่บันทึกเป็นไม้จริง'}
     · Candle ${tf} แยกสถิติจาก TF อื่น`;
   }
 
@@ -4248,7 +4248,7 @@ function openReport(){
     :v.phase?.phase==='EXHAUSTION'?'แรงเริ่มหมด · รอยืนยันการกลับตัว'
     :v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม'
     :v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';
-   $('entry-state').textContent=e?`${typeName[e.type]||v.v2Story?.playbookLabel||e.type} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`
+   $('entry-state').textContent=e?cleanReportText(`${typeName[e.type]||v.v2Story?.playbookLabel||e.type} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`)
     :v.watch?(CFG.version==='ARIS-2.0.0'?`${v.watch.state} ${v.watch.direction||'—'} · คะแนน ${Math.round(v.watch.score)}/100`:CFG.version.startsWith('ARIS-')?`${v.watch.state} ${v.watch.direction} · คะแนน ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
     :d?`มุมมอง ${d>0?'HIGH':'LOW'} · Entry ยังรอ trigger`
     :contextMode?'บริบท '+tf+' · '+idle:idle;
@@ -4522,8 +4522,8 @@ function openReport(){
    $('analysis-tf-active').textContent='วิเคราะห์ '+tf;
    $('analysis-tf-active').title='ระบบกำลังวิเคราะห์จากแท่ง '+label;
    $('main-analysis-scope').textContent=tf;
-   $('main-outlook-title').textContent=primary?(CFG.version==='ARIS-2.0.0'?'ARIS V2 Market View +10 นาที':CFG.version.startsWith('ARIS-')?'ARIS Market Bias +10 นาที':'แนวโน้ม +10 นาที'):'มุมมองจากกราฟ '+label;
-   $('main-probability-label').textContent=primary?(CFG.version==='ARIS-2.0.0'?'Evidence ของสมมติฐาน · ยังไม่ใช่ Win %':CFG.version.startsWith('ARIS-')?'น้ำหนักทิศทาง · ยังไม่ใช่ Win %':'อีก 10 นาที'):'น้ำหนักทิศทางจาก '+label;
+   $('main-outlook-title').textContent=primary?'แนวโน้ม +10 นาที':'มุมมองจากกราฟ '+label;
+   $('main-probability-label').textContent=primary?(CFG.version==='ARIS-2.0.0'?'น้ำหนักหลักฐาน · ยังไม่ใช่อัตราชนะ':CFG.version.startsWith('ARIS-')?'น้ำหนักทิศทาง · ยังไม่ใช่อัตราชนะ':'อีก 10 นาที'):'น้ำหนักทิศทางจาก '+label;
    $('candle-analysis-title').textContent='แท่งเทียน';
    $('realtime-analysis-kicker').textContent='REALTIME';
    $('market-analysis-title').textContent='ตลาดตอนนี้';
