@@ -406,12 +406,14 @@ function structureGate(reader,thesis){
  const swingAligned=s.dir===d,trendAligned=s.trendDir===d&&s.alignedEfficiency;
  const reversalBreak=d>0?s.reverseUp:s.reverseDown;
  const accepted=d>0?b.acceptedUp:b.acceptedDown;
+ const breakoutStructure=accepted&&b.breakoutContext;
  let pass=false,developing=false;
- if(thesis.playbook==='breakout_continuation'){pass=accepted&&protectedOK&&(swingAligned||trendAligned)&&fEff(reader)>=CFG.v3BreakoutEffMin;developing=!pass&&protectedOK&&(accepted||swingAligned||trendAligned);}
+ if(thesis.playbook==='breakout_continuation'){pass=breakoutStructure&&protectedOK;developing=!pass&&protectedOK&&((d>0?b.breakoutUp:b.breakoutDown)||accepted);}
  else if(thesis.playbook==='shock_resolution'){pass=reader.episodeShock?.state==='HOLD'&&protectedOK&&(swingAligned||trendAligned||accepted);developing=!pass&&protectedOK;}
  else if(thesis.playbook==='pullback_reclaim'){pass=protectedOK&&(swingAligned||trendAligned)&&reader.episodeBase===true;developing=!pass&&protectedOK&&(swingAligned||trendAligned);}
  else if(thesis.playbook==='confirmed_reversal'){pass=reversalBreak&&((d>0&&s.bearBroken)||(d<0&&s.bullBroken));developing=!pass&&reversalBreak;}
- checks.push({label:'จุดสวิงป้องกันยังไม่เสียในฝั่งของมุมมอง',pass:protectedOK},{label:'โครงสร้างจุดสวิงหรือเทรนด์รองรับ',pass:swingAligned||trendAligned},
+ const structuralSupport=thesis.playbook==='breakout_continuation'?b.breakoutContext:(swingAligned||trendAligned);
+ checks.push({label:'จุดสวิงป้องกันยังไม่เสียในฝั่งของมุมมอง',pass:protectedOK},{label:thesis.playbook==='breakout_continuation'?'มีฐานหรือกรอบเดิมรองรับการทะลุ':'โครงสร้างจุดสวิงหรือเทรนด์รองรับ',pass:structuralSupport},
   {label:'การทะลุกรอบหรือการแตกโครงสร้างตรงตามแผน',pass:thesis.playbook==='confirmed_reversal'?reversalBreak:thesis.playbook==='breakout_continuation'?accepted:true});
  const state=gateState(pass,developing);
  return {state,pass,reason:pass?'โครงสร้างรองรับมุมมอง':state==='DEVELOPING'?'โครงสร้างกำลังก่อตัวแต่ยังไม่ครบ':'เงื่อนไขโครงสร้างหลักยังไม่ผ่าน',
