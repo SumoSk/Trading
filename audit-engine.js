@@ -431,6 +431,7 @@
       <small id="audit-v1-note">คะแนน Audit เป็น quality score ไม่ใช่ % โอกาสชนะ</small>
     `;
     direction.insertAdjacentElement('afterend',panel);
+    panel.hidden=globalThis.EventSignalV6?.CFG?.version!==TARGET_VERSION;
 
     if(!document.getElementById('audit-v1-style')){
       const style=document.createElement('style');
