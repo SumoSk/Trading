@@ -635,7 +635,7 @@ main{padding-top:10px}
         <div class="toolbar-more-popover">
           <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
           <button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
-          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.5.0">V6.5.0 · Inverse All</option><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.0.0">V7.0.0 · Market Phase</option><option value="7.0.1">V7.0.1 · Range Edge Confirmation</option><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.0.0">ARIS V1 · T+10 Edge Engine</option><option value="ARIS-1.1.0">ARIS V1.1 · Faster Entry</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option></select></label>
+          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.5.0">V6.5.0 · Inverse All</option><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.0.0">V7.0.0 · Market Phase</option><option value="7.0.1">V7.0.1 · Range Edge Confirmation</option><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.0.0">ARIS V1 · T+10 Edge Engine</option><option value="ARIS-1.1.0">ARIS V1.1 · Faster Entry</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option><option value="ARIS-2.0.0">ARIS V2 · Market Observer</option></select></label>
           <button id="latest" class="quiet">กลับล่าสุด</button>
         </div>
       </details>
@@ -856,16 +856,16 @@ main{padding-top:10px}
 </script>
 <script>
 
-/* Event Engine — selectable V7.1.0 / V7.1.1 / V7.2.0 / ARIS V1 / V1.1 / V1.2, +10 minute horizon first, causal, 1m-first.
+/* Event Engine — selectable V7.1.0 / V7.1.1 / V7.2.0 / ARIS V1 / V1.1 / V1.2 / V2, +10 minute horizon first, causal, 1m-first.
    Market Phase routes each setup: RANGE, TREND, IMPULSE, MATURE_IMPULSE, EXHAUSTION, REVERSAL.
    RSI/MACD are chart-only and never enter signal decisions. */
 (function(root){
 'use strict';
-const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v1-2';
-let SELECTED_ENGINE_VERSION='ARIS-1.2.0';
+const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v2';
+let SELECTED_ENGINE_VERSION='ARIS-2.0.0';
 try{
  const savedVersion=localStorage.getItem(ACTIVE_VERSION_STORE);
- if(['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0'].includes(savedVersion))SELECTED_ENGINE_VERSION=savedVersion;
+ if(['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0','ARIS-2.0.0'].includes(savedVersion))SELECTED_ENGINE_VERSION=savedVersion;
 }catch{}
 const V710_CONFIG=Object.freeze({
  version:'7.1.0',horizonMs:600000,settlementToleranceMs:5000,
@@ -957,6 +957,7 @@ const ARIS_V12_CONFIG=Object.freeze({...ARIS_V11_CONFIG,
  arisLateReversalMaxAgainstBias:.12,
  arisMacroHardExtension:3.60
 });
+const ARIS_V2_CONFIG=Object.freeze({...ARIS_V12_CONFIG,version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r1'});
 const V650_SELECT_CONFIG=Object.freeze({
  version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
@@ -987,7 +988,7 @@ const V700_SELECT_CONFIG=Object.freeze({
  maxHistory:1500,maxAudit:2500
 });
 const V701_SELECT_CONFIG=Object.freeze({...V700_SELECT_CONFIG,version:'7.0.1'});
-const CFG=SELECTED_ENGINE_VERSION==='6.5.0'?V650_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='6.6.0'?V660_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.0'?V700_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.1'?V701_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_CONFIG:ARIS_V1_CONFIG;
+const CFG=SELECTED_ENGINE_VERSION==='6.5.0'?V650_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='6.6.0'?V660_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.0'?V700_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.1'?V701_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-2.0.0'?ARIS_V2_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_CONFIG:ARIS_V1_CONFIG;
 const V70_PROFILE=Object.freeze({
  name:'V7.0 Market Phase + Volume/Impulse',
  basis:'V6.6 out-of-sample T+10 dataset + observed impulse failure cluster',
@@ -1091,6 +1092,7 @@ const ARIS_V12_PROFILE=Object.freeze({
   safety:'ไม่ใช้กฎ ช้าแล้วสวน; reversal ต้องมีหลักฐาน phase/ exhaustion + flow + micro structure และยังยืนยันสด 2 ticks / 400 ms เหมือนเดิม'
  })
 });
+const ARIS_V2_PROFILE=Object.freeze({name:'ARIS V2 · Market Observer',basis:'เครื่องยนต์ใหม่: Observe → Memory → State → Story → Hypothesis → Playbook → Entry → Re-plan → Learning',change:Object.freeze({observer:'เฝ้าพฤติกรรมตลาดต่อเนื่อง ไม่รอ setup อย่างเดียว',sideway:'แยก Fresh/Balance/Compression/Edge pressure/Fake break/Range failure',candle:'อ่าน candle sequence, shock, rejection, compression, failed expansion',fib:'ใช้ Fibonacci 23.6/38.2/50/61.8/78.6 และ extension เป็น confluence',zones:'เฝ้าแนวรับแนวต้านและ trend-change risk',planning:'ทุกบริบทมี Trigger + Invalidation + Next plan',ui:'ใช้ Block 1/2/3 เดิมผ่าน adapter'})});
 const V65_PROFILE=Object.freeze({
  name:'V6.5 Inverse All',
  basis:'legacy V6.5 engine',
@@ -1108,7 +1110,7 @@ const V66_PROFILE=Object.freeze({
   trend_continuation:'candidate only'
  })
 });
-const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='6.5.0'?V65_PROFILE:SELECTED_ENGINE_VERSION==='6.6.0'?V66_PROFILE:SELECTED_ENGINE_VERSION==='7.0.0'?V70_PROFILE:SELECTED_ENGINE_VERSION==='7.0.1'?V701_PROFILE:SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:SELECTED_ENGINE_VERSION==='7.1.1'?V711_PROFILE:SELECTED_ENGINE_VERSION==='7.2.0'?V720_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_PROFILE:ARIS_V1_PROFILE;
+const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='6.5.0'?V65_PROFILE:SELECTED_ENGINE_VERSION==='6.6.0'?V66_PROFILE:SELECTED_ENGINE_VERSION==='7.0.0'?V70_PROFILE:SELECTED_ENGINE_VERSION==='7.0.1'?V701_PROFILE:SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:SELECTED_ENGINE_VERSION==='7.1.1'?V711_PROFILE:SELECTED_ENGINE_VERSION==='7.2.0'?V720_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-2.0.0'?ARIS_V2_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_PROFILE:ARIS_V1_PROFILE;
 const V65_CONFIG=Object.freeze({
  horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
@@ -1137,7 +1139,8 @@ const VERSION_SETTINGS_SEED=Object.freeze({
  '7.2.0':Object.freeze({name:V720_PROFILE.name,config:V720_CONFIG,strategy:V720_PROFILE}),
  'ARIS-1.0.0':Object.freeze({name:ARIS_V1_PROFILE.name,config:ARIS_V1_CONFIG,strategy:ARIS_V1_PROFILE}),
  'ARIS-1.1.0':Object.freeze({name:ARIS_V11_PROFILE.name,config:ARIS_V11_CONFIG,strategy:ARIS_V11_PROFILE}),
- 'ARIS-1.2.0':Object.freeze({name:ARIS_V12_PROFILE.name,config:ARIS_V12_CONFIG,strategy:ARIS_V12_PROFILE})
+ 'ARIS-1.2.0':Object.freeze({name:ARIS_V12_PROFILE.name,config:ARIS_V12_CONFIG,strategy:ARIS_V12_PROFILE}),
+ 'ARIS-2.0.0':Object.freeze({name:ARIS_V2_PROFILE.name,config:ARIS_V2_CONFIG,strategy:ARIS_V2_PROFILE})
 });
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
@@ -1271,7 +1274,8 @@ function selectOutputDecision(type,modelD,f,phase){
   if(type==='range_reversal')return {direction:modelDirection,modelDirection,policy:'transition_edge_reversal',strength:Math.abs(f?.trend||0),reason:'TRANSITION · edge reversal ผ่านหลักฐาน'};
   return {direction:null,modelDirection,policy:'wait_transition',strength:Math.abs(f?.trend||0),reason:'TRANSITION · ยังไม่มี phase edge ชัด'};
  }
- if(CFG.version.startsWith('ARIS-')&&['early_impulse','pullback_reclaim','range_rejection','confirmed_reversal','live_opportunity'].includes(type))return {direction:modelDirection,modelDirection,policy:'aris_v1_direction_setup_timing',strength:Math.abs(f?.trend||0),reason:'ARIS V1 · Direction + Setup + Timing ตรงกัน'};
+ if(CFG.version==='ARIS-2.0.0')return {direction:modelDirection,modelDirection,policy:'aris_v2_story_playbook_entry',strength:Math.abs(f?.trend||0),reason:'ARIS V2 · Market Story + Playbook + Entry ตรงกัน'};
+ if(CFG.version.startsWith('ARIS-')&&['early_impulse','pullback_reclaim','range_rejection','confirmed_reversal','live_opportunity','breakout_follow','post_late_reclaim','post_late_reversal'].includes(type))return {direction:modelDirection,modelDirection,policy:'aris_v1_direction_setup_timing',strength:Math.abs(f?.trend||0),reason:'ARIS V1 · Direction + Setup + Timing ตรงกัน'};
  const follow=()=>({direction:modelDirection,modelDirection,policy:'follow_market_phase',strength:Math.abs(f?.trend||0),reason:'ตาม '+p.phase+' '+(p.dir>0?'ขึ้น':'ลง')+' · setup ไปทิศเดียวกับ phase'});
  if(['IMPULSE','MATURE_IMPULSE','TREND'].includes(p.phase)){
   if(p.dir&&setupDir!==p.dir)return {direction:null,modelDirection,policy:'block_counter_impulse',strength:Math.abs(f?.trend||0),reason:p.phase+' ยังเดินแรง · ห้ามสวน '+(p.dir>0?'ขาขึ้น':'ขาลง')};
@@ -2075,7 +2079,7 @@ if(typeof module!=='undefined')module.exports=root.ContinuousDirection;
 (function arisPlugin(root){
 'use strict';
 const core=root.EventSignalV6;
-if(!core||!core.Engine||!core.CFG||!core.CFG.version.startsWith('ARIS-'))return;
+if(!core||!core.Engine||!core.CFG||!core.CFG.version.startsWith('ARIS-')||core.CFG.version==='ARIS-2.0.0')return;
 const {Engine,CFG,features,zones,marketPhase}=core;
 const clip=(v,a,b)=>Math.max(a,Math.min(b,v));
 const sign=(v,dead=0)=>v>dead?1:v<-dead?-1:0;
@@ -2491,10 +2495,12 @@ if(root.ContinuousDirection){
 }
 root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timingScore,detectSetup};
 })(typeof globalThis!=='undefined'?globalThis:window);
-
+</script>
+<script src="v2.js"></script>
+<script>
 'use strict';
 (() => {
-  const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v1-2';
+  const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v2';
   const SYMBOL = 'BTCUSDT';
   const PUBLIC_WS='wss://fstream.binance.com/public/stream?streams=btcusdt@depth10@100ms';
   const REST_BASE='https://fapi.binance.com';
@@ -2750,8 +2756,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    signals:Array.isArray(candleSaved.signals)?candleSaved.signals.filter(s=>s&&Number.isFinite(s.entryTime)&&Number.isFinite(s.entryPrice)&&['HIGH','LOW'].includes(s.direction)).slice(-500):[],
    lastIssuedAt:Number(candleSaved.lastIssuedAt)||0
   };
-  const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว',early_impulse:'ต้นขาเร่ง',pullback_reclaim:'ย่อแล้ว reclaim',range_rejection:'เด้งจากขอบกรอบ',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว',live_opportunity:'จังหวะสด',breakout_follow:'ตามเบรกเอาต์',post_late_reclaim:'ย่อแล้วตามต่อ',post_late_reversal:'กลับตัวหลังปลายขา',expedite_follow:'เร่งออก · ตามแรง',expedite_counter:'เร่งออก · สวนเมื่อรีเจค'};
-  const versionDisplay=v=>v==='ARIS-1.0.0'?'ARIS V1':v==='ARIS-1.1.0'?'ARIS V1.1':v==='ARIS-1.2.0'?'ARIS V1.2':'V'+(v||'—');
+  const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว',early_impulse:'ต้นขาเร่ง',pullback_reclaim:'ย่อแล้ว reclaim',range_rejection:'เด้งจากขอบกรอบ',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว',live_opportunity:'จังหวะสด',breakout_follow:'ตามเบรกเอาต์',post_late_reclaim:'ย่อแล้วตามต่อ',post_late_reversal:'กลับตัวหลังปลายขา',v2_range_edge:'V2 · เด้งขอบ Sideway',v2_compression_breakout:'V2 · เบรกกรอบบีบ',v2_edge_breakout:'V2 · เบรกขอบที่ถูกกด',v2_breakout_follow:'V2 · ตาม Breakout',v2_breakout_pullback:'V2 · ย่อหลัง Breakout',v2_failed_break:'V2 · Failed Break สวน',v2_trend_pullback:'V2 · Trend Pullback',v2_fib_pullback:'V2 · Fib Pullback',v2_continuation:'V2 · Continuation',v2_exhaustion_reversal:'V2 · Exhaustion Reversal',v2_reversal_follow:'V2 · Reversal Follow',v2_shock_follow:'V2 · Shock Follow',v2_observer_entry:'V2 · Observer Entry',expedite_follow:'เร่งออก · ตามแรง',expedite_counter:'เร่งออก · สวนเมื่อรีเจค'};
+  const versionDisplay=v=>v==='ARIS-1.0.0'?'ARIS V1':v==='ARIS-1.1.0'?'ARIS V1.1':v==='ARIS-1.2.0'?'ARIS V1.2':v==='ARIS-2.0.0'?'ARIS V2':'V'+(v||'—');
   function directionThai(v){
   return v==='HIGH'?'สูงกว่า':v==='LOW'?'ต่ำกว่า':v==='BALANCED'?'ใกล้เคียงกัน':v||'—';
 }
@@ -3556,6 +3562,19 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function renderCompactSetupProfile(v=null,directionView=null,micro={}){
    const target=$('setup-profile-compact');if(!target)return;
    const primary=state.analysisTf==='1m',tf=state.analysisTf,main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
+   if(CFG.version==='ARIS-2.0.0'&&v?.v2Story){
+    const st=v.v2Story,dir=st.playDirection>0?'HIGH':st.playDirection<0?'LOW':null;
+    target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
+    $('setup-compact-next').textContent=st.stateLabel+' · '+st.summary;$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
+    $('setup-compact-name').textContent=st.playbookLabel+(dir?' · '+directionThai(dir):'');$('setup-compact-status').textContent='State '+st.stateConfidence+'/100';
+    $('setup-compact-desc').textContent='เรื่องที่อริสเห็น: '+st.summary+' · Primary '+st.primary.direction+' '+st.primary.evidence+' evidence · Alt '+st.alternative.direction+' '+st.alternative.evidence;
+    const title=$('signal-title')?.textContent||'กำลังเฝ้ากราฟ',es=$('entry-state')?.textContent||'WATCH';$('setup-compact-entry').textContent=title+' · '+es;
+    $('setup-compact-entry-reason').textContent='Trigger: '+st.trigger+' · ยกเลิกเมื่อ: '+st.invalidation+' · ต่อไป: '+st.nextPlan;
+    const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=t;ul.append(li);}};
+    const sup=[...(st.supports||[])],warn=[...(st.warnings||[])];if(st.fib?.valid)sup.push('Fib retrace '+Math.max(0,st.fib.retracement*100).toFixed(1)+'% · leg '+st.fib.moveAtr.toFixed(2)+' ATR'+(st.fib.confluence?' · ซ้อน zone':''));
+    if(st.range?.balanced)sup.push('Sideway: บน '+st.range.upperTouches+' touch / ล่าง '+st.range.lowerTouches+' touch · ราคา '+Math.round(st.range.pos*100)+'% ของกรอบ');
+    if(candle?.direction&&dir&&candle.direction!==dir&&candle.direction!=='WAIT')warn.unshift('Candle Engine เอนสวนแผน V2 · '+directionThai(candle.direction));fill('setup-compact-support',sup.slice(0,3),'ยังไม่มีแรงหนุนเด่น');fill('setup-compact-warning',warn.slice(0,3),'ยังไม่พบจุดเตือนเด่น');return;
+   }
    const mainDir=main&&['HIGH','LOW'].includes(main.direction)?main.direction:null;
    const candleDir=candle&&['HIGH','LOW'].includes(candle.direction)?candle.direction:null;
    target.classList.remove('side-high','side-low','side-conflict');
@@ -3942,7 +3961,9 @@ function openReport(){
    else rows.push(v.reason||'ยังไม่มี trigger จุดเข้า');
    const m=gate?.metrics;
    if(m&&v.event){
-    if(CFG.version.startsWith('ARIS-')&&Number.isFinite(m.bias))rows.push('ARIS Bias '+(m.bias>=0?'+':'')+m.bias.toFixed(2)+' · ENTER ต้อง |Bias| ≥ '+CFG.arisBiasEnter.toFixed(2));
+    if(CFG.version==='ARIS-2.0.0'&&Number.isFinite(m.evidence))rows.push('V2 Entry evidence '+Math.round(m.evidence)+'/100');
+    if(CFG.version==='ARIS-2.0.0'&&Number.isFinite(m.stateConfidence))rows.push('Market State confidence '+Math.round(m.stateConfidence)+'/100');
+    if(CFG.version!=='ARIS-2.0.0'&&CFG.version.startsWith('ARIS-')&&Number.isFinite(m.bias))rows.push('ARIS Bias '+(m.bias>=0?'+':'')+m.bias.toFixed(2)+' · ENTER ต้อง |Bias| ≥ '+CFG.arisBiasEnter.toFixed(2));
     if(CFG.version.startsWith('ARIS-')&&Number.isFinite(m.timing))rows.push('Timing '+Math.round(m.timing)+'/100 · ENTER ≥ '+CFG.arisTimingEnter);
     if(Number.isFinite(m.flow))rows.push('flow ตามฝั่ง setup '+m.flow.toFixed(2)+(CFG.version.startsWith('ARIS-')?'':' · เกณฑ์ขั้นต่ำ '+CFG.minFlow.toFixed(2)));
     if(Number.isFinite(m.progress))rows.push('ระยะพ้น trigger '+m.progress.toFixed(2)+' ATR');
@@ -3985,7 +4006,7 @@ function openReport(){
     :v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม'
     :v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';
    $('entry-state').textContent=e?`${typeName[e.type]} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`
-    :v.watch?(CFG.version.startsWith('ARIS-')?`${v.watch.state} ${v.watch.direction} · Bias ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
+    :v.watch?(CFG.version==='ARIS-2.0.0'?`${v.watch.state} ${v.watch.direction||'—'} · Evidence ${Math.round(v.watch.score)}/100`:CFG.version.startsWith('ARIS-')?`${v.watch.state} ${v.watch.direction} · Bias ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
     :d?`มุมมอง ${d>0?'HIGH':'LOW'} · Entry ยังรอ trigger`
     :contextMode?'บริบท '+tf+' · '+idle:idle;
 
@@ -4169,7 +4190,7 @@ function openReport(){
    const book=valid?.76*depth.imbalance+.24*depth.micropriceBias:0;
    const fresh=data.fresh;
    const aEngine=analysisEngine(tf),before=aEngine.audit.length;
-   let v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],flow,coverage,book,bookValid:valid,fresh,current,horizonBars:ANALYSIS_HORIZON_BARS[tf]||1});
+   let v=aEngine.step({ts:q.ts*1000,id:q.id,price:q.price,bars,five:state.bars['5m'],fifteen:state.bars['15m'],flow,coverage,book,bookValid:valid,fresh,current,horizonBars:ANALYSIS_HORIZON_BARS[tf]||1});
    if(data.sourceFallback)v.reason='แสดงแท่ง Spot สำรองของ '+tf+' เท่านั้น — พักการประเมินจนโหลด Futures ได้ครบ';
    lastView=v;
    const directionView=ContinuousDirection.assess({features:v.f,regime:v.regime,phase:v.phase,event:v.event,price:q.price,ts:q.ts*1000,flow,coverage,book,bookValid:valid,current,zones:v.z,fresh,reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'});
@@ -4251,8 +4272,8 @@ function openReport(){
    $('analysis-tf-active').textContent='วิเคราะห์ '+tf;
    $('analysis-tf-active').title='ระบบกำลังวิเคราะห์จากแท่ง '+label;
    $('main-analysis-scope').textContent=tf;
-   $('main-outlook-title').textContent=primary?(CFG.version.startsWith('ARIS-')?'ARIS Market Bias +10 นาที':'แนวโน้ม +10 นาที'):'มุมมองจากกราฟ '+label;
-   $('main-probability-label').textContent=primary?(CFG.version.startsWith('ARIS-')?'น้ำหนักทิศทาง · ยังไม่ใช่ Win %':'อีก 10 นาที'):'น้ำหนักทิศทางจาก '+label;
+   $('main-outlook-title').textContent=primary?(CFG.version==='ARIS-2.0.0'?'ARIS V2 Market View +10 นาที':CFG.version.startsWith('ARIS-')?'ARIS Market Bias +10 นาที':'แนวโน้ม +10 นาที'):'มุมมองจากกราฟ '+label;
+   $('main-probability-label').textContent=primary?(CFG.version==='ARIS-2.0.0'?'Evidence ของสมมติฐาน · ยังไม่ใช่ Win %':CFG.version.startsWith('ARIS-')?'น้ำหนักทิศทาง · ยังไม่ใช่ Win %':'อีก 10 นาที'):'น้ำหนักทิศทางจาก '+label;
    $('candle-analysis-title').textContent='แท่งเทียน';
    $('realtime-analysis-kicker').textContent='REALTIME';
    $('market-analysis-title').textContent='ตลาดตอนนี้';
@@ -4700,7 +4721,7 @@ function openReport(){
    engineVersionSelect.value=CFG.version;
    engineVersionSelect.addEventListener('change',()=>{
     const next=engineVersionSelect.value;
-    if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0'].includes(next)||next===CFG.version)return;
+    if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0','ARIS-2.0.0'].includes(next)||next===CFG.version)return;
     try{localStorage.setItem(ACTIVE_VERSION_STORE,next);}catch{}
     location.reload();
    });
