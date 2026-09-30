@@ -1207,6 +1207,7 @@ const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3FibZoneAtr:.15,v3FibMaxAgeBars:25,
  v3SwingBreakAtr:.08,v3BaseReclaimAtr:.03,v3NewLegReclaimAtr:.18,
  v3ReplayMinFlow:.025,v3ShockExhaustExtension:2.10,v3AbsorbProgressAtr:.12,
+ v3ShockMaxResolveMs:15000,v3ShockReleaseMs:30000,
  v3HtfObstacleAtr:.45,v3BreakoutMaxChaseAtr:.75
 });
 const V650_SELECT_CONFIG=Object.freeze({
@@ -2823,11 +2824,11 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 })(typeof globalThis!=='undefined'?globalThis:window);
 </script>
 <script src="v2.js?v=20260930-r6"></script>
-<script src="v3.js?v=20261001-r3"></script>
+<script src="v3.js?v=20261001-r4"></script>
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
 <script src="audit-engine.js?v=20261001-r2"></script>\n<script src="historical-data.js?v=20261001-r2"></script>
-<script src="training-engine-registry.js?v=20261001-r4"></script>
+<script src="training-engine-registry.js?v=20261001-r5"></script>
 <script src="replay-engine.js?v=20261001-r5"></script>
 <script src="training-analytics.js?v=20261001-r1"></script>\n<script src="training-lab.js?v=20261001-r7"></script>\n<script src="training-validation.js?v=20261001-r3"></script>
 <script>
