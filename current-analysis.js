@@ -12,6 +12,7 @@
   const money=v=>finite(v)?Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
   const gateThai=v=>({PASS:'ผ่าน',DEVELOPING:'กำลังก่อตัว',BLOCK:'ไม่ผ่าน',READY:'พร้อม',BLOCKED:'ติดเงื่อนไข',OBSERVE:'เฝ้าดู',WATCH:'จับตา',WAIT:'รอ',ENTER:'เข้าได้'})[v]||v||'—';
   const dirThai=v=>v==='HIGH'?'สูงกว่า':v==='LOW'?'ต่ำกว่า':v==='BALANCED'?'ใกล้เคียงกัน':v||'—';
+  const episodeThai=v=>({RANGE:'กรอบราคา',TREND:'เทรนด์',BREAKOUT:'การทะลุกรอบ',SHOCK:'แรงกระแทก',REVERSAL:'การกลับตัว',TRANSITION:'ช่วงเปลี่ยนจังหวะ'})[v]||v||'—';
 
   function ema(values,period){
     if(!values.length)return [];
@@ -113,21 +114,21 @@
     if(state.key==='BREAKOUT'){
       name='ทะลุกรอบ / กลับมาทดสอบ';
       checks=[
-        ['ทะลุกรอบแล้ว',true],['Volume ขยาย',relVol>=1.1],['แท่งปิดหนุนทิศ',d*candleScore>.12],['มีพื้นที่ก่อนชนแนวถัดไป',d>0?!levels.resistance||levels.resistance.price-price>.45*a:!levels.support||price-levels.support.price>.45*a]
+        ['ทะลุกรอบแล้ว',true],['ปริมาณซื้อขายขยาย',relVol>=1.1],['แท่งปิดหนุนทิศ',d*candleScore>.12],['มีพื้นที่ก่อนชนแนวถัดไป',d>0?!levels.resistance||levels.resistance.price-price>.45*a:!levels.support||price-levels.support.price>.45*a]
       ];
     }else if(state.key==='TREND'){
       const nearBase=Math.abs(price-ema8)<=.65*a||Math.abs(price-ema21)<=.65*a;
       name=nearBase?'ย่อในเทรนด์':'เทรนด์ไปต่อ';
-      checks=[['EMA เรียงตามทิศ',d*(ema8-ema21)>0],['Momentum ตามเทรนด์',d*score>.18],['ราคาไม่ยืดจากฐานเกินไป',Math.abs(state.extension)<1.8],['แท่งล่าสุดสนับสนุน',d*candleScore>.05]];
+      checks=[['EMA เรียงตามทิศ',d*(ema8-ema21)>0],['แรงส่งตามเทรนด์',d*score>.18],['ราคาไม่ยืดจากฐานเกินไป',Math.abs(state.extension)<1.8],['แท่งล่าสุดสนับสนุน',d*candleScore>.05]];
     }else if(['SIDEWAY','COMPRESSION'].includes(state.key)){
       name=rangePosition<.28||rangePosition>.72?'เฝ้าสวนจากขอบกรอบ':'เฝ้ากรอบ / การทะลุกรอบ';
-      checks=[['อยู่ใกล้ขอบกรอบ',rangePosition<.28||rangePosition>.72],['มี Reject จากขอบ',Math.abs(candleScore)>.18],['Flow เริ่มเลือกทิศ',Math.abs(ctx.flowScore)>.12],['Volume เริ่มเพิ่ม',relVol>=1]];
+      checks=[['อยู่ใกล้ขอบกรอบ',rangePosition<.28||rangePosition>.72],['มีการปฏิเสธราคาจากขอบ',Math.abs(candleScore)>.18],['แรงซื้อขายเริ่มเลือกทิศ',Math.abs(ctx.flowScore)>.12],['ปริมาณซื้อขายเริ่มเพิ่ม',relVol>=1]];
     }else if(state.key==='EXHAUSTION'){
       name='เฝ้าปลายขา / กลับตัว';
-      checks=[['ราคายืดจากฐาน',Math.abs(state.extension)>1.8],['แท่งเริ่มสวนขาเดิม',d*candleScore<-.08],['Momentum ชะลอ',Math.abs(ctx.momentumScore)<.45],['มีแนวสำคัญใกล้ราคา',!!levels.support||!!levels.resistance]];
+      checks=[['ราคายืดจากฐาน',Math.abs(state.extension)>1.8],['แท่งเริ่มสวนขาเดิม',d*candleScore<-.08],['แรงส่งชะลอ',Math.abs(ctx.momentumScore)<.45],['มีแนวสำคัญใกล้ราคา',!!levels.support||!!levels.resistance]];
     }else{
       name='เฝ้าการเปลี่ยนโครงสร้าง';
-      checks=[['โครงสร้างเริ่มเลือกทิศ',Math.abs(ctx.structureScore)>.2],['EMA เริ่มแยก',state.sep>.16],['Momentum เริ่มชัด',Math.abs(ctx.momentumScore)>.2],['Flow สนับสนุน',Math.abs(ctx.flowScore)>.1]];
+      checks=[['โครงสร้างเริ่มเลือกทิศ',Math.abs(ctx.structureScore)>.2],['EMA เริ่มแยก',state.sep>.16],['แรงส่งเริ่มชัด',Math.abs(ctx.momentumScore)>.2],['แรงซื้อขายสนับสนุน',Math.abs(ctx.flowScore)>.1]];
     }
     const done=checks.filter(x=>x[1]).length,readiness=Math.round(done/checks.length*100);
     return {name,readiness,checks};
@@ -191,13 +192,13 @@
     const watch=[];
     if(levels.resistance)watch.push('ปิดเหนือ '+money(levels.resistance.price)+' พร้อมปริมาณซื้อขายเพิ่ม → น้ำหนักฝั่งขึ้นแข็งขึ้น');
     if(levels.support)watch.push('ปิดต่ำกว่า '+money(levels.support.price)+' พร้อมแรงขาย → น้ำหนักฝั่งลงแข็งขึ้น');
-    watch.push((d>0?'ถ้า Body เขียว':'ถ้า Body แดง')+' ขยายต่อและไส้ฝั่งตรงข้ามสั้นลง → continuation ดีขึ้น');
+    watch.push((d>0?'ถ้าลำตัวแท่งเขียว':'ถ้าลำตัวแท่งแดง')+' ขยายต่อและไส้ฝั่งตรงข้ามสั้นลง → โอกาสไปต่อดีขึ้น');
     if(Math.abs(flowScore)<.12)watch.push('แรงซื้อขายยังเกือบกลาง ถ้าเริ่มเกิน ±0.12 ต่อเนื่อง จะเป็นข้อมูลเลือกทิศที่สำคัญ');
     if(rv<.9)watch.push('ปริมาณซื้อขายยังต่ำกว่าฐาน การทะลุกรอบตอนนี้ต้องระวังหลอกมากกว่าปกติ');
     const supportTxt=levels.support?money(levels.support.price):'ยังไม่มีแนวใกล้',resistTxt=levels.resistance?money(levels.resistance.price):'ยังไม่มีแนวใกล้';
     const summary=direction==='BALANCED'
       ?'ตอนนี้หลักฐานสองฝั่งยังใกล้กัน ตลาดยังไม่ได้ให้ความได้เปรียบชัด จุดสำคัญคือรอดูว่าราคาจะออกจากกรอบพร้อมปริมาณและแรงซื้อขายจริงหรือไม่ ก่อนให้น้ำหนักกับทิศใดทิศหนึ่งมากขึ้น'
-      :'ตอนนี้ภาพรวมเอียง'+side+'จาก '+state.label+' โดยน้ำหนักหลักฐาน HIGH/LOW อยู่ที่ '+high+'/'+low+' แต่ค่านี้เป็นน้ำหนักจากข้อมูลปัจจุบัน ไม่ใช่อัตราชนะ จุดที่ต้องจับตาคือแนวรับ '+supportTxt+' และแนวต้าน '+resistTxt+'; ถ้าโครงสร้างหลุดฝั่งตรงข้ามควรยกเลิกมุมมองเดิมและประเมินใหม่';
+      :'ตอนนี้ภาพรวมเอียง'+side+'จาก '+state.label+' โดยน้ำหนักหลักฐานสูงกว่า/ต่ำกว่าอยู่ที่ '+high+'/'+low+' แต่ค่านี้เป็นน้ำหนักจากข้อมูลปัจจุบัน ไม่ใช่อัตราชนะ จุดที่ต้องจับตาคือแนวรับ '+supportTxt+' และแนวต้าน '+resistTxt+'; ถ้าโครงสร้างหลุดฝั่งตรงข้ามควรยกเลิกมุมมองเดิมและประเมินใหม่';
     return {...context,ok:true,playbook,scenarios,watch,summary,projected,v3:snap.v3||null};
   }
 
@@ -214,7 +215,7 @@
     return 'ข้อมูลสด · '+(snap.source||'Futures');
   }
   function sideClass(v){return v>0?'up':v<0?'down':'neutral';}
-  function sideWord(v){return v>.08?'หนุน HIGH':v<-.08?'หนุน LOW':'กลาง';}
+  function sideWord(v){return v>.08?'หนุนฝั่งสูงกว่า':v<-.08?'หนุนฝั่งต่ำกว่า':'กลาง';}
   function componentRows(rows){
     return rows.map(x=>'<div class="sit-metric-row"><span>'+esc(x.name)+'</span><b class="'+sideClass(x.value)+'">'+esc(sideWord(x.value))+'</b><small>'+num(x.value,2)+'</small></div>').join('');
   }
@@ -269,11 +270,11 @@
     const stateMeta='ประสิทธิภาพการเดินราคา '+num(a.state.efficiency,2)+' · ความกว้างกรอบ '+num(a.state.rangeWidth,1)+' ATR';
     const scenarios=a.scenarios.map(s=>'<article class="sit-scenario"><div class="sit-scenario-head"><span>สถานการณ์ '+s.key+'</span><b>'+s.weight+'%</b></div><h4>'+esc(s.title)+'</h4><p>'+esc(s.text)+'</p>'+(s.zone?'<small>โซน '+money(s.zone[0])+' – '+money(s.zone[1])+'</small>':s.trigger?'<small>จุดยกเลิก '+money(s.trigger)+(s.target?' · เป้าถัดไป '+money(s.target):'')+'</small>':s.target?'<small>โซนทดสอบ '+money(s.target)+'</small>':'')+'</article>').join('');
     const fib=a.fib;
-    const fibHtml=fib?'<div class="sit-list"><div class="sit-line"><span>Leg</span><b>'+fib.direction+' · '+money(fib.low)+' → '+money(fib.high)+'</b></div><div class="sit-line"><span>Retracement ปัจจุบัน</span><b>'+num(fib.retrace*100,1)+'%</b></div><div class="sit-line"><span>38.2 / 50 / 61.8</span><b>'+money(fib.levels['0.382'])+' / '+money(fib.levels['0.5'])+' / '+money(fib.levels['0.618'])+'</b></div><div class="sit-line"><span>Extension 1.272 / 1.618</span><b>'+money(fib.ext1272)+' / '+money(fib.ext1618)+'</b></div></div>':'<div class="sit-note">ยังไม่มี Swing ที่เหมาะสมพอสำหรับ Fib</div>';
+    const fibHtml=fib?'<div class="sit-list"><div class="sit-line"><span>Leg</span><b>'+fib.direction+' · '+money(fib.low)+' → '+money(fib.high)+'</b></div><div class="sit-line"><span>ระยะย่อปัจจุบัน</span><b>'+num(fib.retrace*100,1)+'%</b></div><div class="sit-line"><span>38.2 / 50 / 61.8</span><b>'+money(fib.levels['0.382'])+' / '+money(fib.levels['0.5'])+' / '+money(fib.levels['0.618'])+'</b></div><div class="sit-line"><span>เป้าขยาย 1.272 / 1.618</span><b>'+money(fib.ext1272)+' / '+money(fib.ext1618)+'</b></div></div>':'<div class="sit-note">ยังไม่มีขาสวิงที่เหมาะสมพอสำหรับฟิโบนัชชี</div>';
     const candle=snap.candle;
-    const candleHtml='<div class="sit-list"><div class="sit-line"><span>ทิศแท่ง</span><b>'+esc(candle?.available?(candle.direction+' · '+(candle.confidence||0)+'%'):'ยังไม่พร้อม')+'</b></div><div class="sit-line"><span>ความหมาย</span><b>'+esc(candle?.plainMeaning||'อ่านจาก Body / Wick / Close ต่อเนื่อง')+'</b></div><div class="sit-line"><span>แพตเทิร์น</span><b>'+esc((candle?.patterns||[]).map(x=>x.name).slice(0,3).join(' · ')||'ยังไม่มีชื่อแพตเทิร์นเด่น')+'</b></div><div class="sit-line"><span>เงื่อนไขเปลี่ยน</span><b>'+esc(candle?.changeTrigger||'รอแท่งใหม่ยืนยัน')+'</b></div></div>';
+    const candleHtml='<div class="sit-list"><div class="sit-line"><span>ทิศแท่ง</span><b>'+esc(candle?.available?(candle.direction+' · '+(candle.confidence||0)+'%'):'ยังไม่พร้อม')+'</b></div><div class="sit-line"><span>ความหมาย</span><b>'+esc(candle?.plainMeaning||'อ่านจากลำตัวแท่ง ไส้เทียน และตำแหน่งปิดต่อเนื่อง')+'</b></div><div class="sit-line"><span>แพตเทิร์น</span><b>'+esc((candle?.patterns||[]).map(x=>x.name).slice(0,3).join(' · ')||'ยังไม่มีชื่อแพตเทิร์นเด่น')+'</b></div><div class="sit-line"><span>เงื่อนไขเปลี่ยน</span><b>'+esc(candle?.changeTrigger||'รอแท่งใหม่ยืนยัน')+'</b></div></div>';
     const checks=a.playbook.checks.map(x=>'<div class="sit-check '+(x[1]?'ok':'')+'">'+(x[1]?'✓ ':'○ ')+esc(x[0])+'</div>').join('');
-    const health=!snap.fresh?'<div class="sit-alert">'+esc(freshnessText(snap))+' — รายงานยังแสดงโครงสร้างล่าสุดได้ แต่ไม่ควรใช้ส่วน Microstructure เป็นข้อมูลสด</div>':'';
+    const health=!snap.fresh?'<div class="sit-alert">'+esc(freshnessText(snap))+' — รายงานยังแสดงโครงสร้างล่าสุดได้ แต่ไม่ควรใช้ส่วนแรงซื้อขายระยะสั้นเป็นข้อมูลสด</div>':'';
     const bookTxt=snap.book?.usable?sideWord(snap.book.composite)+' · '+num(snap.book.composite,2):'ยังใช้ไม่ได้';
     const liq=snap.liquidation||{};
     const v3=a.v3;
@@ -282,13 +283,13 @@
        '<div class="sit-line"><span>สถานะตลาด</span><b>'+esc(v3.stateLabel||v3.state||'—')+'</b></div>'+
        '<div class="sit-line"><span>แผนปัจจุบัน</span><b>'+esc(v3.playbookLabel||'เฝ้าดูตลาด')+'</b></div>'+
        '<div class="sit-line"><span>ทิศของเครื่องยนต์</span><b>'+esc(dirThai(v3.direction))+' · '+esc(String(v3.highEvidence??'—'))+'/'+esc(String(v3.lowEvidence??'—'))+'</b></div>'+
-       '<div class="sit-line"><span>เหตุการณ์ตลาด</span><b>'+esc(v3.episodeFamily||'—')+(v3.shockLabel?' · '+esc(v3.shockLabel):'')+'</b></div>'+
+       '<div class="sit-line"><span>เหตุการณ์ตลาด</span><b>'+esc(episodeThai(v3.episodeFamily))+(v3.shockLabel?' · '+esc(v3.shockLabel):'')+'</b></div>'+
        '</div><p class="sit-note">'+esc(v3.stateDescription||v3.episodeDescription||'')+'</p>'+
        '<div class="sit-checks">'+Object.entries(v3.gates||{}).map(([k,g])=>'<div class="sit-check '+(g?.state==='PASS'?'ok':'')+'">'+esc(({structure:'โครงสร้าง',location:'ตำแหน่งราคา',behavior:'พฤติกรรมราคา',micro:'แรงซื้อขายระยะสั้น'})[k]||k)+' · '+esc(gateThai(g?.state))+(g?.reason?' · '+esc(g.reason):'')+'</div>').join('')+'</div>'+
        '<div class="sit-list" style="margin-top:8px"><div class="sit-line"><span>มุมมอง</span><b>'+esc(v3.thesis?.why||'—')+'</b></div><div class="sit-line"><span>รอเงื่อนไข</span><b>'+esc(v3.trigger||v3.thesis?.trigger||'—')+'</b></div><div class="sit-line"><span>ยกเลิกเมื่อ</span><b>'+esc(v3.invalidation||v3.thesis?.invalidation||'—')+'</b></div><div class="sit-line"><span>แผนต่อไป</span><b>'+esc(v3.nextPlan||v3.thesis?.nextPlan||'—')+'</b></div></div></section>'
       :'';
     $('sit-body').innerHTML=health+
-      '<section class="sit-hero"><div class="sit-card"><div class="sit-bias-top"><div><div class="sit-bias-word '+biasCls+'">'+a.direction+'</div><div class="sit-note">ความชัดของหลักฐาน '+a.confidence+' / 100</div></div><div class="sit-state"><b>'+esc(a.state.label)+'</b><small>'+esc(stateMeta)+'</small></div></div><div class="sit-prob"><div><span>น้ำหนัก HIGH</span><b class="up">'+a.high+'%</b></div><div><span>น้ำหนัก LOW</span><b class="down">'+a.low+'%</b></div></div><div class="sit-track"><i style="width:'+a.high+'%"></i></div><div class="sit-note">เป็นน้ำหนักหลักฐานจากสถานการณ์ปัจจุบัน ไม่ใช่อัตราชนะหรือความน่าจะเป็นที่ผ่านการ Calibration</div></div>'+
+      '<section class="sit-hero"><div class="sit-card"><div class="sit-bias-top"><div><div class="sit-bias-word '+biasCls+'">'+a.direction+'</div><div class="sit-note">ความชัดของหลักฐาน '+a.confidence+' / 100</div></div><div class="sit-state"><b>'+esc(a.state.label)+'</b><small>'+esc(stateMeta)+'</small></div></div><div class="sit-prob"><div><span>น้ำหนัก HIGH</span><b class="up">'+a.high+'%</b></div><div><span>น้ำหนัก LOW</span><b class="down">'+a.low+'%</b></div></div><div class="sit-track"><i style="width:'+a.high+'%"></i></div><div class="sit-note">เป็นน้ำหนักหลักฐานจากสถานการณ์ปัจจุบัน ไม่ใช่อัตราชนะหรือความน่าจะเป็นที่ผ่านการปรับเทียบ</div></div>'+
       '<div class="sit-card"><h3>ภาพเร็ว</h3><div class="sit-kpis"><div class="sit-kpi"><span>ราคา</span><b>'+money(a.price)+'</b></div><div class="sit-kpi"><span>ATR</span><b>'+money(a.a)+'</b></div><div class="sit-kpi"><span>ตำแหน่งในกรอบ</span><b>'+Math.round(a.rangePosition*100)+'%</b></div><div class="sit-kpi"><span>ปริมาณซื้อขาย</span><b>'+num(a.relVol,2)+'×</b></div><div class="sit-kpi"><span>โครงสร้าง</span><b>'+a.structure.text+'</b></div><div class="sit-kpi"><span>ข้อมูล</span><b>'+esc(snap.fresh?'สด':'ไม่สด')+'</b></div></div></div></section>'+v3Html+
       '<section class="sit-card"><h3>อีก 10 แท่ง · '+esc(horizonText(snap.horizonMs))+'</h3><div class="sit-scenarios">'+scenarios+'</div><div class="sit-note">เปอร์เซ็นต์สถานการณ์เป็นสัดส่วนน้ำหนักเชิงสถานการณ์ของโมเดลนี้ และจะเปลี่ยนเมื่อโครงสร้าง แท่งเทียน หรือแรงซื้อขายเปลี่ยน</div></section>'+
       '<div class="sit-grid-2"><section class="sit-card"><h3>โครงสร้างราคา</h3><div class="sit-list"><div class="sit-line"><span>โครงสร้างจุดสวิง</span><b>'+a.structure.text+'</b></div><div class="sit-line"><span>แนวรับใกล้สุด</span><b>'+money(a.levels.support?.price)+'</b></div><div class="sit-line"><span>แนวต้านใกล้สุด</span><b>'+money(a.levels.resistance?.price)+'</b></div><div class="sit-line"><span>EMA 8 / 21</span><b>'+money(a.ema8)+' / '+money(a.ema21)+'</b></div><div class="sit-line"><span>ระยะยืดจาก EMA21</span><b>'+num(a.state.extension,2)+' ATR</b></div><div class="sit-line"><span>ประสิทธิภาพการเดินราคา</span><b>'+num(a.state.efficiency,2)+'</b></div></div></section><section class="sit-card"><h3>แท่งเทียน</h3>'+candleHtml+'</section></div>'+
