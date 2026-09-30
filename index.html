@@ -704,6 +704,24 @@ main{padding-top:10px}
  .right-order-label{right:52px!important}
 }
 </style>
+
+<style id="journal-v3-ui">
+.trade-summary-hero,.report-summary-hero{border:1px solid #31445c;border-radius:12px;background:#101a28;padding:14px 15px}
+.trade-summary-hero>span,.report-summary-hero>span{display:block;font-size:8px;letter-spacing:.65px;color:#8295ae;text-transform:uppercase;margin-bottom:5px}
+.trade-summary-hero h3,.report-summary-hero h3{font-size:15px;line-height:1.35;margin:0 0 6px;color:#dce7f5}
+.trade-summary-hero p,.report-summary-hero p{margin:0;color:#9eb0c5;font-size:10px;line-height:1.5}
+.trade-summary-hero ul{margin:8px 0 0;padding-left:17px;color:#b7c6d8;font-size:9px;line-height:1.5}
+.trade-summary-hero.good{border-color:#2c866c;background:#102922}.trade-summary-hero.good h3{color:#61e3bc}
+.trade-summary-hero.bad{border-color:#8d4155;background:#2b1821}.trade-summary-hero.bad h3{color:#ff8da1}
+.trade-summary-hero.pending{border-color:#806733;background:#261f14}.trade-summary-hero.pending h3{color:#e8c77f}
+.summary-two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}.summary-two-col h4{font-size:10px;margin:0 0 6px}
+.diagnostic-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.diagnostic-card{border:1px solid #2b3d55;border-radius:9px;background:#0f1824;padding:10px;display:grid;gap:4px}
+.diagnostic-card b{font-size:10px}.diagnostic-card span,.diagnostic-card small{font-size:8px;color:#8497b0;line-height:1.4}
+.diagnostic-card strong{font-size:18px}.diagnostic-card.bad strong,.diagnostic-card.bad b{color:#ff8da1}.diagnostic-card.good strong,.diagnostic-card.good b{color:#61e3bc}
+#storage-status{font-size:8px!important;color:#72daba!important;margin-top:3px!important}#storage-status.down{color:#e6b878!important}
+@media(max-width:560px){.summary-two-col{grid-template-columns:1fr}.diagnostic-grid{grid-template-columns:1fr 1fr}.trade-summary-hero h3,.report-summary-hero h3{font-size:13px}}
+</style>
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
@@ -961,7 +979,7 @@ main{padding-top:10px}
 </aside>
 
 </div>
-<section class="prediction-log"><div class="prediction-log-head"><div><h2>ประวัติสัญญาณ</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">V <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">รีพอร์ต</button><button id="export-training-csv">CSV</button><button id="export-history">JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบเวลา</th><th>ราคาตัดสิน</th><th>ผล</th><th>Live %</th><th>บทเรียน</th><th>V</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+<section class="prediction-log"><div class="prediction-log-head"><div><h2>ประวัติสัญญาณ</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">V <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">รีพอร์ต</button><button id="export-training-csv">CSV</button><button id="export-history">JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบเวลา</th><th>ราคาตัดสิน</th><th>ผล</th><th>Live %</th><th>สรุป</th><th>V</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
 <dialog id="engine-guide-dialog" class="review-dialog engine-guide-dialog"><div class="review-modal">
   <div class="review-head"><div><span class="eyebrow">คู่มือระบบ</span><h2>4 วิธีคิดสำหรับตลาด +10 นาที</h2><p>แต่ละระบบมีบุคลิกต่างกัน เก็บไว้เพื่อเปรียบเทียบว่าแนวคิดแบบไหนเหมาะกับสภาพตลาดแบบใด</p></div><button type="button" class="review-close" data-close-dialog="engine-guide-dialog" aria-label="ปิด">×</button></div>
   <div class="review-body">
@@ -1041,8 +1059,8 @@ main{padding-top:10px}
   <div class="review-foot"><button type="button" data-close-dialog="engine-guide-dialog">ปิด</button></div>
 </div></dialog>
 
-<dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">ทบทวนหลังจบไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
-<dialog id="report-dialog" class="review-dialog report-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปข้อมูลเพื่อพัฒนาระบบ</span><h2>สรุปบทเรียนทั้งหมด</h2><p id="report-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="report-dialog" aria-label="ปิด">×</button></div><div id="report-body" class="review-body"></div><div class="review-foot"><button type="button" id="report-export-json">ข้อมูลเทรน JSON</button><button type="button" id="report-export-csv">ข้อมูลเทรน CSV</button><button type="button" data-close-dialog="report-dialog">ปิด</button></div></div></dialog>
+<dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปและรายละเอียดไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
+<dialog id="report-dialog" class="review-dialog report-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปข้อมูลเพื่อพัฒนาระบบ</span><h2>สรุปข้อมูลทั้งหมด</h2><p id="report-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="report-dialog" aria-label="ปิด">×</button></div><div id="report-body" class="review-body"></div><div class="review-foot"><button type="button" id="report-export-json">ข้อมูลเทรน JSON</button><button type="button" id="report-export-csv">ข้อมูลเทรน CSV</button><button type="button" data-close-dialog="report-dialog">ปิด</button></div></div></dialog>
 </main>
 <script>
 /*!
@@ -4133,7 +4151,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    for(const s of old){const v=s.version||'ไม่ทราบเวอร์ชัน';groups.set(v,(groups.get(v)||0)+1);}
    const detail=[...groups.entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([v,n])=>v+' · '+n+' ไม้').join('\n');
    const currentCount=engine.signals.length-old.length;
-   const ok=confirm('ลบข้อมูลเวอร์ชันเก่าทั้งหมดหรือไม่?\n\n'+detail+'\n\nจะเก็บ '+CFG.version+' ไว้ '+currentCount+' ไม้\nรวมถึง Dataset / บทเรียนของ '+CFG.version+' จะยังอยู่\n\nการลบนี้ย้อนกลับไม่ได้จากเบราว์เซอร์นี้');
+   const ok=confirm('ลบข้อมูลเวอร์ชันเก่าทั้งหมดหรือไม่?\n\n'+detail+'\n\nจะเก็บ '+CFG.version+' ไว้ '+currentCount+' ไม้\nรวมถึง Dataset / สรุปของ '+CFG.version+' จะยังอยู่\n\nการลบนี้ย้อนกลับไม่ได้จากเบราว์เซอร์นี้');
    if(!ok)return;
    engine.signals=engine.signals.filter(s=>s.version===CFG.version);
    const keepIds=new Set(engine.signals.map(s=>s.id));
@@ -4207,41 +4225,52 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
  return `<div class="report-card"><h4>${esc(title)}</h4>${items.map(x=>`<p><b>${esc(x.key)}</b> · ${x.n} ไม้ · ถูก ${x.w} / ผิด ${x.l}${Number.isFinite(x.rate)?' · อัตราถูก '+(x.rate*100).toFixed(1)+'%':''}</p><div class="report-bar"><i style="width:${Number.isFinite(x.rate)?Math.round(x.rate*100):0}%"></i></div>`).join('')||'<p>ยังไม่มีผลที่ตัดสินแล้ว</p>'}</div>`;
 }
 function openReport(){
- const scoped=filterByVersion(engine.signals),rows=scoped.filter(s=>['correct','incorrect'].includes(s.result));
- const wins=rows.filter(s=>s.result==='correct'),losses=rows.filter(s=>s.result==='incorrect');
- const enriched=scoped.filter(s=>s.dataset?.entry).length;
- const candidates=candidateDataset().filter(x=>historyVersionFilter==='all'||x.version===historyVersionFilter);
+ const scoped=filterByVersion(engine.signals),rows=scoped.filter(sig=>['correct','incorrect'].includes(sig.result));
+ const wins=rows.filter(sig=>sig.result==='correct'),losses=rows.filter(sig=>sig.result==='incorrect');
+ const enriched=scoped.filter(sig=>sig.dataset?.entry).length,candidates=candidateDataset().filter(x=>historyVersionFilter==='all'||x.version===historyVersionFilter);
+ const diag=buildDiagnosticReport(rows),topWeak=diag.weaknesses[0],topStrong=diag.strengths[0];
  const patterns=(signals,kind)=>{
-  const counts=new Map();for(const s of signals)for(const t of new Set(s.dataset?.review?.tags||[]))counts.set(t,(counts.get(t)||0)+1);
-  const top=[...counts].sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const counts=new Map();for(const sig of signals)for(const t of new Set(sig.dataset?.review?.tags||[]))counts.set(t,(counts.get(t)||0)+1);
+  const top=[...counts].sort((a,b)=>b[1]-a[1]).slice(0,12);
   if(!signals.length)return '<p>ยังไม่มีไม้ที่ตัดสินผลในกลุ่มนี้</p>';
-  if(!top.length)return '<p>ยังไม่มีบทเรียนละเอียดสำหรับกลุ่มนี้ อาจเป็นข้อมูลเก่าที่ยังไม่ได้บันทึกรูปแบบหลังจบไม้</p>';
-  const analyzed=signals.filter(s=>s.dataset?.review?.tags?.length).length;
-  return `<p class="review-note">วิเคราะห์รูปแบบได้ ${analyzed} จาก ${signals.length} ไม้ · หนึ่งไม้อาจพบหลายรูปแบบ</p><ul class="review-list">${top.map(([t,n])=>`<li class="${kind}"><b>${esc(reviewTagLabel(t))}</b> · ${n} ไม้<small style="display:block;margin-top:4px">${esc(reviewTagMeaning(t))}</small></li>`).join('')}</ul>`;
+  if(!top.length)return '<p>ยังไม่มีสรุปรูปแบบจากกฎเดิมสำหรับกลุ่มนี้</p>';
+  return '<ul class="review-list">'+top.map(([t,n])=>`<li class="${kind}"><b>${esc(reviewTagLabel(t))}</b> · ${n} ไม้<small style="display:block;margin-top:4px">${esc(reviewTagMeaning(t))}</small></li>`).join('')+'</ul>';
  };
- $('report-subtitle').textContent=`ตัดสินผลแล้ว ${rows.length} ไม้ · ข้อมูลตอนเข้าละเอียด ${enriched} ไม้ · เหตุการณ์ที่ตรวจพบ ${candidates.length} ครั้ง`;
+ $('report-subtitle').textContent=`ตัดสินผลแล้ว ${rows.length} ไม้ · ข้อมูลตอนเข้าละเอียด ${enriched} ไม้ · เหตุการณ์ที่ตรวจพบ ${candidates.length} ครั้ง · Journal V3`;
  $('report-body').innerHTML=`
- <section class="review-section"><h3>1 · ภาพรวมผลที่บันทึกจริง</h3><p class="review-note">อัตราถูกนับเฉพาะไม้ที่มีผลถูกหรือผิดแล้ว ไม้เสมอ ข้อมูลขาด และไม้ที่กำลังรอผลจะไม่นำมาคำนวณ ผลย้อนหลังไม่ใช่การรับประกันในอนาคต</p>
- <div class="review-kpis"><div class="review-kpi"><span>ไม้ที่ตัดสินแล้ว</span><b>${rows.length}</b></div><div class="review-kpi"><span>ถูกทาง</span><b>${wins.length}</b></div><div class="review-kpi"><span>ผิดทาง</span><b>${losses.length}</b></div><div class="review-kpi"><span>อัตราถูกจากข้อมูลจริง</span><b>${rows.length?(wins.length/rows.length*100).toFixed(1)+'%':'—'}</b></div><div class="review-kpi"><span>ข้อมูลขาด</span><b>${scoped.filter(s=>s.result==='missing').length}</b></div><div class="review-kpi"><span>กำลังรอผล</span><b>${scoped.filter(s=>s.result==='pending').length}</b></div><div class="review-kpi"><span>มีภาพตลาดตอนเข้า</span><b>${enriched}</b></div><div class="review-kpi"><span>เหตุการณ์ที่ตรวจพบ</span><b>${candidates.length}</b></div></div></section>
- <section class="review-section"><h3>โหมดเข้า</h3><p class="review-note">แยกผลสูตรปกติและโหมดเร่งเพื่อดูว่าจังหวะเข้าแต่ละแบบให้ผลต่างกันอย่างไร</p><div class="report-groups">${renderGroup('ผลตามโหมดเข้า',groupStats(rows,s=>s.dataset?.entry?.expediteFive?.requested?'เร่ง':'ปกติ'))}</div></section>
- <section class="review-section"><h3>2 · แยกผลตามลักษณะสัญญาณ</h3><p class="review-note">แต่ละกลุ่มมีจำนวนไม้แตกต่างกัน ตัวเลขบอกผลเฉพาะที่บันทึกได้ในกลุ่มนั้น</p><div class="report-groups">
- ${renderGroup('ตามจังหวะเข้า',groupStats(rows,s=>typeName[s.type]||uiReason(s.type)))}
- ${renderGroup('ตามฝั่งสัญญาณ',groupStats(rows,s=>directionThai(s.direction)))}
- ${renderGroup('ตามสภาพตลาดตอนเข้า',groupStats(rows,s=>phaseThai(s.dataset?.entry?.regime||s.features?.regime)))}
- ${renderGroup('ตามช่วงการเคลื่อนที่ของราคา',groupStats(rows,s=>phaseThai(s.dataset?.entry?.marketPhase||s.features?.marketPhase)))}
- ${renderGroup('ตามครั้งที่ออกสัญญาณในรอบราคาเดียวกัน',groupStats(rows,s=>'ครั้งที่ '+(s.dataset?.episodeSequence||1)))}
+ <section class="review-section"><div class="report-summary-hero">
+  <span>สรุปย่อจากข้อมูลที่บันทึก</span>
+  <h3>${topWeak?'จุดอ่อนที่พบมาก: '+esc(WEAKNESS_TEXT[topWeak.tag]||topWeak.tag):'ยังต้องเก็บไม้เพิ่มเพื่อหาจุดอ่อนซ้ำ'}</h3>
+  <p>${topWeak?`พบ ${topWeak.n} ไม้ · ชนะ ${topWeak.w} / แพ้ ${topWeak.l} · Win rate ${Number.isFinite(topWeak.rate)?(topWeak.rate*100).toFixed(1)+'%':'—'}`:'ระบบจะสรุปเมื่อมีข้อมูลที่ตัดสินผลแล้วมากขึ้น'}</p>
+  <small>${topStrong?'จุดแข็งที่ควรรักษา: '+esc(STRENGTH_TEXT[topStrong.tag]||topStrong.tag)+' · พบ '+topStrong.n+' ไม้':'ยังไม่มีจุดแข็งซ้ำที่เด่นพอ'}</small>
  </div></section>
- <section class="review-section"><h3>3 · รูปแบบที่พบในไม้แพ้</h3>${patterns(losses,'bad')}</section>
- <section class="review-section"><h3>4 · รูปแบบที่พบในไม้ชนะ</h3>${patterns(wins,'good')}</section>
- <section class="review-section"><h3>5 · ใช้บทเรียนไปฝึกระบบอย่างไร</h3>
- <p class="review-note">รูปแบบข้างต้นเป็นข้อสังเกตจากกฎที่ระบบกำหนดไว้ ไม่ได้ยืนยันสาเหตุที่ทำให้ถูกหรือผิดทาง การปรับกลยุทธ์ควรทดสอบกับข้อมูลใหม่แยกต่างหาก</p>
- <ul class="review-list">
- <li>ใช้เฉพาะข้อมูลก่อนหรือขณะเข้าไม้เพื่อฝึกการทำนาย ได้แก่ <b>dataset.entry</b> และ <b>candidate.input</b></li>
- <li>ผลลัพธ์ <b>result</b> และ <b>dataset.outcome</b> เป็นคำตอบสำหรับตรวจสอบย้อนหลัง ส่วนราคาหลังเข้าและบริบทในอนาคตห้ามใช้เป็นข้อมูลตอนทำนาย</li>
- <li>แยกข้อมูลฝึก ข้อมูลตรวจระหว่างฝึก และข้อมูลทดสอบตามลำดับเวลา</li>
- <li>ใช้รหัสรอบราคาหรือ Episode ID เพื่อไม่ให้นับสัญญาณซ้ำจากการเคลื่อนที่เดียวกันเป็นตัวอย่างอิสระ</li>
- <li>โหลดข้อมูลดิบด้วยปุ่ม JSON หรือ CSV ด้านล่าง ชื่อฟิลด์ยังคงเดิมเพื่อใช้กับระบบฝึกต่อ</li>
- </ul></section>`;
+ <section class="review-section"><h3>1 · ภาพรวมผลที่บันทึกจริง</h3><div class="review-kpis">
+  <div class="review-kpi"><span>ไม้ที่ตัดสินแล้ว</span><b>${rows.length}</b></div>
+  <div class="review-kpi"><span>ถูกทาง</span><b>${wins.length}</b></div>
+  <div class="review-kpi"><span>ผิดทาง</span><b>${losses.length}</b></div>
+  <div class="review-kpi"><span>อัตราถูกจากข้อมูลจริง</span><b>${rows.length?(wins.length/rows.length*100).toFixed(1)+'%':'—'}</b></div>
+  <div class="review-kpi"><span>กำลังรอผล</span><b>${scoped.filter(sig=>sig.result==='pending').length}</b></div>
+  <div class="review-kpi"><span>มี Timeline V3</span><b>${scoped.filter(sig=>sig.dataset?.timeline?.length).length}</b></div>
+ </div></section>
+ <section class="review-section"><h3>2 · จุดอ่อนที่พบซ้ำ</h3><p class="review-note">นับจากเงื่อนไขที่เกิดจริงในแต่ละไม้ แล้วดูผลของไม้ที่มีเงื่อนไขนั้นร่วมกัน เพื่อใช้ตั้งสมมติฐานสำหรับการเทรนรอบต่อไป</p>${renderDiagnosticStats(diag.weaknesses,'weakness')}</section>
+ <section class="review-section"><h3>3 · จุดแข็งที่ควรรักษา</h3><p class="review-note">ใช้กันไม่ให้เราแก้ระบบจากไม้แพ้จนข้อดีเดิมหายไป</p>${renderDiagnosticStats(diag.strengths,'strength')}</section>
+ <section class="review-section"><h3>4 · แยกผลตามสภาพตอนเข้า</h3><div class="report-groups">
+  ${renderGroup('ตามจังหวะเข้า',groupStats(rows,sig=>typeName[sig.type]||uiReason(sig.type)))}
+  ${renderGroup('ตามฝั่งสัญญาณ',groupStats(rows,sig=>directionThai(sig.direction)))}
+  ${renderGroup('ตาม Market State',groupStats(rows,sig=>sig.dataset?.entry?.v2State||phaseThai(sig.dataset?.entry?.marketPhase||sig.features?.marketPhase)))}
+  ${renderGroup('ตาม Playbook',groupStats(rows,sig=>sig.dataset?.entry?.v2Playbook||sig.type))}
+  ${renderGroup('ตามครั้งที่ออกในรอบเดียวกัน',groupStats(rows,sig=>'ครั้งที่ '+(sig.dataset?.episodeSequence||1)))}
+ </div></section>
+ <section class="review-section"><h3>5 · รูปแบบจากกฎเดิมที่พบในไม้แพ้</h3>${patterns(losses,'bad')}</section>
+ <section class="review-section"><h3>6 · รูปแบบจากกฎเดิมที่พบในไม้ชนะ</h3>${patterns(wins,'good')}</section>
+ <section class="review-section"><h3>7 · ใช้สรุปนี้เทรนระบบอย่างไร</h3>
+  <ul class="review-list">
+   <li><b>dataset.entry</b> คือข้อมูลที่รู้ตอนเข้า ใช้เป็น feature ฝึกได้</li>
+   <li><b>dataset.timeline / path1m / v2Followup / outcome / summaryV3</b> คือข้อมูลหลังเข้า ใช้เป็น label และวิเคราะห์จุดอ่อน ห้ามย้อนกลับไปเป็น input ของไม้เดิม</li>
+   <li>ดูจุดอ่อนร่วมกับ Win rate ของเงื่อนไข ไม่แก้เพราะแพ้เพียง 1–2 ไม้</li>
+   <li>ดู “จุดแข็งที่ควรรักษา” ทุกครั้งก่อนเพิ่ม gate ใหม่ เพื่อไม่ให้ 2.0 กลายเป็นนิ่งเกินไป</li>
+   <li>JSON มี <b>weaknessReport</b> และ <b>journalSummary</b> ต่อไม้สำหรับนำมาเทรนต่อได้ค่ะ</li>
+  </ul></section>`;
  $('report-dialog').showModal();
 }
   function val(v,suffix=''){return Number.isFinite(v)?nfmt(v)+suffix:'—';}
@@ -4278,7 +4307,7 @@ function openReport(){
    function reviewTagLabel(t){return REVIEW_TEXT[t]?.[0]||uiReason(String(t||'').replaceAll('_',' '));}
    function reviewTagMeaning(t){return REVIEW_TEXT[t]?.[1]||'เป็นข้อสังเกตจากเงื่อนไขที่ระบบบันทึกไว้';}
    function reviewSummary(s){
- if(s.result==='pending')return 'ไม้นี้ยังไม่ครบ 10 นาที จึงยังสรุปผลและบทเรียนไม่ได้';
+ if(s.result==='pending')return 'ไม้นี้ยังไม่ครบ 10 นาที ระบบจะแสดงสรุประหว่างไม้จากข้อมูลที่เก็บได้จนถึงตอนนี้';
  if(s.result==='missing')return 'ข้อมูลราคาไม่ครบช่วงตัดสิน จึงยังบอกไม่ได้ว่าไม้นี้ถูกหรือผิด';
  if(s.result==='equal')return 'ราคาตัดสินเท่ากับราคาเข้า จึงนับเป็นผลเสมอ';
  const tags=s.dataset?.review?.tags||[];
@@ -4286,66 +4315,82 @@ function openReport(){
  return `ไม้นี้ปิด${s.result==='correct'?'ถูกทาง':'ผิดทาง'}หลังครบ 10 นาที ระบบพบ ${tags.length} รูปแบบที่เกี่ยวข้องตามกฎที่ตั้งไว้ ดูคำอธิบายด้านล่างเพื่อทบทวนแต่ละข้อ`;
 }
    function openTradeReview(id){
- const s=engine.signals.find(x=>x.id===id);if(!s)return;
- const e=s.dataset?.entry,o=s.dataset?.outcome,tags=s.dataset?.review?.tags||[];
- $('review-title').textContent=`${directionThai(s.direction)} · ราคาเข้า ${money(s.entryPrice)} · ${typeName[s.type]||uiReason(s.type||'ไม่ทราบ')}`;
- $('review-subtitle').textContent=`เข้า ${clockMs(s.entryTime)} · ครบกำหนด ${clockMs(s.expiresAt)} · ${resultThai(s.result)}`;
+ const sig=engine.signals.find(x=>x.id===id);if(!sig)return;
+ const e=sig.dataset?.entry,o=sig.dataset?.outcome,tags=sig.dataset?.review?.tags||[],diag=tradeDiagnostics(sig),timeline=sig.dataset?.timeline||[];
+ $('review-title').textContent=`${directionThai(sig.direction)} · ราคาเข้า ${money(sig.entryPrice)} · ${typeName[sig.type]||uiReason(sig.type||'ไม่ทราบ')}`;
+ $('review-subtitle').textContent=`เข้า ${clockMs(sig.entryTime)} · ครบกำหนด ${clockMs(sig.expiresAt)} · ${resultThai(sig.result)} · Journal V3`;
  const metric=(title,value,hint='')=>`<div class="review-kpi"><span>${esc(title)}</span><b>${esc(value)}</b>${hint?`<small style="display:block;margin-top:4px;font-size:11px;color:var(--muted)">${esc(hint)}</small>`:''}</div>`;
- const tagList=tags.length?`<ul class="review-list">${tags.map(t=>`<li class="${s.result==='correct'?'good':s.result==='incorrect'?'bad':''}"><b>${esc(reviewTagLabel(t))}</b><small style="display:block;margin-top:5px">${esc(reviewTagMeaning(t))}</small></li>`).join('')}</ul>`:'<p>ยังไม่มีรูปแบบเพิ่มเติมที่เข้าเกณฑ์ของระบบสำหรับไม้นี้</p>';
+ const weakList=diag.weaknessTags.map(k=>`<li class="bad"><b>${esc(WEAKNESS_TEXT[k]||k)}</b></li>`).join('');
+ const strongList=diag.strengthTags.map(k=>`<li class="good"><b>${esc(STRENGTH_TEXT[k]||k)}</b></li>`).join('');
+ const tagList=tags.length?`<ul class="review-list">${tags.map(t=>`<li class="${sig.result==='correct'?'good':sig.result==='incorrect'?'bad':''}"><b>${esc(reviewTagLabel(t))}</b><small style="display:block;margin-top:5px">${esc(reviewTagMeaning(t))}</small></li>`).join('')}</ul>`:'<p>ยังไม่มีรูปแบบเพิ่มเติมจากกฎเดิมสำหรับไม้นี้</p>';
+ const remaining=Math.max(0,sig.expiresAt-Date.now()),live=liveExcursion(sig,state.quote?.price),last=timeline.at(-1);
+ const summaryTone=sig.result==='correct'?'good':sig.result==='incorrect'?'bad':sig.result==='pending'?'pending':'neutral';
+ const summarySub=sig.result==='pending'
+  ?`เหลือ ${countdownLabel(remaining)} · MFE ${nfmt(live.mfeAtr)} ATR · MAE ${nfmt(live.maeAtr)} ATR`
+  :`MFE ${Number.isFinite(o?.mfeAtr)?nfmt(o.mfeAtr):'—'} ATR · MAE ${Number.isFinite(o?.maeAtr)?nfmt(o.maeAtr):'—'} ATR`;
+ let html=`<section class="review-section"><div class="trade-summary-hero ${summaryTone}">
+   <span>สรุปย่อ</span><h3>${esc(diag.headline)}</h3><p>${esc(summarySub)}</p>
+   ${diag.reasons.length?'<ul>'+diag.reasons.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''}
+   ${sig.result==='pending'&&last?'<small>ตอนนี้ · '+esc(last.state||'—')+' · '+esc(last.playbookLabel||last.playbook||'—')+' · Flow ตามฝั่ง '+nfmt(last.alignedFlow)+'</small>':''}
+  </div></section>`;
  if(!e){
-  $('review-body').innerHTML=`<section class="review-section"><h3>ไม้จากข้อมูลเก่า</h3><p>ไม้นี้ถูกบันทึกก่อนระบบเก็บภาพตลาดตอนเข้าและเส้นทางราคาแบบละเอียด</p><p>${esc(cleanReportText(uiReason(s.reason||'ไม่มีเหตุผลเก่าที่บันทึกไว้')))}</p></section><section class="review-section"><h3>ผลและบทเรียน</h3><p>${esc(reviewSummary(s))}</p>${tagList}</section>`;
-  $('trade-review-dialog').showModal();return;
+  html+=`<section class="review-section"><h3>ข้อมูลเก่า</h3><p>ไม้นี้ถูกบันทึกก่อนระบบเก็บภาพตลาดและ Timeline V3 แบบละเอียด</p><p>${esc(cleanReportText(uiReason(sig.reason||'ไม่มีเหตุผลเก่าที่บันทึกไว้')))}</p></section>
+   <section class="review-section"><h3>สรุปผล</h3><p>${esc(reviewSummary(sig))}</p>${tagList}</section>`;
+  $('review-body').innerHTML=html;$('trade-review-dialog').showModal();return;
  }
- const why=[...new Set([e.setupReason,e.decisionReason,...(e.evidenceWhy||[])].filter(Boolean).map(v=>cleanReportText(uiReason(v))).filter(Boolean))];
- const path=s.dataset?.path1m||[],ctx=s.dataset?.context1m||[];
- const pathRows=[1,2,3,4,5,6,7,8,9,10].map(m=>{
-  const b=path.find(x=>x.minute===m),q=ctx.find(x=>x.minute===m),close=m===10?(s.exitPrice??b?.close):b?.close;
-  return `<tr><td>+${m}</td><td>${b?money(b.open):'—'}</td><td>${b?money(b.high):'—'}</td><td>${b?money(b.low):'—'}</td><td>${Number.isFinite(close)?money(close):'—'}</td><td>${Number.isFinite(q?.flow)?nfmt(q.flow):'—'}</td><td>${esc(phaseThai(q?.regime))}</td><td>${esc(phaseThai(q?.phase))}</td></tr>`;
- });
- const candleRows=(e.candleSequence||[]).map(c=>`<tr><td>${clockMs(c.time*1000)}</td><td>${esc(c.direction)}</td><td>${money(c.open)}</td><td>${money(c.high)}</td><td>${money(c.low)}</td><td>${money(c.close)}</td><td>${nfmt(c.bodyAtr)}</td><td>${nfmt(c.rangeAtr)}</td><td>${Number.isFinite(c.closeLocation)?Math.round(c.closeLocation*100)+'%':'—'}</td><td>${c.closed?'ปิดแล้ว':'กำลังก่อตัว'}</td></tr>`);
- $('review-body').innerHTML=`
- <section class="review-section"><h3>1 · เข้าไม้นี้เพราะอะไร</h3><p class="review-note">เหตุผลที่ระบบบันทึกไว้ในจังหวะเข้า แยกจากผลที่เกิดขึ้นภายหลัง</p>
- ${why.length?`<ul class="review-list">${why.map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`:'<p>ไม่มีเหตุผลแบบข้อความที่บันทึกไว้</p>'}
- <div class="review-kpis">${metric('โมเดลเห็นฝั่งไหนตอนแรก',directionThai(e.modelDirection))}${metric('ฝั่งที่ใช้เข้าจริง',directionThai(e.outputDirection))}${metric('รูปแบบจุดเข้า',typeName[e.setupType]||uiReason(e.setupType))}${metric('วิธีออกสัญญาณ',e.expediteFive?.requested?(e.expediteFive.forcedByWrapper?'เร่ง 5 แท่ง · '+String(e.expediteFive.issueMode||'').toUpperCase():'สูตรหลักออกเองระหว่างโหมดเร่ง'):'ปกติ')}${metric('คะแนนหลักฐาน',Number.isFinite(e.evidenceScore)?e.evidenceScore+' คะแนน':'—','คะแนนของกฎ ไม่ใช่เปอร์เซ็นต์โอกาสชนะ')}</div></section>
- <section class="review-section"><h3>2 · ตอนเข้า ตลาดเป็นอย่างไร</h3><p class="review-note">กลุ่มนี้เป็นข้อมูลที่มีอยู่แล้วขณะเข้า สามารถนำไปใช้ศึกษาหรือฝึกระบบต่อได้</p><div class="review-kpis">
- ${metric('สภาพตลาด',phaseThai(e.regime))}
- ${metric('สภาพตลาดที่ยืนยันแล้ว',phaseThai(e.stableMode))}
- ${metric('ช่วงการเคลื่อนที่ของราคา',phaseThai(e.marketPhase)+(e.phaseDir>0?' ↑':e.phaseDir<0?' ↓':''))}
- ${metric('ปริมาณซื้อขายเทียบปกติ',Number.isFinite(e.relativeVolume)?nfmt(e.relativeVolume)+' เท่า':'—','1.5 เท่า หมายถึงมากกว่าค่ากลางย้อนหลังราว 50%')}
- ${metric('ความเร็วการซื้อขายสด',Number.isFinite(e.liveVolumePace)?nfmt(e.liveVolumePace)+' เท่า':'—','ประมาณการจากแท่งเทียนที่ยังไม่ปิด')}
- ${metric('ระยะการแกว่งเฉลี่ย (ATR)',val(e.atr)+' USDT','ใช้เปรียบเทียบว่าราคาวิ่งมากหรือน้อย')}
- ${metric('ขนาดตัวแท่งเทียน',val(e.bodyAtr,' เท่าของ ATR'))}
- ${metric('ช่วงสูง–ต่ำของแท่ง',val(e.rangeAtr,' เท่าของ ATR'))}
- ${metric('ระยะจากฐานของแนวโน้ม',val(e.phaseExtensionAtr,' เท่าของ ATR'))}
- ${metric('หลักฐานว่าราคาเริ่มหมดแรง',e.exhaustionScore??'—','คะแนนตามเกณฑ์ ไม่ใช่เปอร์เซ็นต์')}
- ${metric('แนวโน้มระยะสั้น',val(e.trend),'บวกเอนขึ้น ลบเอนลง')}
- ${metric('แรงส่งราคา',val(e.momentum),'บวกเอนขึ้น ลบเอนลง')}
- ${metric('แรงซื้อเทียบแรงขาย',val(e.flow),'บวกหมายถึงแรงซื้อเด่น ลบหมายถึงแรงขายเด่น')}
- ${metric('คำสั่งซื้อขายที่รออยู่',e.bookValid?val(e.book):'ยังไม่มีข้อมูลยืนยัน','บวกคือคำสั่งซื้อเด่น ลบคือคำสั่งขายเด่น')}
- ${metric('ตำแหน่งราคาในกรอบ',Number.isFinite(e.rangePosition)?(e.rangePosition*100).toFixed(0)+'%':'—','0% ใกล้ขอบล่าง 100% ใกล้ขอบบน')}
- ${metric('ระยะถึงแนวสำคัญข้างหน้า',val(e.room,' เท่าของ ATR'))}
- ${metric('ราคาไปจากจุดอ้างอิงแล้ว',val(e.progress,' เท่าของ ATR'))}
- ${metric('ราคาไปจากจุดเริ่มจับสัญญาณ',val(e.drift,' เท่าของ ATR'))}
- ${metric('แนวรับ 1 นาทีที่ใกล้ที่สุด',e.zones?.nearestSupport?money(e.zones.nearestSupport.price)+' · ห่าง '+nfmt(e.zones.nearestSupport.distanceAtr)+' ATR':'—')}
- ${metric('แนวต้าน 1 นาทีที่ใกล้ที่สุด',e.zones?.nearestResistance?money(e.zones.nearestResistance.price)+' · ห่าง '+nfmt(e.zones.nearestResistance.distanceAtr)+' ATR':'—')}
- ${metric('สัญญาณครั้งที่ในรอบราคาเดียวกัน',s.dataset?.episodeSequence||1)}
- </div></section>
- <section class="review-section"><h3>3 · แท่งเทียนตอนที่ระบบตัดสินใจเข้า</h3><p class="review-note">บันทึกเฉพาะแท่งที่ระบบเห็นได้แล้ว ณ ตอนเข้า ใช้เป็น input/บทเรียนได้ โดยไม่ใช้ข้อมูลอนาคต</p><div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>สีแท่ง</th><th>เปิด</th><th>สูง</th><th>ต่ำ</th><th>ปิด/ล่าสุด</th><th>Body/ATR</th><th>Range/ATR</th><th>ปิดในแท่ง</th><th>สถานะ</th></tr></thead><tbody>${candleRows.join('')||'<tr><td colspan="10">ไม้นี้ยังไม่มี snapshot แท่งเทียน</td></tr>'}</tbody></table></div></section>
- <section class="review-section"><h3>4 · ราคาวิ่งอย่างไรใน 10 นาทีหลังเข้า</h3><p class="review-note">เป็นข้อมูลอนาคตหลังออกสัญญาณ ใช้ทบทวนได้ แต่ห้ามนำไปใช้เป็นข้อมูลตอนคาดการณ์</p><div class="review-table-wrap"><table class="review-table"><thead><tr><th>นาทีที่</th><th>ราคาเปิด</th><th>สูงสุด</th><th>ต่ำสุด</th><th>ราคาล่าสุด</th><th>แรงซื้อขาย</th><th>สภาพตลาด</th><th>ช่วงราคา</th></tr></thead><tbody>${pathRows.join('')}</tbody></table></div></section>
- <section class="review-section"><h3>5 · ผลเมื่อครบ 10 นาที</h3><div class="review-kpis">
- ${metric('ผลลัพธ์',resultThai(s.result))}
- ${metric('ราคาเข้า',money(s.entryPrice))}
- ${metric('ราคาที่ใช้ตัดสิน',Number.isFinite(s.exitPrice)?money(s.exitPrice):'—')}
- ${metric('ราคาวิ่งตามฝั่งที่เลือก',o?val(o.directionalMovePoints,' จุด'):'—','บวกคือถูกทาง ลบคือสวนทาง')}
- ${metric('ระยะเมื่อเทียบความผันผวน',o?val(o.directionalMoveAtr,' เท่าของ ATR'):'—')}
- ${metric('ระหว่างทางเคยไปถูกทางมากที่สุด',o?val(o.mfeAtr,' เท่าของ ATR'):'—')}
- ${metric('ระหว่างทางเคยสวนหนักที่สุด',o?val(o.maeAtr,' เท่าของ ATR'):'—')}
- ${metric('นาทีที่เคยไปถูกทางมากที่สุด',o?.mfeAtMinute?'นาทีที่ '+o.mfeAtMinute:'—')}
- ${metric('นาทีที่เคยโดนสวนหนักที่สุด',o?.maeAtMinute?'นาทีที่ '+o.maeAtMinute:'—')}
- </div></section>
- <section class="review-section"><h3>6 · บทเรียนหลังจบไม้</h3><p>${esc(reviewSummary(s))}</p>${tagList}<p class="review-note">ข้อสังเกตจากกฎไม่ใช่ข้อพิสูจน์สาเหตุ ควรเปรียบเทียบผลหลายไม้ก่อนปรับกลยุทธ์</p></section>
- <section class="review-section"><details class="raw-details"><summary>แท่งเทียน 1 นาทีก่อนเข้า (20 แท่ง)</summary><p class="review-note">ข้อมูลดิบก่อนเข้าที่ใช้ตรวจจังหวะย้อนหลังได้</p><div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>เปิด</th><th>สูงสุด</th><th>ต่ำสุด</th><th>ปิด</th><th>ปริมาณซื้อขาย</th></tr></thead><tbody>${(e.prior1m||[]).map(b=>`<tr><td>${clockMs(b[0]*1000)}</td><td>${money(b[1])}</td><td>${money(b[2])}</td><td>${money(b[3])}</td><td>${money(b[4])}</td><td>${nfmt(b[5])}</td></tr>`).join('')}</tbody></table></div></details></section>`;
- $('trade-review-dialog').showModal();
+ const why=[...new Set([e.setupReason,e.decisionReason,...(e.v2EntryReasons||[]),...(e.evidenceWhy||[])].filter(Boolean).map(v=>cleanReportText(uiReason(v))).filter(Boolean))];
+ const fib=e.v2Fib||{},range=e.v2Range||{},candle=e.v2CandleBehavior||{},story=e.v2Story||{};
+ const timelineRows=timeline.map(x=>`<tr><td>${clockMs(x.ts)}</td><td>+${Math.floor((x.elapsedSec||0)/60)}:${String((x.elapsedSec||0)%60).padStart(2,'0')}</td><td>${money(x.price)}</td><td class="${Number(x.moveAtr)>=0?'up':'down'}">${nfmt(x.moveAtr)} ATR</td><td>${esc(x.state||'—')}</td><td>${esc(x.playbookLabel||x.playbook||'—')}</td><td>${nfmt(x.alignedFlow)}</td><td>${Number.isFinite(x.highEvidence)?Math.round(x.highEvidence)+'/'+Math.round(x.lowEvidence):'—'}</td><td>${esc(x.fibZone||'—')}</td><td>${x.structureBroken===true?'เสีย':x.structureBroken===false?'ยังอยู่':'—'}</td></tr>`);
+ const path=sig.dataset?.path1m||[],ctx=sig.dataset?.context1m||[];
+ const pathRows=[1,2,3,4,5,6,7,8,9,10].map(m=>{const b=path.find(x=>x.minute===m),q=ctx.find(x=>x.minute===m),close=m===10?(sig.exitPrice??b?.close):b?.close;return `<tr><td>+${m}</td><td>${b?money(b.open):'—'}</td><td>${b?money(b.high):'—'}</td><td>${b?money(b.low):'—'}</td><td>${Number.isFinite(close)?money(close):'—'}</td><td>${Number.isFinite(q?.flow)?nfmt(q.flow):'—'}</td><td>${esc(phaseThai(q?.regime))}</td><td>${esc(phaseThai(q?.phase))}</td></tr>`;}).join('');
+ const candleRows=(e.candleSequence||[]).map(c=>`<tr><td>${clockMs(c.time*1000)}</td><td>${esc(c.direction)}</td><td>${money(c.open)}</td><td>${money(c.high)}</td><td>${money(c.low)}</td><td>${money(c.close)}</td><td>${nfmt(c.bodyAtr)}</td><td>${nfmt(c.rangeAtr)}</td><td>${Number.isFinite(c.closeLocation)?Math.round(c.closeLocation*100)+'%':'—'}</td></tr>`).join('');
+
+ html+=`
+ <section class="review-section"><h3>1 · เข้าไม้นี้เพราะอะไร</h3><p class="review-note">ข้อมูลชุดนี้ freeze จากตอนเข้า ไม่ใช้ข้อมูลอนาคตย้อนมาแต่งเหตุผล</p>
+  ${why.length?'<ul class="review-list">'+why.map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'<p>ไม่มีเหตุผลข้อความที่บันทึกไว้</p>'}
+  <div class="review-kpis">
+   ${metric('ฝั่งที่เข้า',directionThai(sig.direction))}
+   ${metric('Market State',e.v2State||phaseThai(e.marketPhase||e.regime))}
+   ${metric('Playbook',e.v2Playbook||typeName[e.setupType]||uiReason(e.setupType))}
+   ${metric('Entry evidence',Number.isFinite(e.v2EntryEvidence)?Math.round(e.v2EntryEvidence)+'/100':Number.isFinite(e.evidenceScore)?e.evidenceScore+' คะแนน':'—','เป็นคะแนนหลักฐาน ไม่ใช่ Win rate')}
+   ${metric('State confidence',Number.isFinite(e.v2StateConfidence)?Math.round(e.v2StateConfidence)+'/100':'—')}
+   ${metric('Trigger',e.v2Trigger||'—')}
+   ${metric('Invalidation',e.v2Invalidation||'—')}
+   ${metric('Next plan',e.v2NextPlan||'—')}
+  </div></section>
+ <section class="review-section"><h3>2 · โครงสร้าง / Fib / ตลาดตอนเข้า</h3><div class="review-kpis">
+   ${metric('ราคาในกรอบ',Number.isFinite(e.rangePosition)?Math.round(e.rangePosition*100)+'%':'—')}
+   ${metric('Range state',range.balanced?'Balanced range':range.compression?'Compression':range.edgePressureDir?'Edge pressure':'—')}
+   ${metric('Fib leg',fib.valid?(fib.d>0?'ขึ้น':'ลง')+' · '+nfmt(fib.moveAtr)+' ATR':'ยังไม่มี leg')}
+   ${metric('Fib retracement',fib.valid?Math.max(0,Number(fib.retracement)*100).toFixed(1)+'% · '+(fib.retraceZone||''):'—')}
+   ${metric('Fib extension',fib.valid?Number(fib.extension*100).toFixed(1)+'% · '+(fib.extensionZone||''):'—')}
+   ${metric('Fib confluence',fib.confluence?'มี':'ไม่มี/ไม่ยืนยัน')}
+   ${metric('Candle behavior',(candle.tags||[]).join(' · ')||'—')}
+   ${metric('Trend-change risk',e.v2TrendChangeRisk||story.trendChangeRisk||'—')}
+   ${metric('แนวรับใกล้สุด',e.zones?.nearestSupport?money(e.zones.nearestSupport.price)+' · '+nfmt(e.zones.nearestSupport.distanceAtr)+' ATR':'—')}
+   ${metric('แนวต้านใกล้สุด',e.zones?.nearestResistance?money(e.zones.nearestResistance.price)+' · '+nfmt(e.zones.nearestResistance.distanceAtr)+' ATR':'—')}
+   ${metric('Flow ตอนเข้า',val(e.flow))}
+   ${metric('Momentum ตอนเข้า',val(e.momentum))}
+  </div></section>
+ <section class="review-section"><h3>3 · Timeline ระหว่างไม้${sig.result==='pending'?' · สด':''}</h3><p class="review-note">บันทึกทุกประมาณ 15 วินาทีหรือเมื่อ State / Playbook / Fib / Flow / Structure เปลี่ยน เพื่อเอาไปวิเคราะห์หลังไม้โดยไม่เก็บทุก tick</p>
+  <div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>ผ่านไป</th><th>ราคา</th><th>Move</th><th>State</th><th>Playbook</th><th>Flow</th><th>H/L</th><th>Fib</th><th>Structure</th></tr></thead><tbody>${timelineRows.join('')||'<tr><td colspan="10">ยังไม่มี Timeline V3 สำหรับไม้นี้</td></tr>'}</tbody></table></div></section>
+ <section class="review-section"><h3>4 · แท่งเทียนตอนเข้า</h3><div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>สี</th><th>เปิด</th><th>สูง</th><th>ต่ำ</th><th>ปิด</th><th>Body/ATR</th><th>Range/ATR</th><th>Close loc</th></tr></thead><tbody>${candleRows||'<tr><td colspan="9">ไม่มี snapshot แท่งเทียน</td></tr>'}</tbody></table></div></section>
+ <section class="review-section"><h3>5 · เส้นทางราคา +10 นาที</h3><div class="review-table-wrap"><table class="review-table"><thead><tr><th>นาที</th><th>เปิด</th><th>สูง</th><th>ต่ำ</th><th>ล่าสุด</th><th>Flow</th><th>Regime</th><th>Phase</th></tr></thead><tbody>${pathRows}</tbody></table></div></section>
+ <section class="review-section"><h3>6 · ${sig.result==='pending'?'สถานะของไม้ตอนนี้':'ผลเมื่อครบ 10 นาที'}</h3><div class="review-kpis">
+   ${metric('ผล',resultThai(sig.result))}
+   ${metric('ราคาเข้า',money(sig.entryPrice))}
+   ${metric(sig.result==='pending'?'ราคาปัจจุบัน':'ราคาตัดสิน',sig.result==='pending'&&Number.isFinite(state.quote?.price)?money(state.quote.price):Number.isFinite(sig.exitPrice)?money(sig.exitPrice):'—')}
+   ${metric('MFE',sig.result==='pending'?nfmt(live.mfeAtr)+' ATR':o?val(o.mfeAtr,' ATR'):'—')}
+   ${metric('MAE',sig.result==='pending'?nfmt(live.maeAtr)+' ATR':o?val(o.maeAtr,' ATR'):'—')}
+   ${metric('Final move',o?val(o.directionalMoveAtr,' ATR'):'ยังไม่ตัดสิน')}
+  </div></section>
+ <section class="review-section"><h3>7 · สรุปเพื่อเทรนต่อ</h3><p>${esc(reviewSummary(sig))}</p>
+  <div class="summary-two-col"><div><h4>จุดอ่อน/ความเสี่ยงที่พบ</h4><ul class="review-list">${weakList||'<li>ยังไม่พบ pattern จุดอ่อนตามกฎ V3</li>'}</ul></div>
+  <div><h4>จุดแข็งที่ควรรักษา</h4><ul class="review-list">${strongList||'<li>ยังไม่มี pattern จุดแข็งที่ชัด</li>'}</ul></div></div>
+  <h4>Tag จากระบบเดิม</h4>${tagList}
+  <p class="review-note">ส่วนนี้เป็นการจัดกลุ่มจากข้อมูลที่สังเกตได้ ไม่ถือเป็นข้อพิสูจน์เชิงสาเหตุจนกว่าจะเห็นซ้ำหลายไม้</p></section>
+ <section class="review-section"><details class="raw-details"><summary>ข้อมูลดิบก่อนเข้า (20 แท่ง)</summary><div class="review-table-wrap"><table class="review-table"><thead><tr><th>เวลา</th><th>เปิด</th><th>สูง</th><th>ต่ำ</th><th>ปิด</th><th>Volume</th></tr></thead><tbody>${(e.prior1m||[]).map(b=>`<tr><td>${clockMs(b[0]*1000)}</td><td>${money(b[1])}</td><td>${money(b[2])}</td><td>${money(b[3])}</td><td>${money(b[4])}</td><td>${nfmt(b[5])}</td></tr>`).join('')}</tbody></table></div></details></section>`;
+ $('review-body').innerHTML=html;$('trade-review-dialog').showModal();
 }
   function countdownLabel(ms){
    const sec=Math.max(0,Math.ceil(ms/1000));
@@ -4469,13 +4514,13 @@ function openReport(){
    $('observed-rate').textContent=done.length?`ผล ${versionLabel()} ที่บันทึกจริง ${(wins/done.length*100).toFixed(1)}% จาก ${done.length} ครั้ง`:`${versionLabel()} ยังไม่มีผลจริงครบ 10 นาที`;
    const enriched=rows.filter(s=>s.dataset?.entry).length,reviewed=rows.filter(s=>s.dataset?.review).length,candidateCount=candidateDataset().filter(x=>historyVersionFilter==='all'||x.version===historyVersionFilter).length;
    const watchRows=(engine.watchSamples||[]).filter(w=>historyVersionFilter==='all'||w.version===historyVersionFilter),watchDone=watchRows.filter(w=>['correct','incorrect'].includes(w.result)),watchWins=watchDone.filter(w=>w.result==='correct').length;
-   $('dataset-status').textContent=`ข้อมูลเทรน ${DATASET_SCHEMA} · จุดเข้าละเอียด ${enriched} ไม้ · บทเรียน ${reviewed} ไม้ · WATCH ${watchRows.length} ครั้ง${watchDone.length?' · WATCH ถูก '+(watchWins/watchDone.length*100).toFixed(1)+'% จาก '+watchDone.length:''} · candidate ${candidateCount} ครั้ง · ${Object.keys(versionSettings).length} เวอร์ชัน`;
+   $('dataset-status').textContent=`ข้อมูลเทรน ${DATASET_SCHEMA} · จุดเข้าละเอียด ${enriched} ไม้ · สรุปแล้ว ${reviewed} ไม้ · WATCH ${watchRows.length} ครั้ง${watchDone.length?' · WATCH ถูก '+(watchWins/watchDone.length*100).toFixed(1)+'% จาก '+watchDone.length:''} · candidate ${candidateCount} ครั้ง · ${Object.keys(versionSettings).length} เวอร์ชัน`;
    const tb=$('history-body');tb.replaceChildren();
    for(const s of rows.slice(-60).reverse()){
     const tr=document.createElement('tr');const labels={correct:'ถูก',incorrect:'ผิด',equal:'เสมอ',missing:'ข้อมูลขาด',pending:'รอผล'};
     const remain=Math.max(0,Math.ceil((s.expiresAt-Date.now())/1000));
     const winPct=liveWinPercent(s);const vals=[clockMs(s.entryTime),(typeName[s.type]||s.type)+(s.dataset?.entry?.expediteFive?.requested?' · เร่ง':''),directionThai(s.direction),money(s.entryPrice),clockMs(s.expiresAt),s.exitPrice?money(s.exitPrice):'—',s.result==='pending'?`${Math.floor(remain/60)}:${String(remain%60).padStart(2,'0')}`:labels[s.result]];
-    for(const v of vals){const td=document.createElement('td');td.textContent=v;tr.append(td);}const liveTd=document.createElement('td');liveTd.className='live-win-cell '+(!Number.isFinite(winPct)?'mid':winPct>=60?'good':winPct<=40?'bad':'mid');liveTd.textContent=s.result==='pending'&&Number.isFinite(winPct)?winPct+'%':'—';tr.append(liveTd);const detail=document.createElement('td'),btn=document.createElement('button');btn.type='button';btn.className='detail-button';btn.dataset.reviewId=s.id;btn.textContent=s.dataset?.review?'ดูบทเรียน':s.dataset?'ดูรายละเอียด':'ดูข้อมูล';detail.append(btn);tr.append(detail);const ver=document.createElement('td');ver.className='version-cell';ver.textContent=versionDisplay(s.version);tr.append(ver);tb.append(tr);
+    for(const v of vals){const td=document.createElement('td');td.textContent=v;tr.append(td);}const liveTd=document.createElement('td');liveTd.className='live-win-cell '+(!Number.isFinite(winPct)?'mid':winPct>=60?'good':winPct<=40?'bad':'mid');liveTd.textContent=s.result==='pending'&&Number.isFinite(winPct)?winPct+'%':'—';tr.append(liveTd);const detail=document.createElement('td'),btn=document.createElement('button');btn.type='button';btn.className='detail-button';btn.dataset.reviewId=s.id;btn.textContent='ดูสรุป';detail.append(btn);tr.append(detail);const ver=document.createElement('td');ver.className='version-cell';ver.textContent=versionDisplay(s.version);tr.append(ver);tb.append(tr);
    }
    const last=rows.at(-1);if(last){$('last-entry').hidden=false;$('last-entry-direction').textContent=directionThai(last.direction);$('last-entry-price').textContent=money(last.entryPrice);$('last-entry-time').textContent=clockMs(last.entryTime);$('last-entry-meta').textContent=`${typeName[last.type]}${last.dataset?.entry?.expediteFive?.requested?' · เร่ง':''}${last.setupStatus==='invalidated'?' · เงื่อนไขเสียแล้ว':''} · ครบ ${clockMs(last.expiresAt)} · ล็อกราคาแล้ว`;}
    syncSignalChart(rows);
