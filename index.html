@@ -635,7 +635,7 @@ main{padding-top:10px}
         <div class="toolbar-more-popover">
           <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
           <button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
-          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.5.0">V6.5.0 · Inverse All</option><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.0.0">V7.0.0 · Market Phase</option><option value="7.0.1">V7.0.1 · Range Edge Confirmation</option><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.0.0">ARIS V1 · T+10 Edge Engine</option><option value="ARIS-1.1.0">ARIS V1.1 · Faster Entry</option></select></label>
+          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.5.0">V6.5.0 · Inverse All</option><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.0.0">V7.0.0 · Market Phase</option><option value="7.0.1">V7.0.1 · Range Edge Confirmation</option><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.0.0">ARIS V1 · T+10 Edge Engine</option><option value="ARIS-1.1.0">ARIS V1.1 · Faster Entry</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option></select></label>
           <button id="latest" class="quiet">กลับล่าสุด</button>
         </div>
       </details>
@@ -856,16 +856,16 @@ main{padding-top:10px}
 </script>
 <script>
 
-/* Event Engine — selectable V7.1.0 / V7.1.1 / V7.2.0 / ARIS V1 / V1.1, +10 minute horizon first, causal, 1m-first.
+/* Event Engine — selectable V7.1.0 / V7.1.1 / V7.2.0 / ARIS V1 / V1.1 / V1.2, +10 minute horizon first, causal, 1m-first.
    Market Phase routes each setup: RANGE, TREND, IMPULSE, MATURE_IMPULSE, EXHAUSTION, REVERSAL.
    RSI/MACD are chart-only and never enter signal decisions. */
 (function(root){
 'use strict';
-const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v1-1';
-let SELECTED_ENGINE_VERSION='ARIS-1.1.0';
+const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v1-2';
+let SELECTED_ENGINE_VERSION='ARIS-1.2.0';
 try{
  const savedVersion=localStorage.getItem(ACTIVE_VERSION_STORE);
- if(['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0'].includes(savedVersion))SELECTED_ENGINE_VERSION=savedVersion;
+ if(['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0'].includes(savedVersion))SELECTED_ENGINE_VERSION=savedVersion;
 }catch{}
 const V710_CONFIG=Object.freeze({
  version:'7.1.0',horizonMs:600000,settlementToleranceMs:5000,
@@ -931,6 +931,32 @@ const ARIS_V11_CONFIG=Object.freeze({...ARIS_V1_CONFIG,
  arisLiveOpportunityMinProgress:-.08,arisLiveOpportunityMaxProgress:.45,
  arisCandidateMaxAgeMs:30000
 });
+const ARIS_V12_CONFIG=Object.freeze({...ARIS_V11_CONFIG,
+ version:'ARIS-1.2.0',arisRevision:'breakout-recovery-r1',
+ arisBreakoutFollow:true,
+ arisBreakoutBuffer:.05,
+ arisBreakoutMaxProgress:.34,
+ arisBreakoutMinFlow:.04,
+ arisBreakoutMinBias:.06,
+ arisBreakoutMinRoom:.18,
+ arisBreakoutMinVotes:2,
+ arisBreakoutMinClose:.68,
+ arisBreakoutMinRangeAtr:.45,
+ arisBreakoutMinVolumePace:1.25,
+ arisPostLatePlan:true,
+ arisLatePlanMaxAgeMs:180000,
+ arisLatePullbackMin:.12,
+ arisLatePullbackMax:.85,
+ arisLateReclaimMinProgress:.03,
+ arisLateReclaimMaxProgress:.30,
+ arisLateReclaimMinFlow:.025,
+ arisLateFollowMinBias:.10,
+ arisLateReversalMinFlow:.05,
+ arisLateReversalMinRetreat:.18,
+ arisLateReversalStructureAtr:.05,
+ arisLateReversalMaxAgainstBias:.12,
+ arisMacroHardExtension:3.60
+});
 const V650_SELECT_CONFIG=Object.freeze({
  version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
@@ -961,7 +987,7 @@ const V700_SELECT_CONFIG=Object.freeze({
  maxHistory:1500,maxAudit:2500
 });
 const V701_SELECT_CONFIG=Object.freeze({...V700_SELECT_CONFIG,version:'7.0.1'});
-const CFG=SELECTED_ENGINE_VERSION==='6.5.0'?V650_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='6.6.0'?V660_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.0'?V700_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.1'?V701_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_CONFIG:ARIS_V1_CONFIG;
+const CFG=SELECTED_ENGINE_VERSION==='6.5.0'?V650_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='6.6.0'?V660_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.0'?V700_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.1'?V701_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_CONFIG:ARIS_V1_CONFIG;
 const V70_PROFILE=Object.freeze({
  name:'V7.0 Market Phase + Volume/Impulse',
  basis:'V6.6 out-of-sample T+10 dataset + observed impulse failure cluster',
@@ -1054,6 +1080,17 @@ const ARIS_V11_PROFILE=Object.freeze({
   safety:'คง soft/hard late guard และยืนยันข้อมูลสด 2 ticks / 400 ms'
  })
 });
+const ARIS_V12_PROFILE=Object.freeze({
+ name:'ARIS V1.2 · Breakout + Recovery',
+ basis:'ต่อยอด V1.1 โดยแก้ช่องว่างหลังพลาดจังหวะแรก: follow breakout ที่ยังสด และมีแผนต่อหลัง TOO LATE แทนการค้างคำว่าไม่ไล่',
+ source:Object.freeze({version:'ARIS-1.1.0',observation:'V1.1 เข้าไวขึ้นแต่เมื่อ breakout วิ่งเร็ว ระบบยังพลาดจังหวะแรกได้ และ late guard เดิมไม่มี recovery state ที่กลับมาหาจุดเข้าใหม่อย่างเป็นระบบ'}),
+ change:Object.freeze({
+  breakout:'เพิ่ม Breakout Follow: ทะลุกรอบจริง + flow + แท่งสด/volume/phase สนับสนุน + ยังไม่ยืดเกิน สามารถ follow ได้ก่อนรอ confirmation หนักแบบเดิม',
+  recovery:'หลัง TOO LATE เก็บ Late Plan 3 นาที: รอย่อแล้ว reclaim ตามขาเดิม หรือถ้า exhaustion + flow พลิก + structure break จึงค่อยจับ reversal',
+  timing:'จุด recovery วัด freshness จาก pivot/reclaim ใหม่ ไม่บังคับวัดจาก EMA21 อย่างเดียว แต่ยังมี macro hard guard 3.60 ATR กันไล่ขาที่สุดโต่ง',
+  safety:'ไม่ใช้กฎ ช้าแล้วสวน; reversal ต้องมีหลักฐาน phase/ exhaustion + flow + micro structure และยังยืนยันสด 2 ticks / 400 ms เหมือนเดิม'
+ })
+});
 const V65_PROFILE=Object.freeze({
  name:'V6.5 Inverse All',
  basis:'legacy V6.5 engine',
@@ -1071,7 +1108,7 @@ const V66_PROFILE=Object.freeze({
   trend_continuation:'candidate only'
  })
 });
-const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='6.5.0'?V65_PROFILE:SELECTED_ENGINE_VERSION==='6.6.0'?V66_PROFILE:SELECTED_ENGINE_VERSION==='7.0.0'?V70_PROFILE:SELECTED_ENGINE_VERSION==='7.0.1'?V701_PROFILE:SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:SELECTED_ENGINE_VERSION==='7.1.1'?V711_PROFILE:SELECTED_ENGINE_VERSION==='7.2.0'?V720_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_PROFILE:ARIS_V1_PROFILE;
+const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='6.5.0'?V65_PROFILE:SELECTED_ENGINE_VERSION==='6.6.0'?V66_PROFILE:SELECTED_ENGINE_VERSION==='7.0.0'?V70_PROFILE:SELECTED_ENGINE_VERSION==='7.0.1'?V701_PROFILE:SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:SELECTED_ENGINE_VERSION==='7.1.1'?V711_PROFILE:SELECTED_ENGINE_VERSION==='7.2.0'?V720_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_PROFILE:ARIS_V1_PROFILE;
 const V65_CONFIG=Object.freeze({
  horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
@@ -1099,7 +1136,8 @@ const VERSION_SETTINGS_SEED=Object.freeze({
  '7.1.1':Object.freeze({name:V711_PROFILE.name,config:V711_CONFIG,strategy:V711_PROFILE}),
  '7.2.0':Object.freeze({name:V720_PROFILE.name,config:V720_CONFIG,strategy:V720_PROFILE}),
  'ARIS-1.0.0':Object.freeze({name:ARIS_V1_PROFILE.name,config:ARIS_V1_CONFIG,strategy:ARIS_V1_PROFILE}),
- 'ARIS-1.1.0':Object.freeze({name:ARIS_V11_PROFILE.name,config:ARIS_V11_CONFIG,strategy:ARIS_V11_PROFILE})
+ 'ARIS-1.1.0':Object.freeze({name:ARIS_V11_PROFILE.name,config:ARIS_V11_CONFIG,strategy:ARIS_V11_PROFILE}),
+ 'ARIS-1.2.0':Object.freeze({name:ARIS_V12_PROFILE.name,config:ARIS_V12_CONFIG,strategy:ARIS_V12_PROFILE})
 });
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
@@ -2111,22 +2149,55 @@ function freshScore(extension){
   return 0;
 }
 function timingScore(f,x,d,z,candidate,setup){
-  const atr=Math.max(f.atr,1e-9),extension=d*(x.price-f.ema21)/atr,room=roomAtr(z,x.price,d,atr),flow=d*(x.flow||0);
+  const atr=Math.max(f.atr,1e-9),macroExtension=d*(x.price-f.ema21)/atr;
+  const localTiming=!!setup?.localTiming&&Number.isFinite(setup?.timingBase);
+  const extension=localTiming?d*(x.price-setup.timingBase)/atr:macroExtension;
+  const room=roomAtr(z,x.price,d,atr),flow=d*(x.flow||0);
   const extreme=candidate?.extreme??x.price,retreat=d*(extreme-x.price)/atr;
   const fresh=freshScore(extension),roomScore=Number.isFinite(room)?clip(room/.60,0,1):1,flowScore=clip((flow-.02)/.18,0,1),retreatScore=1-clip(Math.max(0,retreat)/.35,0,1),candle=candleTimingScore(f,x,d);
   const total=Math.round(30*fresh+20*roomScore+20*flowScore+15*retreatScore+15*candle);
   const heat=Math.max(f.relVolume||0,f.volume3Ratio||0,x.phase?.liveVolumePace||0);
   const progress=Number.isFinite(setup?.progress)?setup.progress:d*(x.price-(setup?.level??x.price))/atr;
-  const hardLate=extension>=CFG.arisHardLateExtension||progress>=CFG.arisMaxTriggerProgress;
+  const macroHard=!!CFG.arisPostLatePlan&&localTiming&&macroExtension>=CFG.arisMacroHardExtension;
+  const hardLate=extension>=CFG.arisHardLateExtension||progress>=CFG.arisMaxTriggerProgress||macroHard;
   const softLate=!hardLate&&extension>=CFG.arisSoftLateExtension&&(heat>CFG.arisSoftHeat||room<CFG.arisSoftRoom||retreat>CFG.arisSoftRetreat);
-  return {total,extension,room,flow,retreat,heat,progress,hardLate,softLate,parts:{fresh,room:roomScore,flow:flowScore,retreat:retreatScore,candle}};
+  return {total,extension,macroExtension,localTiming,room,flow,retreat,heat,progress,hardLate,softLate,macroHard,parts:{fresh,room:roomScore,flow:flowScore,retreat:retreatScore,candle}};
 }
 function setupKey(type,d,level,barTime){return [type,d,Number(level).toFixed(1),barTime||0].join(':');}
 function detectSetup(f,x,regime,phase,z,bias,prev){
   if(!prev)return null;
-  const d=sign(bias.bias,CFG.arisBiasWatch),abs=Math.abs(bias.bias),atr=Math.max(f.atr,1e-9),p=x.price;
+  const atr=Math.max(f.atr,1e-9),p=x.price,closed=f.b,last=closed.at(-1),before=closed.slice(-7,-1),barTime=last?.time||0;
+
+  /* V1.2 breakout follow: catch a real expansion while it is still near the broken edge.
+     It may start before the slower EMA-heavy Bias reaches the ordinary ENTER threshold,
+     but it cannot fight a clearly opposite Bias. */
+  if(CFG.arisBreakoutFollow){
+    const upProgress=(p-f.high)/atr,downProgress=(f.low-p)/atr;
+    const breakD=upProgress>=CFG.arisBreakoutBuffer?1:downProgress>=CFG.arisBreakoutBuffer?-1:0;
+    if(breakD){
+      const progress=breakD>0?upProgress:downProgress,level=breakD>0?f.high:f.low;
+      const live=liveMetrics(f,x,breakD),flow=breakD*(x.flow||0),biasAligned=breakD*bias.bias;
+      const room=roomAtr(z,p,breakD,atr);
+      const votes=[
+        (phase?.score||0)>=4,
+        live.rangeAtr>=CFG.arisBreakoutMinRangeAtr,
+        (phase?.liveVolumePace||0)>=CFG.arisBreakoutMinVolumePace,
+        breakD*(f.momAccel||0)>=.08
+      ].filter(Boolean).length;
+      const phaseAgainst=phase?.phase==='REVERSAL'&&phase?.dir&&phase.dir!==breakD;
+      const roomOK=!Number.isFinite(room)||room>=CFG.arisBreakoutMinRoom;
+      if(progress<=CFG.arisBreakoutMaxProgress&&flow>=CFG.arisBreakoutMinFlow&&biasAligned>=CFG.arisBreakoutMinBias&&
+         live.liveDir===breakD&&live.alignedClose>=CFG.arisBreakoutMinClose&&votes>=CFG.arisBreakoutMinVotes&&roomOK&&!phaseAgainst){
+        return {type:'breakout_follow',d:breakD,level,progress,barTime,key:setupKey('breakout_follow',breakD,level,barTime),
+          entryBiasMin:CFG.arisBreakoutMinBias,entryBiasReady:Math.min(CFG.arisBreakoutMinBias,.04),timingBase:level,localTiming:false,
+          breakoutVotes:votes,reason:'Breakout Follow · พ้นขอบกรอบพร้อม flow + expansion และยังอยู่ใกล้จุดเบรก'};
+      }
+    }
+  }
+
+  const d=sign(bias.bias,CFG.arisBiasWatch),abs=Math.abs(bias.bias);
   if(!d||abs<CFG.arisBiasReady)return null;
-  const flow=d*(x.flow||0),extension=d*(p-f.ema21)/atr,live=liveMetrics(f,x,d),closed=f.b,last=closed.at(-1),before=closed.slice(-7,-1),barTime=last?.time||0;
+  const flow=d*(x.flow||0),extension=d*(p-f.ema21)/atr,live=liveMetrics(f,x,d);
   if(phase?.phase==='REVERSAL'&&phase.dir===d&&abs>=CFG.arisBiasEnter&&flow>=.05&&before.length>=3){
     const recent=before.slice(-3),level=d>0?Math.max(...recent.map(b=>b.high)):Math.min(...recent.map(b=>b.low)),progress=d*(p-level)/atr;
     if(progress>=.03&&progress<=.25&&d*(f.momAccel||0)>=.05)return {type:'confirmed_reversal',d,level,progress,barTime,key:setupKey('confirmed_reversal',d,level,barTime),reason:'กลับทิศยืนยัน + micro structure แตก + flow หนุน'};
@@ -2150,8 +2221,7 @@ function detectSetup(f,x,regime,phase,z,bias,prev){
     if(progress>=CFG.arisEarlyImpulseMinProgress&&progress<=CFG.arisEarlyImpulseMaxProgress)return {type:'early_impulse',d,level,progress,barTime,key:setupKey('early_impulse',d,level,barTime),reason:'Bias + acceleration + flow เริ่มเร่ง และเพิ่งพ้นโครงสร้างต้นขา'};
   }
 
-  /* Live Opportunity: do not require catching the exact cross tick.
-     This keeps V1 causal but lets it enter while the move is still healthy. */
+  /* Live Opportunity: do not require catching the exact cross tick. */
   if(regime.mode!=='RANGE'&&abs>=CFG.arisBiasEnter&&before.length>=5){
     const trendAligned=d*(f.trend||0)>=.12, slopeAligned=d*(f.emaSlopeAtr||0)>=.08, momAligned=d*(f.mom||0)>=.12;
     const structureVotes=[trendAligned,slopeAligned,momAligned].filter(Boolean).length;
@@ -2167,6 +2237,57 @@ function detectSetup(f,x,regime,phase,z,bias,prev){
   }
   return null;
 }
+
+function detectPostLateSetup(engine,f,x,regime,phase,z,bias,prev){
+  if(!CFG.arisPostLatePlan||!engine.arisLatePlan||!prev)return null;
+  const plan=engine.arisLatePlan,atr=Math.max(f.atr,1e-9),p=x.price;
+  if(x.ts-plan.startedAt>CFG.arisLatePlanMaxAgeMs){engine.arisLatePlan=null;return null;}
+  const oldD=plan.d,revD=-oldD;
+
+  // A new extreme means the old move extended again; restart pullback measurement from that extreme.
+  const extended=oldD>0?p>plan.extreme:p<plan.extreme;
+  if(extended){
+    plan.extreme=p;plan.recoveryPivot=p;plan.maxRetreat=0;plan.lastSeen=x.ts;
+  }else{
+    const retreat=oldD*(plan.extreme-p)/atr;
+    if(retreat>plan.maxRetreat){plan.maxRetreat=retreat;plan.recoveryPivot=p;}
+    plan.lastSeen=x.ts;
+  }
+
+  // Reversal is allowed only after the late move actually shows exhaustion/reversal evidence.
+  const revLive=liveMetrics(f,x,revD),revFlow=revD*(x.flow||0);
+  const revStructure=revD*(p-f.ema8)/atr;
+  const phaseConfirmed=phase?.phase==='REVERSAL'&&phase?.dir===revD;
+  const exhaustionConfirmed=phase?.phase==='EXHAUSTION'&&(phase?.exhaustionScore||0)>=2&&
+    plan.maxRetreat>=CFG.arisLateReversalMinRetreat&&revLive.liveDir===revD&&
+    revFlow>=CFG.arisLateReversalMinFlow&&revStructure>=CFG.arisLateReversalStructureAtr;
+  if(phaseConfirmed||exhaustionConfirmed){
+    const level=f.ema8,progress=Math.max(0,revD*(p-level)/atr);
+    return {type:'post_late_reversal',d:revD,level,progress,barTime:f.b.at(-1)?.time||0,
+      key:setupKey('post_late_reversal',revD,level,f.b.at(-1)?.time||0),
+      entryBiasMin:-CFG.arisLateReversalMaxAgainstBias,entryBiasReady:-CFG.arisLateReversalMaxAgainstBias,
+      timingBase:level,localTiming:true,latePlan:true,lateTrendDir:oldD,
+      reason:'Post-Late Reversal · ขาเดิมเริ่มหมดแรง + flow พลิก + micro structure แตก'};
+  }
+
+  // Preferred recovery: wait for a real pullback, then follow the original trend from a fresh pivot.
+  const rebound=oldD*(p-plan.recoveryPivot)/atr,followLive=liveMetrics(f,x,oldD),followFlow=oldD*(x.flow||0);
+  const biasAligned=oldD*bias.bias,macroExtension=oldD*(p-f.ema21)/atr;
+  const phaseAgainst=phase?.phase==='REVERSAL'&&phase?.dir===revD;
+  if(plan.maxRetreat>=CFG.arisLatePullbackMin&&plan.maxRetreat<=CFG.arisLatePullbackMax&&
+     rebound>=CFG.arisLateReclaimMinProgress&&rebound<=CFG.arisLateReclaimMaxProgress&&
+     oldD*(p-prev.price)>0&&followLive.liveDir===oldD&&followFlow>=CFG.arisLateReclaimMinFlow&&
+     biasAligned>=CFG.arisLateFollowMinBias&&!phaseAgainst&&macroExtension<CFG.arisMacroHardExtension){
+    const level=plan.recoveryPivot;
+    return {type:'post_late_reclaim',d:oldD,level,progress:rebound,barTime:f.b.at(-1)?.time||0,
+      key:setupKey('post_late_reclaim',oldD,level,f.b.at(-1)?.time||0),
+      entryBiasMin:CFG.arisLateFollowMinBias,entryBiasReady:Math.min(CFG.arisLateFollowMinBias,.06),
+      timingBase:level,localTiming:true,latePlan:true,lateTrendDir:oldD,
+      reason:'Post-Late Reclaim · พลาดขาแรกแล้ว รอย่อจริงก่อนกลับมาตามจาก pivot ใหม่'};
+  }
+  return null;
+}
+
 function candleSnapshot(bars,atr,n=8){
   const a=Math.max(atr,1e-9);
   return (bars||[]).slice(-n).map(b=>{const r=Math.max(b.high-b.low,1e-9),body=b.close-b.open;return {time:b.time,open:b.open,high:b.high,low:b.low,close:b.close,volume:b.volume,closed:!!b.closed,direction:body>0?'GREEN':body<0?'RED':'DOJI',bodyAtr:Math.abs(body)/a,rangeAtr:r/a,closeLocation:clip((b.close-b.low)/r,0,1),upperWickAtr:(b.high-Math.max(b.open,b.close))/a,lowerWickAtr:(Math.min(b.open,b.close)-b.low)/a};});
@@ -2215,89 +2336,135 @@ function arisEpisodeInfo(engine,x,d,f,setup){
 function arisStep(x){
   const f=features(x.bars,x.price,x.horizonBars||10);if(!f)return {status:'warmup',reason:'ARIS V1 · รอแท่งที่สมบูรณ์อย่างน้อย 35 แท่ง',signal:null};
   const z=zones(x.bars||[],f.atr),regime=arisRegime(this,f),phase=marketPhase(f,x,regime);x.phase=phase;
-  const bias=arisBias(f,x),absBias=Math.abs(bias.bias),d=sign(bias.bias,CFG.arisBiasWatch),direction=d>0?'HIGH':d<0?'LOW':null;
+  const bias=arisBias(f,x),absBias=Math.abs(bias.bias),biasD=sign(bias.bias,CFG.arisBiasWatch),biasDirection=biasD>0?'HIGH':biasD<0?'LOW':null;
+  const label=CFG.version==='ARIS-1.2.0'?'ARIS V1.2':'ARIS V1';
   const base={f,z,regime,phase,signal:null,event:null,continuation:0,reversal:0,arisBias:bias.bias};
-  if(!x.fresh){this.arisCandidate=null;return this.lastView={...base,status:'offline',reason:'ARIS V1 · พักสัญญาณจนข้อมูล Futures สดและต่อเนื่อง'};}
+  if(!x.fresh){this.arisCandidate=null;return this.lastView={...base,status:'offline',reason:label+' · พักสัญญาณจนข้อมูล Futures สดและต่อเนื่อง'};}
   if(x.id===this.lastId)return {...(this.lastView||base),status:this.lastView?.status==='new'?'issued':this.lastView?.status,signal:null};
   this.lastId=x.id;
   const prev=this.previous;this.previous={price:x.price,ts:x.ts};
-  if(!prev||x.ts-prev.ts>5000){this.arisCandidate=null;return this.lastView={...base,status:'warming',reason:'ARIS V1 · ตั้งต้นราคาสด รอข้อมูลต่อเนื่อง'};}
-  const rawRoom=d?roomAtr(z,x.price,d,f.atr):null,rawExtension=d?d*(x.price-f.ema21)/Math.max(f.atr,1e-9):0;
-  let setup=detectSetup(f,x,regime,phase,z,bias,prev),candidate=this.arisCandidate;
+  if(!prev||x.ts-prev.ts>5000){this.arisCandidate=null;return this.lastView={...base,status:'warming',reason:label+' · ตั้งต้นราคาสด รอข้อมูลต่อเนื่อง'};}
+
+  let setup=detectPostLateSetup(this,f,x,regime,phase,z,bias,prev)||detectSetup(f,x,regime,phase,z,bias,prev),candidate=this.arisCandidate;
   if(setup&&(!candidate||candidate.key!==setup.key)){
-    if(candidate&&!candidate.issued)this.log('cancelled',x.ts,{id:candidate.id||candidate.key,reason:'ARIS V1 · setup เปลี่ยนก่อนเข้า'});
+    if(candidate&&!candidate.issued)this.log('cancelled',x.ts,{id:candidate.id||candidate.key,reason:label+' · setup เปลี่ยนก่อนเข้า'});
     candidate=this.arisCandidate={...setup,id:'ARIS-C:'+this.session+':'+x.ts+':'+setup.key,startedAt:x.ts,startPrice:x.price,extreme:x.price,evidenceSince:0,ticks:0,issued:false,logged:false};
   }
   if(candidate&&!setup&&x.ts-candidate.startedAt>CFG.arisCandidateMaxAgeMs){
-    if(!candidate.issued)this.log('cancelled',x.ts,{id:candidate.id||candidate.key,reason:'ARIS V1 · setup หมดอายุก่อนเข้า'});
+    if(!candidate.issued)this.log('cancelled',x.ts,{id:candidate.id||candidate.key,reason:label+' · setup หมดอายุก่อนเข้า'});
     this.arisCandidate=null;candidate=null;
   }
   if(candidate){candidate.extreme=candidate.d>0?Math.max(candidate.extreme,x.price):Math.min(candidate.extreme,x.price);setup=setup||candidate;}
-  const timing=d?timingScore(f,x,d,z,candidate,setup):null;
+
+  const activeD=setup?.d||candidate?.d||biasD,activeDirection=activeD>0?'HIGH':activeD<0?'LOW':null;
+  const rawRoom=activeD?roomAtr(z,x.price,activeD,f.atr):null,rawExtension=activeD?activeD*(x.price-f.ema21)/Math.max(f.atr,1e-9):0;
+  const timing=activeD?timingScore(f,x,activeD,z,candidate,setup):null;
+  const alignedBias=activeD?activeD*bias.bias:0;
+  const enterBiasMin=Number.isFinite(candidate?.entryBiasMin)?candidate.entryBiasMin:CFG.arisBiasEnter;
+  const readyBiasMin=Number.isFinite(candidate?.entryBiasReady)?candidate.entryBiasReady:Math.min(CFG.arisBiasReady,enterBiasMin);
+
   if(candidate&&!candidate.logged&&timing){
     candidate.logged=true;
-    this.log('detected',x.ts,{id:candidate.id,key:candidate.key,type:candidate.type,detectedAt:x.ts,direction,price:x.price,level:candidate.level,candidate:arisInput(f,x,regime,phase,bias,candidate,timing)});
+    this.log('detected',x.ts,{id:candidate.id,key:candidate.key,type:candidate.type,detectedAt:x.ts,direction:activeDirection,price:x.price,level:candidate.level,candidate:arisInput(f,x,regime,phase,bias,candidate,timing)});
   }
   const tooLate=!!timing&&(timing.hardLate||timing.softLate);
-  const watchState=tooLate?'TOO_LATE':setup&&absBias>=CFG.arisBiasReady&&timing?.total>=CFG.arisTimingReady?'READY':'WATCH';
-  const watch=direction?{direction,d,score:Math.round(absBias*100),state:watchState,reasons:watchReasons(bias,timing,setup),room:timing?.room??rawRoom,extension:timing?.extension??rawExtension,reason:tooLate?direction+' ยังเด่น แต่ timing ช้าแล้ว · ไม่ไล่ราคา':watchState==='READY'?direction+' เริ่มพร้อม · รอคะแนนเข้าให้ครบ':'จับตา '+direction+' · ARIS Bias เริ่มมี edge แต่ยังไม่อนุญาตเข้า'}:null;
+  const biasReady=activeD&&alignedBias>=readyBiasMin;
+  const watchState=tooLate?'TOO_LATE':setup&&biasReady&&timing?.total>=CFG.arisTimingReady?'READY':'WATCH';
+  const watch=activeDirection?{direction:activeDirection,d:activeD,score:Math.round(Math.max(0,Math.abs(bias.bias))*100),state:watchState,reasons:watchReasons(bias,timing,setup),room:timing?.room??rawRoom,extension:timing?.extension??rawExtension,
+    reason:tooLate?activeDirection+' ยังเด่น แต่ timing ช้าแล้ว · ไม่ไล่ราคา':watchState==='READY'?activeDirection+' เริ่มพร้อม · รอคะแนนเข้าให้ครบ':'จับตา '+activeDirection+' · มีแผนอยู่ แต่ยังไม่อนุญาตเข้า'}:null;
   if(watch&&watch.score>=CFG.watchMinScore)recordArisWatch(this,watch,x,f,regime,phase,bias,timing);else recordArisWatch(this,null,x,f,regime,phase,bias,timing);
+
   if(candidate?.issued){
     const progress=candidate.d*(x.price-candidate.level)/Math.max(f.atr,1e-9),signal=this.signals.find(s=>s.id===candidate.signalId);
-    if(progress<-.18&&signal){signal.setupStatus='invalidated';signal.invalidatedAt=x.ts;this.arisCandidate=null;return this.lastView={...base,event:{...candidate},status:'invalidated',reason:'ARIS V1 · สัญญาณล็อกแล้ว แต่โครงสร้างหลังเข้าเสีย'};}
+    if(progress<-.18&&signal){signal.setupStatus='invalidated';signal.invalidatedAt=x.ts;this.arisCandidate=null;return this.lastView={...base,event:{...candidate},status:'invalidated',reason:label+' · สัญญาณล็อกแล้ว แต่โครงสร้างหลังเข้าเสีย'};}
     if(x.ts-candidate.issuedAt>60000)this.arisCandidate=null;
-    return this.lastView={...base,event:{...candidate},status:'issued',reason:'ARIS V1 · จุดเข้าออกแล้ว · ล็อกผลถึง T+10'};
+    return this.lastView={...base,event:{...candidate},status:'issued',reason:label+' · จุดเข้าออกแล้ว · ล็อกผลถึง T+10'};
   }
-  if(!direction||absBias<CFG.arisBiasWatch){
+
+  if(!activeDirection||(!candidate&&absBias<CFG.arisBiasWatch)){
     this.arisCandidate=null;
-    return this.lastView={...base,status:'watch',reason:`ARIS V1 · Bias ยังต่ำกว่า ${CFG.arisBiasWatch.toFixed(2)} · ไม่มี edge พอให้เลือกฝั่ง`,gate:{state:'WAIT',direction:null,blocker:'Bias ยังไม่ถึงเกณฑ์ WATCH',waitingFor:[`รอ |Bias| ≥ ${CFG.arisBiasWatch.toFixed(2)}`],metrics:{bias:bias.bias}}};
+    return this.lastView={...base,status:'watch',reason:label+` · Bias ยังต่ำกว่า ${CFG.arisBiasWatch.toFixed(2)} · ไม่มี edge พอให้เลือกฝั่ง`,gate:{state:'WAIT',direction:null,blocker:'Bias ยังไม่ถึงเกณฑ์ WATCH',waitingFor:[`รอ |Bias| ≥ ${CFG.arisBiasWatch.toFixed(2)}`],metrics:{bias:bias.bias}}};
   }
+
   if(tooLate){
     if(candidate){candidate.evidenceSince=0;candidate.ticks=0;}
-    return this.lastView={...base,event:candidate?{...candidate}:null,watch,status:'tracking',reason:timing.hardLate?'ARIS V1 · TOO LATE · ราคายืด/พ้น trigger มากเกิน':'ARIS V1 · timing เริ่มปลายขา · รอย่อหรือโครงสร้างใหม่',gate:{state:'TOO_LATE',direction,code:'aris_too_late',blocker:'ไม่ไล่ราคา',waitingFor:[`Extension ${timing.extension.toFixed(2)} ATR`,`Trigger progress ${timing.progress.toFixed(2)} ATR`,`Timing ${timing.total}/100`],metrics:{bias:bias.bias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension}}};
+    if(CFG.arisPostLatePlan&&activeD){
+      const expired=!this.arisLatePlan||this.arisLatePlan.d!==activeD||x.ts-this.arisLatePlan.startedAt>CFG.arisLatePlanMaxAgeMs;
+      if(expired){
+        const level=candidate?.level??setup?.level??x.price;
+        this.arisLatePlan={d:activeD,direction:activeDirection,startedAt:x.ts,lastSeen:x.ts,triggerLevel:level,extreme:x.price,recoveryPivot:x.price,maxRetreat:0,sourceType:candidate?.type||setup?.type||null};
+      }else{
+        this.arisLatePlan.lastSeen=x.ts;
+        if(activeD>0)this.arisLatePlan.extreme=Math.max(this.arisLatePlan.extreme,x.price);
+        else this.arisLatePlan.extreme=Math.min(this.arisLatePlan.extreme,x.price);
+      }
+    }
+    const opposite=activeD>0?'LOW':'HIGH';
+    const planWaiting=CFG.arisPostLatePlan?[
+      `Plan A · รอย่อ ${CFG.arisLatePullbackMin.toFixed(2)}–${CFG.arisLatePullbackMax.toFixed(2)} ATR แล้ว reclaim ตาม ${activeDirection}`,
+      `Plan B · ถ้า exhaustion + flow พลิก + micro structure แตก → WATCH ${opposite}`,
+      'Plan C · ถ้าเกิด breakout ใหม่ที่ยังสด ให้ประเมิน Breakout Follow ใหม่'
+    ]:[`Extension ${timing.extension.toFixed(2)} ATR`,`Trigger progress ${timing.progress.toFixed(2)} ATR`,`Timing ${timing.total}/100`];
+    return this.lastView={...base,event:candidate?{...candidate}:null,watch,status:'tracking',
+      reason:timing.hardLate?label+' · TOO LATE · ไม่ไล่ แต่เปิดแผนต่อแล้ว':label+' · ปลายขา · ไม่ไล่ และกำลังรอย่อ/กลับตัวตามหลักฐาน',
+      gate:{state:'TOO_LATE',direction:activeDirection,code:'aris_too_late',blocker:'ไม่ไล่ราคา · กำลังตามแผนถัดไป',waitingFor:planWaiting,
+      metrics:{bias:bias.bias,alignedBias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension,macroExtensionAtr:timing.macroExtension}}};
   }
+
   if(!setup||!candidate){
-    return this.lastView={...base,watch,status:'watch',reason:watch.reason,gate:{state:'WATCH',direction,code:'aris_watch',blocker:'Direction เริ่มชัด แต่ยังไม่มี setup ที่ผ่านของ ARIS V1',waitingFor:['Early Impulse','Pullback Reclaim','Range Rejection','Confirmed Reversal','Live Opportunity'],metrics:{bias:bias.bias,room:Number.isFinite(rawRoom)?rawRoom:null,extensionAtr:rawExtension}}};
+    const waiting=CFG.arisBreakoutFollow?['Breakout Follow','Early Impulse','Pullback Reclaim','Range Rejection','Confirmed Reversal','Live Opportunity']:['Early Impulse','Pullback Reclaim','Range Rejection','Confirmed Reversal','Live Opportunity'];
+    return this.lastView={...base,watch,status:'watch',reason:watch?.reason||label+' · กำลังจับตา',gate:{state:'WATCH',direction:activeDirection||biasDirection,code:'aris_watch',blocker:'Direction เริ่มชัด แต่ยังไม่มี setup ที่ผ่าน',waitingFor:waiting,metrics:{bias:bias.bias,room:Number.isFinite(rawRoom)?rawRoom:null,extensionAtr:rawExtension}}};
   }
-  const episodeInfo=arisEpisodeInfo(this,x,d,f,setup);
+
+  const episodeInfo=arisEpisodeInfo(this,x,activeD,f,setup);
   if(episodeInfo.sameSetupKey){
     candidate.evidenceSince=0;candidate.ticks=0;
-    return this.lastView={...base,event:{...candidate},watch,status:'tracking',reason:'ARIS V1 · trigger เดิมถูกใช้แล้ว · รอ setup ใหม่จริงก่อนเติม',gate:{state:'WAIT',direction,code:'aris_same_trigger_guard',blocker:'ไม่ยิงซ้ำ trigger เดิม',waitingFor:['รอ level / bar / reclaim / rejection ใหม่ แล้วประเมิน Bias + Timing ใหม่เต็มชุด'],metrics:{bias:bias.bias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension}}};
+    return this.lastView={...base,event:{...candidate},watch,status:'tracking',reason:label+' · trigger เดิมถูกใช้แล้ว · รอ setup ใหม่จริงก่อนเติม',gate:{state:'WAIT',direction:activeDirection,code:'aris_same_trigger_guard',blocker:'ไม่ยิงซ้ำ trigger เดิม',waitingFor:['รอ level / bar / reclaim / rejection ใหม่ แล้วประเมินใหม่เต็มชุด'],metrics:{bias:bias.bias,alignedBias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension}}};
   }
-  const coverageOK=(x.coverage||0)>=CFG.arisFlowCoverageSec,flowOK=timing.flow>=.02,ready=absBias>=CFG.arisBiasReady&&timing.total>=CFG.arisTimingReady&&coverageOK,enter=absBias>=CFG.arisBiasEnter&&timing.total>=CFG.arisTimingEnter&&coverageOK&&flowOK;
+
+  const coverageOK=(x.coverage||0)>=CFG.arisFlowCoverageSec,flowOK=timing.flow>=.02;
+  const ready=alignedBias>=readyBiasMin&&timing.total>=CFG.arisTimingReady&&coverageOK;
+  const enter=alignedBias>=enterBiasMin&&timing.total>=CFG.arisTimingEnter&&coverageOK&&flowOK;
   if(!enter){
     candidate.evidenceSince=0;candidate.ticks=0;
-    const waiting=[];if(absBias<CFG.arisBiasEnter)waiting.push(`Bias ${absBias.toFixed(2)} / ${CFG.arisBiasEnter.toFixed(2)}`);if(timing.total<CFG.arisTimingEnter)waiting.push(`Timing ${timing.total}/${CFG.arisTimingEnter}`);if(!coverageOK)waiting.push(`Flow coverage ${Number(x.coverage||0).toFixed(1)}/${CFG.arisFlowCoverageSec} วินาที`);if(!flowOK)waiting.push(`Aligned flow ${timing.flow.toFixed(2)} · ต้องเป็นบวกอย่างน้อย 0.02`);
-    return this.lastView={...base,event:{...candidate},watch,status:ready?'confirming':'tracking',reason:ready?'ARIS V1 · READY · setup ผ่าน แต่ยังรอคะแนน ENTER':'ARIS V1 · WATCH · setup มาแล้ว แต่ timing/bias ยังไม่ถึง ENTER',gate:{state:ready?'READY':'WATCH',direction,code:'aris_entry_score',blocker:ready?'ใกล้เข้าแล้ว':'คะแนนเข้าไม่ครบ',waitingFor:waiting.length?waiting:['รอ trigger คงคุณภาพต่อ'],metrics:{bias:bias.bias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension}}};
+    const waiting=[];
+    if(alignedBias<enterBiasMin)waiting.push(`Aligned Bias ${alignedBias.toFixed(2)} / ${enterBiasMin.toFixed(2)}`);
+    if(timing.total<CFG.arisTimingEnter)waiting.push(`Timing ${timing.total}/${CFG.arisTimingEnter}`);
+    if(!coverageOK)waiting.push(`Flow coverage ${Number(x.coverage||0).toFixed(1)}/${CFG.arisFlowCoverageSec} วินาที`);
+    if(!flowOK)waiting.push(`Aligned flow ${timing.flow.toFixed(2)} · ต้องเป็นบวกอย่างน้อย 0.02`);
+    return this.lastView={...base,event:{...candidate},watch,status:ready?'confirming':'tracking',reason:ready?label+' · READY · setup ผ่าน แต่ยังรอคะแนน ENTER':label+' · WATCH · setup มาแล้ว แต่ timing/direction evidence ยังไม่ถึง ENTER',gate:{state:ready?'READY':'WATCH',direction:activeDirection,code:'aris_entry_score',blocker:ready?'ใกล้เข้าแล้ว':'คะแนนเข้าไม่ครบ',waitingFor:waiting.length?waiting:['รอ trigger คงคุณภาพต่อ'],metrics:{bias:bias.bias,alignedBias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension,macroExtensionAtr:timing.macroExtension}}};
   }
+
   if(!candidate.evidenceSince)candidate.evidenceSince=x.ts;candidate.ticks=(candidate.ticks||0)+1;
   if(candidate.ticks<CFG.minEvidenceTicks||x.ts-candidate.evidenceSince<CFG.minEvidenceMs){
-    return this.lastView={...base,event:{...candidate},watch,status:'confirming',reason:'ARIS V1 · READY · ยืนยันข้อมูลสดสั้น ๆ ก่อนล็อกจุดเข้า',gate:{state:'READY',direction,code:'aris_confirmation',blocker:'เงื่อนไขผ่านแล้ว',waitingFor:[`ยืนยัน ${Math.min(candidate.ticks,CFG.minEvidenceTicks)}/${CFG.minEvidenceTicks} ครั้ง`,`คงเงื่อนไขอย่างน้อย ${CFG.minEvidenceMs} ms`],metrics:{bias:bias.bias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension}}};
+    return this.lastView={...base,event:{...candidate},watch,status:'confirming',reason:label+' · READY · ยืนยันข้อมูลสดสั้น ๆ ก่อนล็อกจุดเข้า',gate:{state:'READY',direction:activeDirection,code:'aris_confirmation',blocker:'เงื่อนไขผ่านแล้ว',waitingFor:[`ยืนยัน ${Math.min(candidate.ticks,CFG.minEvidenceTicks)}/${CFG.minEvidenceTicks} ครั้ง`,`คงเงื่อนไขอย่างน้อย ${CFG.minEvidenceMs} ms`],metrics:{bias:bias.bias,alignedBias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension,macroExtensionAtr:timing.macroExtension}}};
   }
-  const outputDirection=direction,episodeId=episodeInfo.episodeId,episodeSequence=episodeInfo.sequence,isAddOn=episodeInfo.isAddOn,id=`ARIS:${this.session}:${x.ts}:${setup.key}`;
-  const entryLow=d>0?setup.level-f.atr*.03:setup.level-f.atr*.40,entryHigh=d>0?setup.level+f.atr*.40:setup.level+f.atr*.03;
+
+  const outputDirection=activeDirection,episodeId=episodeInfo.episodeId,episodeSequence=episodeInfo.sequence,isAddOn=episodeInfo.isAddOn,id=`ARIS:${this.session}:${x.ts}:${setup.key}`;
+  const entryLow=activeD>0?setup.level-f.atr*.03:setup.level-f.atr*.40,entryHigh=activeD>0?setup.level+f.atr*.40:setup.level+f.atr*.03;
   const signal={
     id,version:CFG.version,type:setup.type,direction:outputDirection,modelDirection:outputDirection,decisionPolicy:'aris_v1_direction_setup_timing',
     entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+CFG.horizonMs,result:'pending',lastObserved:x.ts,event:{...candidate},
-    features:{atr:f.atr,trend:f.trend,flow:x.flow,book:x.book,room:Number.isFinite(timing.room)?timing.room:null,progress:timing.progress,drift:d*(x.price-candidate.startPrice)/Math.max(f.atr,1e-9),retreat:timing.retreat,regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,phaseDir:phase.dir,phaseScore:phase.score,eff:f.eff,emaSepAtr:f.emaSepAtr,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,rangePosition:f.rangePosition,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,liveVolumePace:phase.liveVolumePace,extensionAtr:timing.extension,exhaustionScore:phase.exhaustionScore,arisBias:bias.bias,arisTiming:timing.total},
+    features:{atr:f.atr,trend:f.trend,flow:x.flow,book:x.book,room:Number.isFinite(timing.room)?timing.room:null,progress:timing.progress,drift:activeD*(x.price-candidate.startPrice)/Math.max(f.atr,1e-9),retreat:timing.retreat,regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,phaseDir:phase.dir,phaseScore:phase.score,eff:f.eff,emaSepAtr:f.emaSepAtr,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,rangePosition:f.rangePosition,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,liveVolumePace:phase.liveVolumePace,extensionAtr:timing.extension,macroExtensionAtr:timing.macroExtension,exhaustionScore:phase.exhaustionScore,arisBias:bias.bias,arisAlignedBias:alignedBias,arisTiming:timing.total},
     dataset:{schema:'btc-t10-training-v2',episodeId,episodeSequence,path1m:[],context1m:[],entry:{
       capturedAt:x.ts,price:x.price,outputDirection,modelDirection:outputDirection,decisionPolicy:'aris_v1_direction_setup_timing',decisionReason:setup.reason,strategyVersion:CFG.version,setupType:setup.type,setupReason:setup.reason,
       marketPhase:phase.phase,phaseDir:phase.dir,phaseScore:phase.score,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,closeLocation:f.closeLocation,liveVolumePace:phase.liveVolumePace,phaseExtensionAtr:phase.extensionAtr,exhaustionScore:phase.exhaustionScore,
       level:setup.level,entryLow,entryHigh,atr:f.atr,trend:f.trend,momentum:f.mom,momentumAccel:f.momAccel,eff:f.eff,ema8:f.ema8,ema21:f.ema21,emaSepAtr:f.emaSepAtr,emaSlopeAtr:f.emaSlopeAtr,rangeHigh:f.high,rangeLow:f.low,fair:f.fair,rangeWidthAtr:f.rangeWidthAtr,rangePosition:f.rangePosition,sideCrosses:f.sideCrosses,falseBreaks:f.falseBreaks,upperRejects:f.upperRejects,lowerRejects:f.lowerRejects,regime:regime.mode,stableMode:regime.stableMode,
       flow:x.flow,coverage:x.coverage||0,book:x.book,bookValid:!!x.bookValid,room:Number.isFinite(timing.room)?timing.room:null,progress:timing.progress,retreat:timing.retreat,
-      arisRevision:CFG.arisRevision||'base',arisBias:bias.bias,arisBiasBase:bias.base,arisBiasParts:bias.parts,arisTiming:timing.total,arisTimingParts:timing.parts,arisHeat:timing.heat,arisExtensionAtr:timing.extension,arisSetupProgressAtr:timing.progress,
-      arisSetupKey:setup.key,arisIsAddOn:isAddOn,arisAddOnSequence:episodeSequence,arisPriorSignalId:episodeInfo.prior?.id||null,
-      outputExtensionAtr:d*(x.price-f.ema8)/Math.max(f.atr,1e-9),modelExtensionAtr:d*(x.price-f.ema8)/Math.max(f.atr,1e-9),
+      arisRevision:CFG.arisRevision||'base',arisBias:bias.bias,arisAlignedBias:alignedBias,arisRequiredBias:enterBiasMin,arisBiasBase:bias.base,arisBiasParts:bias.parts,arisTiming:timing.total,arisTimingParts:timing.parts,arisHeat:timing.heat,arisExtensionAtr:timing.extension,arisMacroExtensionAtr:timing.macroExtension,arisLocalTiming:!!timing.localTiming,arisSetupProgressAtr:timing.progress,
+      arisSetupKey:setup.key,arisIsAddOn:isAddOn,arisAddOnSequence:episodeSequence,arisPriorSignalId:episodeInfo.prior?.id||null,arisLatePlan:!!setup.latePlan,arisBreakoutVotes:setup.breakoutVotes??null,
+      outputExtensionAtr:activeD*(x.price-f.ema8)/Math.max(f.atr,1e-9),modelExtensionAtr:activeD*(x.price-f.ema8)/Math.max(f.atr,1e-9),
       zones:{nearestSupport:nearestZone(z,x.price,'support',f.atr),nearestResistance:nearestZone(z,x.price,'resistance',f.atr)},
       liveBar:x.bars.at(-1)?{time:x.bars.at(-1).time,open:x.bars.at(-1).open,high:x.bars.at(-1).high,low:x.bars.at(-1).low,close:x.bars.at(-1).close,volume:x.bars.at(-1).volume,closed:!!x.bars.at(-1).closed}:null,
       candleSequence:candleSnapshot(x.bars,f.atr,8),prior1m:compactBars(x.bars,20)
     }},
-    reason:`ARIS V1 · ${setup.type}${isAddOn?' · ADD-ON #'+episodeSequence:''} · Bias ${bias.bias.toFixed(2)} · Timing ${timing.total}/100 · ${setup.reason}`
+    reason:`${label} · ${setup.type}${isAddOn?' · ADD-ON #'+episodeSequence:''} · Bias ${bias.bias.toFixed(2)} · Timing ${timing.total}/100 · ${setup.reason}`
   };
   this.signals.push(signal);if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(s=>s.result!=='pending');if(i>=0)this.signals.splice(i,1);}
   candidate.issued=true;candidate.issuedAt=x.ts;candidate.signalId=id;candidate.entryLow=entryLow;candidate.entryHigh=entryHigh;
-  this.log('issued',x.ts,{id,type:setup.type,direction:outputDirection,modelDirection:outputDirection,price:x.price,episodeId,episodeSequence,isAddOn,priorSignalId:episodeInfo.prior?.id||null,arisBias:bias.bias,arisTiming:timing.total});
-  return this.lastView={...base,event:{...candidate},watch,status:'new',reason:signal.reason,signal,gate:{state:'ENTER',direction:outputDirection,code:'aris_enter',blocker:isAddOn?'ARIS V1 · จุดเติมใหม่ผ่าน Direction + Setup + Timing':'ARIS V1 ผ่าน Direction + Setup + Timing',waitingFor:[],metrics:{bias:bias.bias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension,isAddOn,addOnSequence:episodeSequence}}};
+  if(setup.latePlan)this.arisLatePlan=null;
+  this.log('issued',x.ts,{id,type:setup.type,direction:outputDirection,modelDirection:outputDirection,price:x.price,episodeId,episodeSequence,isAddOn,priorSignalId:episodeInfo.prior?.id||null,arisBias:bias.bias,arisAlignedBias:alignedBias,arisTiming:timing.total});
+  return this.lastView={...base,event:{...candidate},watch,status:'new',reason:signal.reason,signal,gate:{state:'ENTER',direction:outputDirection,code:'aris_enter',blocker:isAddOn?label+' · จุดเติมใหม่ผ่านแผน + Timing':label+' · แผน + Timing ผ่าน',waitingFor:[],metrics:{bias:bias.bias,alignedBias,timing:timing.total,flow:timing.flow,progress:timing.progress,retreat:timing.retreat,room:Number.isFinite(timing.room)?timing.room:null,extensionAtr:timing.extension,macroExtensionAtr:timing.macroExtension,isAddOn,addOnSequence:episodeSequence}}};
 }
 const originalStep=Engine.prototype.step;
 Engine.prototype.step=function(x){return CFG.version.startsWith('ARIS-')?arisStep.call(this,x):originalStep.call(this,x);};
@@ -2327,7 +2494,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 
 'use strict';
 (() => {
-  const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v1-1';
+  const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v1-2';
   const SYMBOL = 'BTCUSDT';
   const PUBLIC_WS='wss://fstream.binance.com/public/stream?streams=btcusdt@depth10@100ms';
   const REST_BASE='https://fapi.binance.com';
@@ -2583,8 +2750,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    signals:Array.isArray(candleSaved.signals)?candleSaved.signals.filter(s=>s&&Number.isFinite(s.entryTime)&&Number.isFinite(s.entryPrice)&&['HIGH','LOW'].includes(s.direction)).slice(-500):[],
    lastIssuedAt:Number(candleSaved.lastIssuedAt)||0
   };
-  const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว',early_impulse:'ต้นขาเร่ง',pullback_reclaim:'ย่อแล้ว reclaim',range_rejection:'เด้งจากขอบกรอบ',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว',live_opportunity:'จังหวะสด',expedite_follow:'เร่งออก · ตามแรง',expedite_counter:'เร่งออก · สวนเมื่อรีเจค'};
-  const versionDisplay=v=>v==='ARIS-1.0.0'?'ARIS V1':v==='ARIS-1.1.0'?'ARIS V1.1':'V'+(v||'—');
+  const typeName={breakout:'ทะลุกรอบ',pullback:'ย่อแล้วไปต่อ',trend_continuation:'เทรนด์ไปต่อ',failed_break:'ทะลุไม่ผ่าน',range_reversal:'เด้งกลับในกรอบ',exhaustion_reversal:'หมดแรงกลับตัว',early_impulse:'ต้นขาเร่ง',pullback_reclaim:'ย่อแล้ว reclaim',range_rejection:'เด้งจากขอบกรอบ',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว',live_opportunity:'จังหวะสด',breakout_follow:'ตามเบรกเอาต์',post_late_reclaim:'ย่อแล้วตามต่อ',post_late_reversal:'กลับตัวหลังปลายขา',expedite_follow:'เร่งออก · ตามแรง',expedite_counter:'เร่งออก · สวนเมื่อรีเจค'};
+  const versionDisplay=v=>v==='ARIS-1.0.0'?'ARIS V1':v==='ARIS-1.1.0'?'ARIS V1.1':v==='ARIS-1.2.0'?'ARIS V1.2':'V'+(v||'—');
   function directionThai(v){
   return v==='HIGH'?'สูงกว่า':v==='LOW'?'ต่ำกว่า':v==='BALANCED'?'ใกล้เคียงกัน':v||'—';
 }
@@ -4533,7 +4700,7 @@ function openReport(){
    engineVersionSelect.value=CFG.version;
    engineVersionSelect.addEventListener('change',()=>{
     const next=engineVersionSelect.value;
-    if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0'].includes(next)||next===CFG.version)return;
+    if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0'].includes(next)||next===CFG.version)return;
     try{localStorage.setItem(ACTIVE_VERSION_STORE,next);}catch{}
     location.reload();
    });
