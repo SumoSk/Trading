@@ -2914,7 +2914,9 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 
   function setComponent(id,v){const el=$(id);el.textContent=!Number.isFinite(v)?'—':v>.14?'↑ '+(v>.42?'แรง':'สนับสนุน'):v<-.14?'↓ '+(v<-.42?'แรง':'สนับสนุน'):'กลาง';el.className=!Number.isFinite(v)?'neutral':v>.14?'up':v<-.14?'down':'neutral';}
   const {Engine,CFG,DATASET_SCHEMA,VERSION_PROFILE,VERSION_SETTINGS_SEED,selectOutputDecision}=EventSignalV6;
-  const STORE='btc-event-v5-history',VERSION_STORE='btc-event-version-settings',EXPEDITE_STORE='btc-expedite-five-history-v1';let storageOK=true;
+  const STORE='btc-event-v5-history',VERSION_STORE='btc-event-version-settings',EXPEDITE_STORE='btc-expedite-five-history-v1';
+  const JOURNAL_DB='btc-trading-journal-v3',JOURNAL_DB_VERSION=1,JOURNAL_STORE='snapshots',JOURNAL_SCHEMA='trade-record-v3';
+  let storageOK=true,journalOK=false,persistenceReady=false,savedParseError=false,journalLastSavedAt=0,journalDbPromise=null;
   try{const x=JSON.parse(localStorage.getItem(EXPEDITE_STORE)||'[]');if(Array.isArray(x))state.expediteHistory=x.slice(-500);}catch{}
   function persistExpediteHistory(){try{localStorage.setItem(EXPEDITE_STORE,JSON.stringify(state.expediteHistory.slice(-500)));}catch{}}
 
@@ -2927,8 +2929,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    return registry;
   }
   let versionSettings=rememberVersionSettings();
-  let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;}
-  const engine=new Engine(saved);const analysisContextEngines=new Map();
+  let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}');}catch{storageOK=false;savedParseError=true;}
+  let engine=new Engine(saved);const analysisContextEngines=new Map();
   function analysisEngine(tf=state.analysisTf){
    if(tf==='1m')return engine;
    if(!analysisContextEngines.has(tf))analysisContextEngines.set(tf,new Engine({}));
@@ -3998,7 +4000,131 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    }
   }
 
-  function persist(force=false){if(!force&&Date.now()-lastPersist<5000)return;try{localStorage.setItem(STORE,JSON.stringify(engine.serialize()));lastPersist=Date.now();storageOK=true;}catch{storageOK=false;}$('storage-status').textContent=storageOK?'':'บันทึกไม่ได้ — กรุณาส่งออกข้อมูลก่อนปิดหน้า';}
+
+  function openJournalDb(){
+   if(journalDbPromise)return journalDbPromise;
+   journalDbPromise=new Promise((resolve,reject)=>{
+    if(!('indexedDB' in globalThis)){reject(new Error('IndexedDB unavailable'));return;}
+    const req=indexedDB.open(JOURNAL_DB,JOURNAL_DB_VERSION);
+    req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(JOURNAL_STORE))db.createObjectStore(JOURNAL_STORE,{keyPath:'id'});};
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('เปิด IndexedDB ไม่สำเร็จ'));
+   });
+   return journalDbPromise;
+  }
+  async function journalRead(id){
+   const db=await openJournalDb();
+   return new Promise((resolve,reject)=>{
+    const tx=db.transaction(JOURNAL_STORE,'readonly'),req=tx.objectStore(JOURNAL_STORE).get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error||new Error('อ่าน Journal ไม่สำเร็จ'));
+   });
+  }
+  function cloneJournalPayload(v){try{return structuredClone(v);}catch{return JSON.parse(JSON.stringify(v));}}
+  async function journalWrite(payload,updatedAt){
+   const db=await openJournalDb(),snapshot=cloneJournalPayload(payload);
+   return new Promise((resolve,reject)=>{
+    const tx=db.transaction(JOURNAL_STORE,'readwrite'),store=tx.objectStore(JOURNAL_STORE),req=store.get('latest');
+    let skipped=false;
+    req.onsuccess=()=>{
+     const previous=req.result;
+     if(previous?.updatedAt>updatedAt){skipped=true;return;}
+     if(previous?.payload)store.put({...previous,id:'backup'});
+     store.put({id:'latest',schema:JOURNAL_SCHEMA,updatedAt,payload:snapshot});
+    };
+    tx.oncomplete=()=>resolve(!skipped);
+    tx.onerror=()=>reject(tx.error||new Error('เขียน Journal ไม่สำเร็จ'));
+    tx.onabort=()=>reject(tx.error||new Error('Journal transaction ถูกยกเลิก'));
+   });
+  }
+  function compactEntryForFallback(e){
+   if(!e||typeof e!=='object')return e;
+   const {prior1m,candleSequence,v2Story,v2Range,v2CandleBehavior,...rest}=e;
+   const fib=e.v2Fib&&typeof e.v2Fib==='object'?{
+    valid:e.v2Fib.valid,d:e.v2Fib.d,start:e.v2Fib.start,end:e.v2Fib.end,startTime:e.v2Fib.startTime,endTime:e.v2Fib.endTime,
+    retracement:e.v2Fib.retracement,extension:e.v2Fib.extension,retraceZone:e.v2Fib.retraceZone,extensionZone:e.v2Fib.extensionZone,
+    healthy:e.v2Fib.healthy,deep:e.v2Fib.deep
+   }:e.v2Fib;
+   return {...rest,v2Fib:fib};
+  }
+  function compactSignalForFallback(sig){
+   if(!sig||typeof sig!=='object')return sig;
+   const d=sig.dataset;
+   const dataset=d?{
+    schema:d.schema,episodeId:d.episodeId,episodeSequence:d.episodeSequence,
+    entry:compactEntryForFallback(d.entry),outcome:d.outcome,review:d.review,summaryV3:d.summaryV3,
+    journalSchema:d.journalSchema,historyRecovery:d.historyRecovery
+   }:d;
+   return {...sig,dataset,event:sig.event?{id:sig.event.id,type:sig.event.type,d:sig.event.d,level:sig.event.level,playbook:sig.event.playbook,stage:sig.event.stage}:sig.event};
+  }
+  function compactStateForFallback(full,savedAt){
+   return {
+    version:full.version,datasetSchema:full.datasetSchema,watchSchema:full.watchSchema,journalSchema:JOURNAL_SCHEMA,journalUpdatedAt:savedAt,
+    signals:(full.signals||[]).slice(-350).map(compactSignalForFallback),
+    watchSamples:(full.watchSamples||[]).slice(-120),
+    audit:(full.audit||[]).slice(-180),
+    v2Memory:full.v2Memory?{
+     snapshots:(full.v2Memory.snapshots||[]).slice(-80),history:(full.v2Memory.history||[]).slice(-40),
+     lastKey:full.v2Memory.lastKey,lastLog:full.v2Memory.lastLog,lastBreakout:full.v2Memory.lastBreakout
+    }:null
+   };
+  }
+  function mergeSignalRecord(full,local){
+   if(!full)return local;if(!local)return full;
+   const fd=full.dataset||{},ld=local.dataset||{};
+   return {...full,...local,dataset:{
+    ...fd,...ld,entry:{...(fd.entry||{}),...(ld.entry||{})},
+    path1m:ld.path1m?.length?ld.path1m:fd.path1m,
+    context1m:ld.context1m?.length?ld.context1m:fd.context1m,
+    v2Followup:ld.v2Followup?.length?ld.v2Followup:fd.v2Followup,
+    timeline:ld.timeline?.length?ld.timeline:fd.timeline
+   }};
+  }
+  function mergeJournalState(full,local){
+   if(!full)return local||{};
+   const map=new Map((full.signals||[]).map(x=>[x.id,x]));
+   for(const q of (local?.signals||[]))map.set(q.id,mergeSignalRecord(map.get(q.id),q));
+   return {
+    ...full,version:local?.version||full.version,
+    signals:[...map.values()].sort((a,b)=>(a.entryTime||0)-(b.entryTime||0)),
+    watchSamples:(full.watchSamples?.length||0)>=(local?.watchSamples?.length||0)?full.watchSamples:local.watchSamples,
+    audit:(full.audit?.length||0)>=(local?.audit?.length||0)?full.audit:local.audit,
+    v2Memory:local?.v2Memory||full.v2Memory
+   };
+  }
+  async function restoreJournalBeforeBoot(){
+   try{
+    let rec=await journalRead('latest');
+    if(!rec?.payload)rec=await journalRead('backup');
+    if(rec?.payload){
+     engine=new Engine(mergeJournalState(rec.payload,saved));
+     journalLastSavedAt=Number(rec.updatedAt)||0;
+     journalOK=true;
+     if(savedParseError)savedParseError=false;
+    }else journalOK=true;
+   }catch(err){journalOK=false;console.warn('Journal restore failed',err);}
+   persistenceReady=true;
+  }
+  function updateStorageStatus(){
+   const el=$('storage-status');if(!el)return;
+   if(journalOK&&storageOK){el.textContent=`เก็บละเอียดในเครื่อง · Journal V3 (IndexedDB) · ${engine.signals.length} ไม้`;el.className='';}
+   else if(journalOK){el.textContent='Journal V3 ยังเก็บละเอียดได้ · local fallback บันทึกไม่ได้';el.className='down';}
+   else if(storageOK){el.textContent='IndexedDB ใช้ไม่ได้ · กำลังใช้ local fallback แบบย่อ';el.className='down';}
+   else{el.textContent='บันทึกในเครื่องไม่ได้ — ส่งออก JSON ก่อนปิดหน้า';el.className='down';}
+  }
+
+  function persist(force=false){
+   if(!persistenceReady)return;
+   if(!force&&Date.now()-lastPersist<5000)return;
+   const savedAt=Date.now(),payload=engine.serialize();
+   journalWrite(payload,savedAt).then(()=>{journalOK=true;journalLastSavedAt=savedAt;updateStorageStatus();})
+    .catch(err=>{journalOK=false;console.warn('Journal write failed',err);updateStorageStatus();});
+   if(!savedParseError){
+    try{localStorage.setItem(STORE,JSON.stringify(compactStateForFallback(payload,savedAt)));storageOK=true;}
+    catch(err){storageOK=false;console.warn('local fallback write failed',err);}
+   }else storageOK=false;
+   lastPersist=savedAt;updateStorageStatus();
+  }
   function purgeOldVersions(){
    const old=engine.signals.filter(s=>s.version!==CFG.version);
    if(!old.length){alert('ไม่มีข้อมูลเวอร์ชันเก่าให้ลบค่ะ');return;}
@@ -5246,12 +5372,13 @@ function openReport(){
   setInterval(()=>fallbackPoll(),2500);
   setInterval(()=>{updateSetupHealth();analyseNow(true);},1500);
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,candleState,candleBehaviorAssess,candleMaybeIssue,candleSettle,ingest,analyseNow,trainingBundle};
+  async function startPersistentApp(){await restoreJournalBeforeBoot();drawHistory();persist(true);boot();}
   refreshAnalysisLabels();
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
   $('main-version-inline').textContent=versionDisplay(CFG.version);
   state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
-  $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
+  $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});startPersistentApp();
   setInterval(()=>{if(state.booted&&!document.hidden&&!state.orderHistoryRecoveryBusy&&engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);},1000);
   window.addEventListener('pagehide',()=>{persist(true);candlePersist();});
 })();
