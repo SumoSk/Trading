@@ -136,11 +136,9 @@
       .training-start-card{background:linear-gradient(145deg,#11182a 0%,#0d1721 58%,#0d191d 100%);border-color:#343658}
       .training-engine-block{display:grid;gap:7px}
       .training-engine-label{font-size:8px;color:#8394aa}
-      .train-version-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-      .train-version-btn{min-height:42px;border:1px solid #293a4e;border-radius:10px;background:#0b141f;color:#899bb0;font-size:9px;font-weight:650}
-      .train-version-btn.active{border-color:#715fc4;background:#262044;color:#eeeaff;box-shadow:inset 0 0 0 1px #715fc433}
-      .train-version-btn small{display:block;margin-top:1px;font-size:6px;font-weight:500;color:#71849c}
-      .train-version-btn.active small{color:#a99ed7}
+      .train-version-select-wrap{position:relative}
+      .train-version-select{width:100%;min-height:44px;padding:0 38px 0 12px;border:1px solid #3a4560;border-radius:11px;background:#0b141f;color:#e3eaf4;font-size:10px;font-weight:650;appearance:auto}
+      .train-version-select:focus{outline:none;border-color:#7763cf;box-shadow:0 0 0 2px #7763cf22}
       .train-range-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:13px}
       .train-presets{margin:0}
       .train-presets button{min-height:32px;padding:0 12px;border-radius:9px;font-size:8px}
@@ -185,14 +183,13 @@
       @media(max-width:760px){
         #training-lab-dialog{width:calc(100vw - 10px);border-radius:14px}
         .training-lab-head{padding:13px 12px}.training-lab-body{padding:10px 10px 16px}
-        .train-version-grid{grid-template-columns:repeat(2,1fr)}
         .train-fields{grid-template-columns:1fr}.train-fields .train-field:last-child{grid-column:auto}
         .train-range-summary{width:100%;margin-left:0}
         .analytics-grid{grid-template-columns:repeat(2,1fr)}
       }
       @media(max-width:430px){
         .training-lab-head h2{font-size:16px}.training-guide-open{padding:0 9px;font-size:7px}
-        .train-card{padding:12px}.train-version-btn{min-height:40px}
+        .train-card{padding:12px}
         .replay-kpis{grid-template-columns:repeat(2,1fr)}
       }
     `;
@@ -221,12 +218,9 @@
             </div>
 
             <div class="training-engine-block">
-              <span class="training-engine-label">เวอร์ชันที่ใช้เทรน</span>
-              <div class="train-version-grid" id="train-version-grid">
-                <button type="button" class="train-version-btn" data-train-engine="6.6.0">V6.6<small>Legacy</small></button>
-                <button type="button" class="train-version-btn" data-train-engine="7.2.0">V7.2<small>Market Phase</small></button>
-                <button type="button" class="train-version-btn" data-train-engine="ARIS-1.2.0">ARIS 1.2<small>ARIS V1</small></button>
-                <button type="button" class="train-version-btn active" data-train-engine="ARIS-2.0.0">ARIS 2.0<small>Current</small></button>
+              <label class="training-engine-label" for="train-engine-select">เวอร์ชันที่ใช้เทรน</label>
+              <div class="train-version-select-wrap">
+                <select class="train-version-select" id="train-engine-select" aria-label="เวอร์ชันที่ใช้เทรน"></select>
               </div>
             </div>
 
@@ -428,7 +422,7 @@
   function setBusy(busy){
     byId('train-load').disabled=busy;
     byId('train-cancel').hidden=!busy;
-    document.querySelectorAll('[data-train-days],[data-train-engine],#train-start,#train-end,#train-warmup').forEach(el=>el.disabled=busy);
+    document.querySelectorAll('[data-train-days],#train-engine-select,#train-start,#train-end,#train-warmup').forEach(el=>el.disabled=busy);
     byId('train-progress-wrap').classList.toggle('active',busy||!!latestSession);
   }
 
@@ -492,10 +486,8 @@
     const supported=globalThis.TrainingEngineRegistryV1?.versions||['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0'];
     if(!supported.includes(version))return false;
     selectedTrainingVersion=version;
-    document.querySelectorAll('[data-train-engine]').forEach(b=>{
-      const active=b.dataset.trainEngine===version;
-      b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false');
-    });
+    const select=byId('train-engine-select');
+    if(select)select.value=version;
     try{localStorage.setItem(TRAINING_VERSION_STORE,version);}catch{}
     if(!silent){
       updateReplayPanel(latestSession);
@@ -599,7 +591,7 @@
     const start=byId('train-replay-start'),pause=byId('train-replay-pause'),resume=byId('train-replay-resume'),stop=byId('train-replay-stop');
     const selected=!!latestSession,ready=!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status);
     start.disabled=!selected||!ready||mode==='running'||mode==='paused';
-    document.querySelectorAll('[data-train-engine]').forEach(el=>el.disabled=mode==='running'||mode==='paused');
+    const versionSelect=byId('train-engine-select');if(versionSelect)versionSelect.disabled=mode==='running'||mode==='paused';
     pause.disabled=mode!=='running';pause.hidden=mode!=='running';
     resume.disabled=mode!=='paused';resume.hidden=mode!=='paused';
     stop.disabled=!['running','paused'].includes(mode);stop.hidden=!['running','paused'].includes(mode);
@@ -802,7 +794,12 @@
     byId('training-guide-close').addEventListener('click',()=>guide.close());
     guide.addEventListener('click',e=>{if(e.target===guide)guide.close();});
 
-    document.querySelectorAll('[data-train-engine]').forEach(b=>b.addEventListener('click',()=>setTrainingVersion(b.dataset.trainEngine)));
+    const versionSelect=byId('train-engine-select');
+    if(versionSelect){
+      const registry=globalThis.TrainingEngineRegistryV1;
+      versionSelect.innerHTML=(registry?.supported||[]).map(x=>'<option value="'+esc(x.version)+'">'+esc(x.label||x.version)+'</option>').join('');
+      versionSelect.addEventListener('change',()=>setTrainingVersion(versionSelect.value));
+    }
     document.querySelectorAll('[data-train-days]').forEach(b=>b.addEventListener('click',()=>{
       const v=b.dataset.trainDays;setPreset(v==='custom'?'custom':Number(v));
     }));
