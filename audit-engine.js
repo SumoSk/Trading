@@ -444,7 +444,6 @@
       rawComposite,
       confidence,
       grade:score>=88?'แข็งแรงมาก':score>=80?'แข็งแรง':score>=70?'ดี':score>=60?'พอใช้':'เสี่ยง',
-      revision:AUDIT_REVISION,
       weights:{...W},
       components,
       riskFlags:flags,
@@ -612,7 +611,7 @@
       $('audit-v1-history').textContent='ยังไม่มีผลในช่วงนี้';
     }
 
-    const health=cal.report?.health;
+    const health=audit.revision===AUDIT_REVISION?cal.report?.health:cal.report?.legacy?.health;
     $('audit-v1-note').textContent=health?.samples>=20&&Number.isFinite(health.score)
       ?'Audit calibration '+health.score+'/100 · '+health.note
       :'คะแนน Audit เป็น quality score ไม่ใช่ % ชนะ · กำลังสะสม Calibration V2';
@@ -637,6 +636,7 @@
     update(rows);
     return {
       schema:SCHEMA,
+      revision:AUDIT_REVISION,
       targetVersion:TARGET_VERSION,
       generatedAt:new Date().toISOString(),
       weights:{...W},
