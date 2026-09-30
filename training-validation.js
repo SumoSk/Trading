@@ -136,8 +136,10 @@
     const weakPlaybook=weakestGroup(train,s=>s.entry?.playbook||s.type);
     const states=[null,weakState?.key||null].filter((x,i,a)=>i===0||x!==null&&a.indexOf(x)===i);
     const plays=[null,weakPlaybook?.key||null].filter((x,i,a)=>i===0||x!==null&&a.indexOf(x)===i);
+    const auditAvailable=(train||[]).some(s=>num(s.entry?.audit?.score)!==null);
+    const auditThresholds=auditAvailable?AUDIT_THRESHOLDS:[null];
     const out=[];
-    for(const auditMin of AUDIT_THRESHOLDS){
+    for(const auditMin of auditThresholds){
       for(const excludeState of states){
         for(const excludePlaybook of plays){
           out.push({auditMin,excludeState,excludePlaybook});
@@ -297,6 +299,7 @@
       methodology:{
         split:'chronological_60_20_20',splitMode:split.mode,
         candidateSelection:'train_only_wilson_lower_bound',
+        auditThresholdSearch:split.train.some(s=>num(s.entry?.audit?.score)!==null),
         validationUsedForSelection:false,holdoutUsedForSelection:false,
         walkForward:'expanding_window',folds:FOLDS,noLiveMutation:true,noLookahead:true
       },
@@ -321,7 +324,7 @@
       notes:[
         'Candidate is selected from Train only; Validation and Holdout do not participate in rule selection.',
         'Walk-forward uses expanding historical windows and derives each fold candidate only from earlier observations.',
-        'This validates a research filter over replay entries; it does not rewrite ARIS 2.0 live logic.',
+        'This validates a research filter over replay entries; it does not rewrite live engine logic.',
         'A supported candidate should still be forward/shadow tested before any live promotion.'
       ]
     };
