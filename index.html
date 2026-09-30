@@ -5628,6 +5628,57 @@ function openReport(){
   setInterval(()=>{if(!document.hidden&&state.lastMessageAt&&Date.now()-state.lastMessageAt>12000){statusView('stale','ไม่ได้รับข้อมูลใหม่เกิน 12 วินาที กำลังเชื่อมต่อใหม่');connect();}},3000);
   setInterval(()=>fallbackPoll(),2500);
   setInterval(()=>{updateSetupHealth();analyseNow(true);},1500);
+  function readOnlySituationSnapshot(){
+    const tf=state.analysisTf,q=state.quote,data=analysisDataReady(tf),view=lastView;
+    const flowRaw=q?flowSnapshot(q.ts):{'15s':0,'60s':0,'180s':0,trades60s:0,coverageSeconds:0,notional60s:0,notional180s:0};
+    const flow=(flowRaw['15s']||0)*.65+(flowRaw['60s']||0)*.35;
+    const depth=q?depthSnapshot(q.ts):{valid:false,imbalance:0,micropriceBias:0,spreadBps:0,ageSeconds:999};
+    const bookValid=!!(depth.valid&&depth.ageSeconds<2&&depth.spreadBps<3);
+    const book=bookValid?.76*depth.imbalance+.24*depth.micropriceBias:0;
+    const liquidation=q?liquidationSnapshot(q.ts):{signed60s:0,signed180s:0,events60s:0,events180s:0};
+    let direction=null;
+    if(q&&view?.f){
+      direction=globalThis.ContinuousDirection?.assess?.({
+        features:view.f,regime:view.regime,phase:view.phase,event:view.event,price:q.price,ts:q.ts*1000,
+        flow,coverage:flowRaw.coverageSeconds||0,book,bookValid,current:data.current,zones:view.z,fresh:data.fresh,
+        reason:state.historyFallback?'ข้อมูล Spot สำรอง — พักการประเมิน Futures':'ข้อมูลสดขาดหรือยังซิงก์ไม่ครบ'
+      })||null;
+      if(direction?.available){
+        direction={...direction,targetTime:q.ts*1000+analysisHorizonMs(tf),analysisTf:tf,reason:tfHumanText(direction.reason)};
+      }
+    }
+    const pick=(o,keys)=>{const out={};for(const k of keys)if(o&&o[k]!==undefined)out[k]=o[k];return out;};
+    const f=pick(view?.f,['atr','ema8','ema21','emaSlopeAtr','trend','mom','momAccel','high','low','rangePosition','relVolume','volume3Ratio','eff','sideCrosses','falseBreaks','rsi','macd','macdSignal']);
+    const phase=pick(view?.phase,['phase','dir','score','extensionAtr','macroExtensionAtr','liveVolumePace','priorDir','exhaustionScore']);
+    const regime=pick(view?.regime,['mode','stableMode','position','rangeScore','trendScore','breakoutCandidate','acceptedDir','breakoutDir']);
+    const currentBar=data.current?pick(data.current,['time','open','high','low','close','volume','closed']):null;
+    const bars=(data.bars||[]).slice(-240).map(b=>pick(b,['time','open','high','low','close','volume','closed']));
+    const zones=(view?.z||[]).filter(z=>Number.isFinite(z?.price)).slice(-30).map(z=>pick(z,['price','kind','source','touches','confirmedAt']));
+    const candle=state.candleView?{
+      ...pick(state.candleView,['available','direction','confidence','score','label','analysisTf','patternBias','plainMeaning','changeTrigger']),
+      reasons:Array.isArray(state.candleView.reasons)?state.candleView.reasons.slice(0,6):[],
+      warnings:Array.isArray(state.candleView.warnings)?state.candleView.warnings.slice(0,6):[],
+      patterns:Array.isArray(state.candleView.patterns)?state.candleView.patterns.slice(0,6).map(p=>pick(p,['name','bias','priority','meaning','change'])):[],
+      metrics:state.candleView.metrics?{...state.candleView.metrics}:null
+    }:null;
+    return {
+      schema:'live-situation-snapshot-v1',capturedAt:Date.now(),symbol:SYMBOL,engineVersion:CFG.version,
+      tf,tfLabel:TF_LABELS[tf]||tf,source:analysisSource(tf),fresh:!!data.fresh,continuous:!!data.continuous,
+      horizonBars:10,horizonMs:(TF_SECONDS[tf]||60)*1000*10,
+      quote:q?{price:q.price,ts:q.ts,id:q.id}:null,currentBar,bars,features:f,phase,regime,zones,candle,
+      direction,
+      flow:{...flowRaw,composite:flow},
+      book:{...depth,composite:book,usable:bookValid},
+      liquidation,
+      setup:{
+        status:view?.status||null,reason:tfHumanText(view?.reason||''),event:view?.event?pick(view.event,['type','d','evidenceScore','why','detectedAt']):null,
+        watch:view?.watch?pick(view.watch,['state','label','score','reason']):null,
+        gate:view?.gate?{state:view.gate.state||null,blocker:view.gate.blocker||null,waitingFor:Array.isArray(view.gate.waitingFor)?view.gate.waitingFor.slice(0,8):[],metrics:view.gate.metrics?{...view.gate.metrics}:null}:null
+      },
+      health:setupFeedHealth()
+    };
+  }
+  globalThis.LiveAnalysisBridgeV1={schema:'live-analysis-bridge-v1',snapshot:readOnlySituationSnapshot};
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,candleState,candleBehaviorAssess,candleMaybeIssue,candleSettle,ingest,analyseNow,trainingBundle};
   async function startPersistentApp(){await restoreJournalBeforeBoot();drawHistory();persist(true);boot();}
   refreshAnalysisLabels();
