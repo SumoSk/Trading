@@ -2805,6 +2805,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 })(typeof globalThis!=='undefined'?globalThis:window);
 </script>
 <script src="v2.js?v=20260930-r6"></script>
+<script src="entry-score.js?v=20261001-r1"></script>
 <script>
 'use strict';
 (() => {
@@ -4561,6 +4562,7 @@ function openReport(){
   }
   function renderEvent(v){
    const tf=state.analysisTf,tfLabel=TF_LABELS[tf]||tf,contextMode=tf!=='1m';
+   globalThis.EntryScoreV1?.update?.(engine.signals);
    const e=v.event,modelD=e?.d||0,freshSignal=v.status==='new',preview=e?(CFG.version==='ARIS-2.0.0'?{direction:modelD>0?'HIGH':'LOW',reason:v.reason}:selectOutputDecision(e.type,modelD,v.f,v.phase)):null;
    const watchD=v.watch?.direction==='HIGH'?1:v.watch?.direction==='LOW'?-1:0,continuousD=state.continuousView?.direction==='HIGH'?1:state.continuousView?.direction==='LOW'?-1:0;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:watchD||continuousD;
