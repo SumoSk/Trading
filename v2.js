@@ -89,11 +89,13 @@ function rangeBehavior(f,x){
  let pressure=0;if(pos>=.62&&lowSlope>=.035&&(compression||weak(ur)||upTouches>=3))pressure=1;else if(pos<=.38&&highSlope<=-.035&&(compression||weak(lr)||loTouches>=3))pressure=-1;
  const bu=(x.price-hi)/a,bd=(lo-x.price)/a,breakDir=bu>=(CFG.v2BreakBuffer||.04)?1:bd>=(CFG.v2BreakBuffer||.04)?-1:0;
  let fakeDir=0,fakeLevel=null;
- for(let i=Math.max(6,b.length-7);i<b.length;i++){
+ const rangeLike=f.eff<=.48||f.sideCrosses>=2||f.falseBreaks>=1||balanced;
+ if(rangeLike)for(let i=Math.max(6,b.length-3);i<b.length;i++){
   const p=b.slice(Math.max(0,i-10),i);if(p.length<6)continue;
-  const ph=Math.max(...p.map(q=>q.high)),pl=Math.min(...p.map(q=>q.low)),q=b[i];
-  if(q.high>ph+a*(CFG.v2FakeBreakBuffer||.05)&&q.close<=ph){fakeDir=1;fakeLevel=ph;}
-  if(q.low<pl-a*(CFG.v2FakeBreakBuffer||.05)&&q.close>=pl){fakeDir=-1;fakeLevel=pl;}
+  const ph=Math.max(...p.map(q=>q.high)),pl=Math.min(...p.map(q=>q.low)),q=b[i],rr=Math.max(q.high-q.low,1e-9);
+  const uw=(q.high-Math.max(q.open,q.close))/rr,lw=(Math.min(q.open,q.close)-q.low)/rr;
+  if(q.high>ph+a*(CFG.v2FakeBreakBuffer||.05)&&q.close<=ph&&uw>=.18){fakeDir=1;fakeLevel=ph;}
+  if(q.low<pl-a*(CFG.v2FakeBreakBuffer||.05)&&q.close>=pl&&lw>=.18){fakeDir=-1;fakeLevel=pl;}
  }
  let age=0;for(let i=b.length-1;i>=0;i--){const q=b[i];if(q.close<lo-a*.08||q.close>hi+a*.08)break;age++;}
  const rotationQuality=clip((Math.max(...r.map(q=>q.close))-Math.min(...r.map(q=>q.close)))/w,0,1);
@@ -175,6 +177,7 @@ function observe(engine,f,x,z,regime,phase){
 
  let edge=clip(f.trend,-1,1)*.20+clip((f.mom||0)/1.2,-1,1)*.15+clip((f.momAccel||0)/.9,-1,1)*.10+clip(flow,-1,1)*.18+clip(book,-1,1)*.04+r.edgePressureDir*.11+c.pressure*.08+c.oneSided*.05+c.engulf*.03+c.rejection*.03;
  if(breakD)edge+=breakD*(accepted?.18:.10);if(r.fakeDir)edge-=r.fakeDir*.18;if(fib.valid&&fib.healthy&&trendDir===fib.d)edge+=fib.d*.05;if(h5.available)edge+=h5.trend*.025;if(h15.available)edge+=h15.trend*.025;
+ if(r.balanced&&!r.edgePressureDir){if(r.pos<=.24)edge+=.22;else if(r.pos>=.76)edge-=.22;}
  edge=clip(edge,-1,1);
  const high=Math.round(clip(50+edge*42,10,90)),low=100-high,evidenceDir=Math.abs(high-low)>=8?(high>low?1:-1):0;
  if(!stateDir)stateDir=evidenceDir;
@@ -183,14 +186,16 @@ function observe(engine,f,x,z,regime,phase){
  if(accepted)rem.memory.lastBreakout={ts:x.ts,d:breakD,level:breakD>0?r.hi:r.lo};
  const lastBreakout=rem.memory.lastBreakout,breakoutRetest=lastBreakout&&x.ts-lastBreakout.ts<=180000&&Math.abs(x.price-lastBreakout.level)/a<=.14&&lastBreakout.d*(x.price-lastBreakout.level)>=-.06?{...lastBreakout,distanceAtr:Math.abs(x.price-lastBreakout.level)/a}:null;
  const reaccel=!!trendDir&&trendDir*(f.momAccel||0)>=.10&&trendDir*flow>=.025&&(c.oneSided===trendDir||c.liveDir===trendDir);
- const shockFailure=!!c.failedExpansion;
+ const shockFailure=c.failedExpansion||0;
+ const failedContinuation=!!trendDir&&c.failedExpansion===-trendDir&&trendDir*(f.momAccel||0)<-.08;
  const absorption=flow>=.10&&Math.abs(speed)<.012?-1:flow<=-.10&&Math.abs(speed)<.012?1:0;
  const ext=stateDir?stateDir*(x.price-f.ema21)/a:0;
  let change=0;if((zone.nearResistance&&trendDir>0)||(zone.nearSupport&&trendDir<0))change++;if(Math.abs(ext)>=1.6)change++;if((trendDir>0&&c.rejection<0)||(trendDir<0&&c.rejection>0))change++;if(trendDir*(f.momAccel||0)<-.15)change++;if(trendDir*flow<-.04)change++;if(fib.valid&&fib.extension>=1.272)change++;
  const trendChangeRisk=change>=4?'สูง':change>=2?'กลาง':'ต่ำ';
  if(['TREND','MATURE_TREND'].includes(state)&&trendChangeRisk==='สูง'&&trendDir){state='REVERSAL_WATCH';stateDir=-trendDir;conf=Math.max(conf,78);}
- else if(state==='TRANSITION'&&c.shock&&c.liveDir){state='EXPANSION';stateDir=c.liveDir;conf=74;}
+ else if(['TREND','PULLBACK','TRANSITION'].includes(state)&&failedContinuation){state='REVERSAL_WATCH';stateDir=-trendDir;conf=Math.max(conf,72);}
  else if(state==='TRANSITION'&&shockFailure){state='EXPANSION';stateDir=shockFailure;conf=72;}
+ else if(state==='TRANSITION'&&c.shock&&c.liveDir){state='EXPANSION';stateDir=c.liveDir;conf=74;}
 
  let play='observe_conflict',d=stateDir||evidenceDir,trigger='รอ behavior ชัดขึ้น',invalid='ยังไม่มี thesis หลัก',next='ประเมิน State ใหม่เมื่อพฤติกรรมเปลี่ยน';
  if(breakoutRetest&&state!=='FALSE_BREAK'){
@@ -229,11 +234,12 @@ function observe(engine,f,x,z,regime,phase){
  if(c.contraction)supports.push('แท่งหดตัวต่อเนื่อง · compression เพิ่ม');
  if(c.oneSided)supports.push('หลายแท่งปิดใกล้'+(c.oneSided>0?'high':'low')+' · pressure ต่อเนื่อง');
  if(c.failedExpansion)warnings.push('Expansion ก่อนหน้าถูกกินกลับ · เสี่ยง trap');
+ if(failedContinuation)warnings.push('Failed Continuation · ขาเดิมพยายามไปต่อแต่ถูกกินกลับและ momentum ชะลอ');
+ if(r.balanced&&r.rotationQuality<.55)warnings.push('Range rotation ไปไม่สุดกรอบ · สมดุล Sideway เริ่มเปลี่ยน');
  if(absorption)warnings.push((absorption>0?'แรงขาย':'แรงซื้อ')+'มากแต่ราคาไปต่อได้น้อย · possible absorption');
  if(Math.abs(speed)>=.055)supports.push('ความเร็วราคาเปลี่ยนชัด · behavior shift');
  if(fib.valid&&fib.nearest&&fib.nearest.distanceAtr<=(CFG.v2FibZoneAtr||.15))supports.push('ใกล้ Fib '+(fib.nearest.ratio*100).toFixed(1)+'%'+(fib.confluence?' + zone confluence':''));
  if(fib.valid&&fib.extension>=1.618)warnings.push('เกิน Fib extension 161.8% · ขาเดินไกลมาก เพิ่ม exhaustion / reversal watch');
- else if(fib.valid&&fib.extension>=1.618)warnings.push('เกิน Fib extension 161.8% · exhaustion / trend-change watch สูงขึ้น');
  else if(fib.valid&&fib.extension>=1.272)warnings.push('เกิน Fib extension 127.2% · เพิ่ม exhaustion watch');
  if(zone.nearResistance)warnings.push('ใกล้ resistance '+zone.resistance.distanceAtr.toFixed(2)+' ATR');
  if(zone.nearSupport)warnings.push('ใกล้ support '+zone.support.distanceAtr.toFixed(2)+' ATR');
@@ -330,7 +336,13 @@ if(root.ContinuousDirection){
  root.ContinuousDirection.assess=function(x){
   if(CFG.version!=='ARIS-2.0.0')return previousAssess?previousAssess(x):{available:false,reason:'Direction engine unavailable'};
   const f=x.features,q=x.phase?.v2View;if(!x.fresh||!f||!q)return {available:false,reason:x.reason||'ARIS V2 · กำลังสร้าง Market Story'};
-  const high=Math.round(q.high),low=Math.round(q.low),direction=Math.abs(high-low)<8?'BALANCED':high>low?'HIGH':'LOW',d=direction==='HIGH'?1:direction==='LOW'?-1:0,room=d?roomAtr(x.zones||[],x.price,d,f.atr):null,extension=d?d*(x.price-f.ema21)/Math.max(f.atr,1e-9):0;
+  let high=Math.round(q.high),low=Math.round(q.low);
+  const pref=q.story?.primary?.direction,pe=Number(q.story?.primary?.evidence);
+  let direction=(['HIGH','LOW'].includes(pref)&&pe>=55)?pref:(Math.abs(high-low)<8?'BALANCED':high>low?'HIGH':'LOW');
+  if(['HIGH','LOW'].includes(pref)&&pe>=55&&direction===pref){
+   const conf=Math.round(clip(50+Math.abs(high-low)/2,55,90));high=pref==='HIGH'?conf:100-conf;low=100-high;
+  }
+  const d=direction==='HIGH'?1:direction==='LOW'?-1:0,room=d?roomAtr(x.zones||[],x.price,d,f.atr):null,extension=d?d*(x.price-f.ema21)/Math.max(f.atr,1e-9):0;
   const risk=q.risk==='สูง'?'สูง':q.risk==='กลาง'?'กลาง':'ต่ำตามเกณฑ์';
   return {available:true,high,low,direction,risk,riskScore:risk==='สูง'?4:risk==='กลาง'?2:0,referencePrice:x.price,referenceTime:x.ts,targetTime:x.ts+CFG.horizonMs,reason:'ARIS V2 · '+q.reason,parts:{marketState:q.story?.state,playbook:q.story?.playbook,flow:x.flow||0},weights:null,regime:x.regime?.v2State||x.regime?.mode||'TRANSITION',coverage:x.coverage||0,room:Number.isFinite(room)?room:null,extension,retreat:0,v2Story:q.story};
  };
