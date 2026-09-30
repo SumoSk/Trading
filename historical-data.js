@@ -196,7 +196,7 @@
       requestedAnalysisBars,expectedBars,loadedBars:0,
       engineVersion:engineMeta.engineVersion||globalThis.EventSignalV6?.CFG?.version||null,
       engineBlobSha:engineMeta.engineBlobSha||null,
-      auditSchema:engineMeta.auditSchema||globalThis.AuditEngineV2?.schema||null,
+      auditSchema:Object.prototype.hasOwnProperty.call(engineMeta,'auditSchema')?engineMeta.auditSchema:(globalThis.AuditEngineV2?.schema||null),
       source:'binance_futures_rest',sourceEndpoint:BINANCE_FUTURES_KLINES,
       replayReady:false
     };
