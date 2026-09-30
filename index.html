@@ -227,6 +227,50 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
  .signal-panel .last-entry-meta{grid-column:1/-1}
  .chart-foot{padding:7px 9px!important;gap:6px!important;font-size:9px!important}
 }
+
+/* Engine guide */
+.engine-guide-dialog{width:min(1120px,calc(100% - 20px));max-height:94dvh}
+.engine-guide-dialog .review-modal{max-height:92dvh}
+.guide-intro{font-size:12px;line-height:1.7;color:#9fb0c6;margin:0 0 14px}
+.guide-score-heroes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.guide-score-hero{padding:12px;border:1px solid #26364b;border-radius:10px;background:#0b141f;min-width:0}
+.guide-score-hero span{display:block;font-size:9px;color:#8497b0;margin-bottom:4px}
+.guide-score-hero strong{display:block;font:700 28px/1 'Segoe UI',sans-serif;color:#dce9f8}
+.guide-score-hero small{display:block;margin-top:6px;color:#8fa3bc;font-size:9px;line-height:1.45}
+.guide-score-table-wrap{overflow:auto;border:1px solid #28384e;border-radius:10px;margin-bottom:16px}
+.guide-score-table{width:100%;min-width:780px;border-collapse:collapse}
+.guide-score-table th,.guide-score-table td{padding:9px 10px;border-bottom:1px solid #1d2a3b;text-align:center;font-size:11px}
+.guide-score-table th{position:sticky;top:0;background:#0b141f;color:#879ab3;font-weight:600}
+.guide-score-table th:first-child,.guide-score-table td:first-child{text-align:left;white-space:nowrap}
+.guide-score-table tr:last-child td{border-bottom:0}
+.guide-score{display:inline-flex;min-width:38px;justify-content:center;padding:3px 7px;border:1px solid #33465f;border-radius:999px;background:#111c29;font:600 11px 'Segoe UI',sans-serif}
+.guide-score.high{border-color:#2c725f;color:#6ce2bf;background:#10261f}
+.guide-score.mid{border-color:#5e5638;color:#e4c47e;background:#252116}
+.guide-score.low{border-color:#5f4250;color:#e694a6;background:#261820}
+.guide-disclaimer{padding:10px 12px;border:1px solid #5d5133;border-radius:8px;background:#242016;color:#d9bf82;font-size:10px;line-height:1.55;margin-bottom:18px}
+.guide-section{margin-top:20px}
+.guide-section>h3{font-size:15px;font-weight:650;margin:0 0 10px;color:#dce8f7}
+.guide-section>p{font-size:11px;line-height:1.65;color:#94a6bd;margin:0 0 10px}
+.guide-version-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.guide-version-card{padding:13px;border:1px solid #27384e;border-radius:10px;background:#0b141f}
+.guide-version-card h4{font-size:14px;margin:0 0 3px;color:#e0eaf7}
+.guide-version-card>.guide-role{font-size:10px;color:#7f93ad;margin:0 0 9px}
+.guide-version-card p{font-size:11px;line-height:1.65;color:#a5b6ca;margin:6px 0}
+.guide-version-card ul{margin:8px 0 0;padding-left:17px;color:#9fb1c5}
+.guide-version-card li{font-size:10px;line-height:1.55;margin:4px 0}
+.guide-best{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.guide-best span{padding:3px 7px;border:1px solid #30445c;border-radius:999px;color:#aec0d5;font-size:9px}
+.guide-lineage{display:grid;gap:6px}
+.guide-lineage-row{display:grid;grid-template-columns:72px 1fr;gap:10px;padding:9px 10px;border-left:2px solid #425a77;background:#0b141f;border-radius:5px}
+.guide-lineage-row b{font:600 11px 'Segoe UI',sans-serif;color:#cfdbeb}
+.guide-lineage-row span{font-size:10px;line-height:1.55;color:#95a8c0}
+.guide-principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.guide-principle{padding:10px;border:1px solid #26374b;border-radius:8px;background:#0c1520}
+.guide-principle b{display:block;font-size:10px;color:#d2deed;margin-bottom:4px}
+.guide-principle span{display:block;font-size:9px;line-height:1.5;color:#879bb4}
+@media(max-width:760px){.guide-score-heroes{grid-template-columns:repeat(2,minmax(0,1fr))}.guide-version-grid{grid-template-columns:1fr}.guide-principles{grid-template-columns:1fr 1fr}.engine-guide-dialog .review-body{padding:14px}}
+@media(max-width:480px){.guide-score-hero strong{font-size:24px}.guide-principles{grid-template-columns:1fr}.guide-lineage-row{grid-template-columns:60px 1fr}}
+
 .review-note{color:var(--muted);font-size:12px;line-height:1.65;margin:8px 0 12px}.review-list li small{font-size:12px;color:var(--muted);line-height:1.5}
 
 /* REALTIME setup profile — advisory only, never changes entry logic */
@@ -636,6 +680,7 @@ main{padding-top:10px}
           <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
           <button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
           <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option><option value="ARIS-2.0.0">ARIS V2 r6 · Market Observer</option></select></label>
+          <button id="engine-guide" class="quiet">คู่มือ</button>
           <button id="latest" class="quiet">กลับล่าสุด</button>
         </div>
       </details>
@@ -841,6 +886,85 @@ main{padding-top:10px}
 
 </div>
 <section class="prediction-log"><div class="prediction-log-head"><div><h2>ประวัติสัญญาณ</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">V <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">รีพอร์ต</button><button id="export-training-csv">CSV</button><button id="export-history">JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบเวลา</th><th>ราคาตัดสิน</th><th>ผล</th><th>Live %</th><th>บทเรียน</th><th>V</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+<dialog id="engine-guide-dialog" class="review-dialog engine-guide-dialog"><div class="review-modal">
+  <div class="review-head"><div><span class="eyebrow">คู่มือระบบ</span><h2>4 วิธีคิดสำหรับตลาด +10 นาที</h2><p>แต่ละระบบมีบุคลิกต่างกัน เก็บไว้เพื่อเปรียบเทียบว่าแนวคิดแบบไหนเหมาะกับสภาพตลาดแบบใด</p></div><button type="button" class="review-close" data-close-dialog="engine-guide-dialog" aria-label="ปิด">×</button></div>
+  <div class="review-body">
+    <section class="guide-section" style="margin-top:0">
+      <h3>คะแนนภาพรวมก่อน</h3>
+      <p class="guide-intro">คะแนนชุดนี้ประเมินจากโครงสร้างวิธีคิด ความไว การกันจังหวะเสีย และความยืดหยุ่นของแต่ละระบบ ไม่ใช่ผลตอบแทนหรือ Win rate ที่ยืนยันแล้ว</p>
+      <div class="guide-score-heroes">
+        <div class="guide-score-hero"><span>6.6 · นักสถิติขี้สงสัย</span><strong>6.0/10</strong><small>เด่นกับกรอบและแนวคิดสวน setup จากสถิติ แต่ยังอ่านช่วงชีวิตของเทรนด์ไม่ละเอียด</small></div>
+        <div class="guide-score-hero"><span>7.2 · อ่าน Phase + Timing</span><strong>7.5/10</strong><small>คุมจังหวะดีและกันปลายขาเก่ง แต่มีโอกาสช้าเพราะ gate หลายชั้น</small></div>
+        <div class="guide-score-hero"><span>1.2 · นักล่าจังหวะ</span><strong>8.5/10</strong><small>เข้าไว จับ Breakout และมีแผนต่อหลังมาช้า เหมาะกับตลาดที่เคลื่อนเร็ว</small></div>
+        <div class="guide-score-hero"><span>V2 · นักอ่านตลาด</span><strong>9.2/10</strong><small>อ่านบริบทต่อเนื่องและเปลี่ยนแผนตามพฤติกรรมตลาด แต่ยังต้องพิสูจน์ด้วย forward data ต่อ</small></div>
+      </div>
+      <div class="guide-score-table-wrap"><table class="guide-score-table"><thead><tr><th>หัวข้อ</th><th>6.6</th><th>7.2</th><th>1.2</th><th>V2</th></tr></thead><tbody>
+        <tr><td>Sideway / วิ่งในกรอบ</td><td><span class="guide-score high">8.0</span></td><td><span class="guide-score mid">7.0</span></td><td><span class="guide-score mid">7.0</span></td><td><span class="guide-score high">9.5</span></td></tr>
+        <tr><td>วิ่งตามเทรนด์</td><td><span class="guide-score low">5.5</span></td><td><span class="guide-score high">8.5</span></td><td><span class="guide-score high">9.0</span></td><td><span class="guide-score high">9.0</span></td></tr>
+        <tr><td>ดีด / สวิง / กลับตัวแรง</td><td><span class="guide-score mid">7.0</span></td><td><span class="guide-score mid">7.0</span></td><td><span class="guide-score high">8.5</span></td><td><span class="guide-score high">9.0</span></td></tr>
+        <tr><td>กราฟเงียบ / รอการบีบตัว</td><td><span class="guide-score mid">6.5</span></td><td><span class="guide-score low">6.0</span></td><td><span class="guide-score mid">6.5</span></td><td><span class="guide-score high">8.5</span></td></tr>
+        <tr><td>ความไวในการหาไม้</td><td><span class="guide-score mid">7.0</span></td><td><span class="guide-score mid">6.5</span></td><td><span class="guide-score high">9.0</span></td><td><span class="guide-score high">8.0</span></td></tr>
+        <tr><td>กันไล่ปลายขา / ภูเขา</td><td><span class="guide-score low">5.5</span></td><td><span class="guide-score high">9.0</span></td><td><span class="guide-score high">8.5</span></td><td><span class="guide-score high">9.0</span></td></tr>
+        <tr><td>เปลี่ยนแผนเมื่อกราฟเปลี่ยนหน้า</td><td><span class="guide-score low">5.5</span></td><td><span class="guide-score mid">7.0</span></td><td><span class="guide-score high">9.0</span></td><td><span class="guide-score high">9.5</span></td></tr>
+      </tbody></table></div>
+      <div class="guide-disclaimer">สำคัญ: คะแนนด้านบนคือคะแนนเชิงออกแบบจากกฎที่ระบบมีอยู่ ไม่ใช่โอกาสชนะของไม้ถัดไป และไม่ควรอ่าน 9.5/10 ว่าเท่ากับชนะ 95% เมื่อมีข้อมูลไม้จริงมากพอ ควรเทียบใหม่ด้วย Win rate แยกตามสภาพตลาด</div>
+    </section>
+
+    <section class="guide-section">
+      <h3>จำ 4 ระบบแบบเร็วที่สุด</h3>
+      <div class="guide-principles">
+        <div class="guide-principle"><b>6.6 = นักสถิติขี้สงสัย</b><span>ถามว่า setup แบบนี้ในข้อมูลที่ผ่านมา มักไปต่อหรือมักถูกสวน แล้วค่อยเลือกฝั่ง</span></div>
+        <div class="guide-principle"><b>7.2 = รู้ทิศ แต่ขอจังหวะสวย</b><span>อ่าน Phase ก่อน แล้วแยก WATCH → READY → ENTER → TOO LATE เพื่อไม่ให้มองถูกแต่เข้าแพง</span></div>
+        <div class="guide-principle"><b>1.2 = นักล่าจังหวะเข้า</b><span>พยายามเข้าต้นขาให้ทัน จับ Breakout สด และถ้ามาช้าก็สร้างแผนรอย่อหรือรอ reversal ต่อ</span></div>
+        <div class="guide-principle"><b>V2 = อ่านเรื่องราวทั้งตลาด</b><span>เฝ้าพฤติกรรมต่อเนื่อง ตั้งสมมติฐาน เลือก Playbook และเปลี่ยนแผนเมื่อข้อมูลใหม่ทำให้เรื่องเดิมใช้ไม่ได้</span></div>
+      </div>
+    </section>
+
+    <section class="guide-section">
+      <h3>รายละเอียดแต่ละระบบ</h3>
+      <div class="guide-version-grid">
+        <article class="guide-version-card"><h4>6.6 · Statistical Entry</h4><p class="guide-role">แนวคิดหลัก: ใช้ผลในอดีตช่วยตัดสินว่าจะเชื่อหรือสวน setup</p><p>เกิดจากบทเรียนของ 6.5 ที่ทดลองกลับฝั่ง setup เกือบทุกประเภท แล้วพบว่าการสวนทุกอย่างก็สุดโต่งเกินไป 6.6 จึงเริ่มเลือกเป็นราย setup และดู Trend 1 นาทีประกอบมากขึ้น</p><ul><li>ถนัดกรอบและจังหวะที่ภาพตรงหน้ามีโอกาสหลอก</li><li>มีคุณค่าเป็น benchmark เพราะวิธีคิดต่างจากรุ่นใหม่ชัด</li><li>จุดอ่อนใหญ่คือยังไม่รู้ละเอียดว่ากำลังอยู่ต้นขา กลางขา หรือปลายขา</li><li>เคยเจอกรณียิงซ้ำฝั่งเดิมหลายไม้ใน impulse เดียวจนเห็นว่าทิศอย่างเดียวไม่พอ</li></ul><div class="guide-best"><span>เด่น: Sideway</span><span>ระวัง: Trend ยาว</span></div></article>
+
+        <article class="guide-version-card"><h4>7.2 · Early Watch + Timing</h4><p class="guide-role">แนวคิดหลัก: Market Phase ก่อน แล้วคุม timing การเข้าอย่างเข้ม</p><p>รุ่นนี้แยก “ตลาดเริ่มมองไปทางไหน” ออกจาก “เข้าได้หรือยัง” อย่างจริงจัง จึงมี WATCH, READY, ENTER และ TOO LATE พร้อมระบบกันไล่ปลายขา</p><ul><li>อ่าน RANGE / TREND / IMPULSE / MATURE IMPULSE / EXHAUSTION / REVERSAL</li><li>Breakout ช่วงเปลี่ยนผ่านสามารถรับ live acceptance ได้ถ้าหลักฐานสดแข็งแรงพอ</li><li>กันภูเขาด้วยระยะจากฐาน, room, volume heat และไม้ซ้ำในคลื่น</li><li>จุดอ่อนคือ gate หลายชั้น บางครั้งเห็นถูกแต่รอนานจนราคาวิ่งพ้นจุดเข้า</li></ul><div class="guide-best"><span>เด่น: Trend</span><span>เด่น: กันปลายขา</span><span>ระวัง: ช้า</span></div></article>
+
+        <article class="guide-version-card"><h4>1.2 · Breakout + Recovery</h4><p class="guide-role">แนวคิดหลัก: Direction → Setup → Timing และหาทางเข้าต่อเมื่อพลาดจังหวะแรก</p><p>ต่อยอดจาก 1.1 เพื่อแก้ปัญหา Breakout วิ่งเร็วแล้วระบบพลาดต้นขา และแก้ TOO LATE ที่เดิมจบเพียงคำว่าไม่ไล่ราคา</p><ul><li>มี Breakout Follow สำหรับการทะลุที่สดและยังไม่ยืดเกิน</li><li>หลัง TOO LATE จะเก็บ Late Plan ประมาณ 3 นาที</li><li>รอย่อแล้ว reclaim ตามขาเดิม หรือค่อยสวนเมื่อ exhaustion + flow flip + structure break ครบจริง</li><li>วัด freshness จาก pivot/reclaim ใหม่ จึงไม่ติดกับฐานเก่าอย่างเดียว</li><li>จุดอ่อนคือยังคิดเป็นชุด setup มากกว่าการอ่านพฤติกรรมตลาดเป็นเรื่องต่อเนื่อง</li></ul><div class="guide-best"><span>เด่น: เข้าเร็ว</span><span>เด่น: Trend/Breakout</span><span>เด่น: Swing</span></div></article>
+
+        <article class="guide-version-card"><h4>V2 · Market Observer</h4><p class="guide-role">แนวคิดหลัก: Observe → Memory → State → Story → Hypothesis → Playbook → Entry → Re-plan → Learning</p><p>แทนที่จะรอ setup อย่างเดียว ระบบเฝ้าพฤติกรรมตลาดต่อเนื่องแล้วถามว่า “ตอนนี้ตลาดกำลังทำอะไร” ก่อนเลือกแผนเข้า</p><ul><li>Sideway แยก Fresh, Balance, Compression, Edge pressure, Fake break และ Range failure</li><li>อ่านลำดับแท่ง เช่น pressure, contraction, body decay, rejection, engulf, shock และ failed expansion</li><li>ใช้ Fibonacci เป็น confluence ร่วมกับโครงสร้าง ไม่ใช่สั่งเข้าเพราะแตะ Fib อย่างเดียว</li><li>ดูแนวรับแนวต้าน, higher timeframe และความเสี่ยง trend change</li><li>ทุกบริบทมี Trigger, Invalidation และ Next plan</li><li>Reversal Watch ไม่เท่ากับสั่งสวน ต้องมีหลักฐานว่าขาเดิมกำลังเสียจริง</li><li>ระบบเก็บข้อมูลเพื่อเรียนรู้ภายหลัง แต่ยังไม่ได้เปลี่ยนน้ำหนักตัวเองอัตโนมัติหลังทุกไม้</li></ul><div class="guide-best"><span>เด่น: Sideway</span><span>เด่น: เปลี่ยนแผน</span><span>เด่น: อ่านบริบท</span></div></article>
+      </div>
+    </section>
+
+    <section class="guide-section">
+      <h3>ทำไมถึงยังเก็บรุ่นเก่าไว้</h3>
+      <p>รุ่นย่อยถูกซ่อนจากตัวเลือกหลักเพื่อให้หน้าเว็บไม่รก แต่โค้ดและเรื่องราวยังอยู่ เพราะแต่ละรุ่นเป็นหลักฐานว่าปัญหาอะไรทำให้เราต้องเปลี่ยนวิธีคิดในรุ่นถัดไป</p>
+      <div class="guide-lineage">
+        <div class="guide-lineage-row"><b>6.5 → 6.6</b><span>จาก “สวน setup เกือบทั้งหมด” มาเป็น “เลือกเป็นราย setup จากสถิติ”</span></div>
+        <div class="guide-lineage-row"><b>6.6 → 7.0</b><span>พบว่ารู้ setup แต่ไม่รู้ช่วงชีวิตของขา จึงเพิ่ม Market Phase, Volume และ Impulse</span></div>
+        <div class="guide-lineage-row"><b>7.0 → 7.0.1</b><span>ตามแรงเข้าขอบกรอบที่ยังไม่แตก จึงเพิ่ม Range Edge Confirmation</span></div>
+        <div class="guide-lineage-row"><b>7.0.1 → 7.1</b><span>จัดกฎ Phase, Transition และ Confirmation ให้เข้มและเป็นเหตุเป็นผลขึ้น</span></div>
+        <div class="guide-lineage-row"><b>7.1 → 7.1.1</b><span>เจอไม้ภูเขา จึงเพิ่มตัวกันไล่ Mature Impulse ที่ยืดไกลและร้อนเกิน</span></div>
+        <div class="guide-lineage-row"><b>7.1.1 → 7.2</b><span>แก้ปัญหาเห็นช้า โดยแยก Direction/WATCH ออกจาก Entry Gate และเพิ่ม TOO LATE ที่อธิบายได้</span></div>
+        <div class="guide-lineage-row"><b>7.2 → 1.0</b><span>ลดกฎซ้ำและออกแบบใหม่เป็น Direction → Setup → Timing</span></div>
+        <div class="guide-lineage-row"><b>1.0 → 1.1</b><span>คลาย gate ที่ซ้อนเกินไปและยอมรับ live opportunity มากขึ้นเพื่อให้มีไม้จริง</span></div>
+        <div class="guide-lineage-row"><b>1.1 → 1.2</b><span>เพิ่ม Breakout Follow และ Late Recovery เพราะพลาดการวิ่งเร็วและไม่มีแผนหลัง TOO LATE</span></div>
+        <div class="guide-lineage-row"><b>1.2 → V2</b><span>จากระบบที่เก่งเป็น “ท่าเข้า” ไปสู่ระบบที่พยายามเข้าใจพฤติกรรมตลาดทั้งเรื่องแล้วเลือกท่าให้เหมาะกับบริบท</span></div>
+      </div>
+    </section>
+
+    <section class="guide-section">
+      <h3>หลักที่ทุกระบบใช้ร่วมกัน</h3>
+      <div class="guide-principles">
+        <div class="guide-principle"><b>เป้าหมายคือ +10 นาที</b><span>การตัดสินใจหลักถูกออกแบบมาสำหรับการเล่นสั้น ไม่ใช่การทำนายแนวโน้มหลายชั่วโมง</span></div>
+        <div class="guide-principle"><b>มองถูก ≠ เข้าได้</b><span>ทิศทางอาจถูก แต่ถ้าราคาไกลเกิน ชนแนว หรือจังหวะหมดอายุ ระบบควรงดไล่</span></div>
+        <div class="guide-principle"><b>ไม่บังคับตามเทรนด์</b><span>ถ้าหลักฐานบอกว่าขาเดิมกำลังหมดแรงและโครงสร้างกลับจริง ระบบสามารถเตรียมฝั่งสวนได้</span></div>
+        <div class="guide-principle"><b>ไม่บังคับสวน</b><span>การเห็นราคาวิ่งแรงหรือมาช้า ไม่ใช่เหตุผลพอที่จะสวน ต้องมี rejection, flow flip หรือ structure break ตามกฎของแต่ละระบบ</span></div>
+        <div class="guide-principle"><b>ข้อมูลอนาคตไม่ใช้ตัดสินอดีต</b><span>ผลหลังเข้าและเส้นทาง +10 นาทีถูกเก็บเป็น label เพื่อทบทวน ไม่เอาย้อนกลับมาหลอกเหตุผลตอนเข้า</span></div>
+        <div class="guide-principle"><b>คะแนนสดไม่ใช่ Win rate</b><span>เปอร์เซ็นต์ HIGH/LOW เป็นน้ำหนักหลักฐานของสถานการณ์ขณะนั้น จนกว่าจะมีการ calibrate จากข้อมูลจริงอย่างเป็นระบบ</span></div>
+      </div>
+    </section>
+  </div>
+  <div class="review-foot"><button type="button" data-close-dialog="engine-guide-dialog">ปิด</button></div>
+</div></dialog>
+
 <dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">ทบทวนหลังจบไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
 <dialog id="report-dialog" class="review-dialog report-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปข้อมูลเพื่อพัฒนาระบบ</span><h2>สรุปบทเรียนทั้งหมด</h2><p id="report-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="report-dialog" aria-label="ปิด">×</button></div><div id="report-body" class="review-body"></div><div class="review-foot"><button type="button" id="report-export-json">ข้อมูลเทรน JSON</button><button type="button" id="report-export-csv">ข้อมูลเทรน CSV</button><button type="button" data-close-dialog="report-dialog">ปิด</button></div></div></dialog>
 </main>
@@ -4835,6 +4959,7 @@ function openReport(){
   expediteRender();
   $('ema-toggle').addEventListener('click',()=>{state.emaVisible=!state.emaVisible;state.emaFast.applyOptions({visible:state.emaVisible});state.emaSlow.applyOptions({visible:state.emaVisible});$('ema-toggle').setAttribute('aria-pressed',String(state.emaVisible));});
   $('indicator-toggle').addEventListener('click',()=>setIndicatorsExpanded(!state.indicatorsExpanded));
+  $('engine-guide')?.addEventListener('click',()=>{const d=$('engine-guide-dialog');if(d&&!d.open)d.showModal();$('toolbar-more')?.removeAttribute('open');});
   const engineVersionSelect=$('engine-version-select');
   if(engineVersionSelect){
    engineVersionSelect.value=CFG.version;
@@ -4866,7 +4991,7 @@ function openReport(){
   $('main-version-inline').textContent=versionDisplay(CFG.version);
   state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
-  $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
+  $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});drawHistory();persist();boot();
   setInterval(()=>{if(engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);},1000);
   window.addEventListener('pagehide',()=>{persist(true);candlePersist();});
 })();
