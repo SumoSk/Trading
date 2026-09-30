@@ -155,10 +155,44 @@
     });
   }
 
+
+  function compactStoredSignal(signal){
+    const e=signal?.dataset?.entry||{},o=signal?.dataset?.outcome||{},review=signal?.dataset?.review||{},audit=e.auditV2||null,evalv=signal?.dataset?.auditEvaluationV2||null;
+    const keepEntry={
+      capturedAt:e.capturedAt,price:e.price,outputDirection:e.outputDirection,setupType:e.setupType,setupReason:e.setupReason,
+      atr:e.atr,trend:e.trend,momentum:e.momentum,momentumAccel:e.momentumAccel,eff:e.eff,ema8:e.ema8,ema21:e.ema21,
+      rangeWidthAtr:e.rangeWidthAtr,rangePosition:e.rangePosition,relativeVolume:e.relativeVolume,volume3Ratio:e.volume3Ratio,
+      bodyAtr:e.bodyAtr,rangeAtr:e.rangeAtr,closeLocation:e.closeLocation,flow:e.flow,coverage:e.coverage,bookValid:e.bookValid,
+      progress:e.progress,zones:e.zones,arisRevision:e.arisRevision,v2Family:e.v2Family,v2EntryEvidence:e.v2EntryEvidence,
+      v2StructuralReady:e.v2StructuralReady,v2EntryMode:e.v2EntryMode,v2State:e.v2State,v2StateConfidence:e.v2StateConfidence,
+      v2Playbook:e.v2Playbook,v2TrendChangeRisk:e.v2TrendChangeRisk,v2Fib:e.v2Fib?{
+        valid:e.v2Fib.valid,d:e.v2Fib.d,retracement:e.v2Fib.retracement,extension:e.v2Fib.extension,
+        retraceZone:e.v2Fib.retraceZone,extensionZone:e.v2Fib.extensionZone,healthy:e.v2Fib.healthy,deep:e.v2Fib.deep,confluence:e.v2Fib.confluence
+      }:null,
+      v2CandleBehavior:e.v2CandleBehavior?{
+        pressure:e.v2CandleBehavior.pressure,rejection:e.v2CandleBehavior.rejection,engulf:e.v2CandleBehavior.engulf,
+        contraction:e.v2CandleBehavior.contraction,bodyDecay:e.v2CandleBehavior.bodyDecay,shock:e.v2CandleBehavior.shock,
+        failedExpansion:e.v2CandleBehavior.failedExpansion,marubozu:e.v2CandleBehavior.marubozu,tags:e.v2CandleBehavior.tags
+      }:null,
+      auditV2:audit,replay:e.replay
+    };
+    return {
+      id:signal.id,version:signal.version,type:signal.type,direction:signal.direction,entryTime:signal.entryTime,entryPrice:signal.entryPrice,
+      expiresAt:signal.expiresAt,result:signal.result,exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
+      features:{atr:signal.features?.atr,trend:signal.features?.trend,flow:signal.features?.flow,progress:signal.features?.progress,rangePosition:signal.features?.rangePosition,relativeVolume:signal.features?.relativeVolume,extensionAtr:signal.features?.extensionAtr},
+      dataset:{
+        schema:signal.dataset?.schema,episodeId:signal.dataset?.episodeId,episodeSequence:signal.dataset?.episodeSequence||1,
+        replay:signal.dataset?.replay,entry:keepEntry,outcome:o,review:{tags:review.tags||[],v2:review.v2||null},
+        auditEvaluationV2:evalv
+      }
+    };
+  }
+
   async function storeSettled(run,signal){
+    const compact=compactStoredSignal(signal);
     const record={
       id:run.session.id+'::'+signal.id,sessionId:run.session.id,originalSignalId:signal.id,
-      entryTime:signal.entryTime,result:signal.result,updatedAt:Date.now(),signal:clone(signal)
+      entryTime:signal.entryTime,result:signal.result,updatedAt:Date.now(),storageProfile:'compact-training-v1',signal:compact
     };
     const audit={
       id:run.session.id+'::'+signal.id,sessionId:run.session.id,originalSignalId:signal.id,updatedAt:Date.now(),
@@ -332,7 +366,7 @@
     // Any entry without ten future bars is not scored; store it as pending replay tail.
     for(const meta of run.pending.values()){
       meta.signal.dataset.replay.tailIncomplete=true;
-      const record={id:run.session.id+'::'+meta.signal.id,sessionId:run.session.id,originalSignalId:meta.signal.id,entryTime:meta.signal.entryTime,result:'pending',updatedAt:Date.now(),signal:clone(meta.signal)};
+      const record={id:run.session.id+'::'+meta.signal.id,sessionId:run.session.id,originalSignalId:meta.signal.id,entryTime:meta.signal.entryTime,result:'pending',updatedAt:Date.now(),storageProfile:'compact-training-v1',signal:compactStoredSignal(meta.signal)};
       await globalThis.HistoricalDataV1.putMany('signals',[record]);
     }
 
