@@ -176,8 +176,8 @@
       entryTime:signal.entryTime,entryPrice:signal.entryPrice,result:signal.result,
       exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
       entry:{
-        state:e.v3State||e.v2State||null,playbook:e.v3Playbook||e.v2Playbook||null,family:e.v3EpisodeFamily||e.v2Family||null,
-        evidence:e.v3GatePassCount??e.v2EntryEvidence??null,stateConfidence:e.v2StateConfidence??null,
+        state:e.v3State||e.v3MarketState||e.v2State||null,stateLabel:e.v3StateLabel||null,playbook:e.v3Playbook||e.v2Playbook||null,playbookLabel:e.v3PlaybookLabel||null,family:e.v3EpisodeFamily||e.v2Family||null,
+        evidence:e.v2EntryEvidence??null,gatePassCount:e.v3GatePassCount??null,stateConfidence:e.v2StateConfidence??null,
         gateStates:e.v3GateStates??null,thesis:e.v3Thesis?.code??null,
         atr:e.atr??null,trend:e.trend??null,momentum:e.momentum??null,flow:e.flow??null,
         rangePosition:e.rangePosition??null,relativeVolume:e.relativeVolume??null,
