@@ -230,24 +230,27 @@ function readMarket(f,x,z,phase){
   relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,atr:a,price:x.price};
 }
 function marketLabel(s){return ({
- SHOCK_UNRESOLVED:'เกิดแรงกระแทก · ตลาดยังไม่เฉลย',BREAKOUT_ATTEMPT:'กำลังลองทะลุกรอบ',BREAKOUT_ACCEPTED:'Breakout เริ่มถูกยอมรับ',
+ SHOCK_UNRESOLVED:'เกิดแรงกระแทก · ตลาดยังไม่เฉลย',BREAKOUT_ATTEMPT:'กำลังลองทะลุกรอบ',BREAKOUT_ACCEPTED:'การทะลุกรอบเริ่มถูกยอมรับ',
  EXHAUSTION:'ปลายขา / แรงเริ่มหมด',REVERSAL_DEVELOPING:'กำลังสร้างโครงกลับตัว',COMPRESSION:'กำลังบีบตัวสะสมแรง',
  PULLBACK:'กำลังย่อในโครงสร้างเดิม',TREND_ADVANCE:'เทรนด์กำลังเดิน',RANGE_EDGE:'อยู่ขอบกรอบ',RANGE_CHOP:'แกว่งสลับในกรอบ',TRANSITION:'กำลังเปลี่ยนจังหวะ'
- })[s]||s;}
+ })[s]||'กำลังอ่านตลาด';}
+function shockLabel(s){return ({
+ UNRESOLVED:'ยังไม่เฉลย',HOLD:'ยืนราคาได้',RETEST:'กลับมาทดสอบ',FAIL:'ถูกตีกลับ / ล้มเหลว',ABSORB:'ถูกดูดซับ',EXHAUST:'แรงหมด'
+ })[s]||null;}
 function marketDescription(r){
- const d=sideThai(r.dir),s=r.structure,b=r.behavior;
+ const d=sideThai(r.dir);
  return ({
- SHOCK_UNRESOLVED:'ราคาและ Volume ขยายผิดปกติ แต่ 3.0 ยังไม่ถือว่าเป็นจุดเข้า ต้องรอดูว่าแรงนี้ถูกยอมรับ ถูกดูดซับ หมดแรง หรือถูกตีกลับ',
- BREAKOUT_ATTEMPT:'ราคาพ้นขอบเดิมแล้ว แต่ acceptance ยังไม่ครบ จึงยังแยกไม่ได้ว่าเป็น Breakout จริงหรือ sweep/fake break',
- BREAKOUT_ACCEPTED:'ราคาพ้นกรอบและแท่งเริ่มรับราคาเหนือ/ใต้ขอบเดิมแล้ว ขั้นต่อไปคือเช็กตำแหน่ง พื้นที่ และแรงสดก่อนเข้า',
- EXHAUSTION:'ราคายืดจากฐานและพฤติกรรมแท่งเริ่มชะลอ/ดูดซับ จึงหยุดไล่ราคาและเฝ้าดูว่าจะสร้างฐานหรือกลับตัว',
- REVERSAL_DEVELOPING:'โครงสร้างเดิมเริ่มเสียและมีพฤติกรรมสวน แต่ยังต้องให้ Structure break กับ Micro ยืนยันฝั่งใหม่ก่อน',
- COMPRESSION:'ช่วงแท่งล่าสุดหดตัวเมื่อเทียบกับก่อนหน้า ตลาดกำลังสะสมแรง จึงรอ Expansion ที่มี acceptance มากกว่าคาดเดาทิศ',
- PULLBACK:'โครงสร้างหลักยังเอียง'+d+' แต่ราคากำลังย่อกลับฐาน ระบบรอให้ย่อจบและ reclaim ก่อนพิจารณาไม้ใหม่',
- TREND_ADVANCE:'Swing และประสิทธิภาพการเดินราคายังรองรับฝั่ง'+d+' แต่ 3.0 จะไม่ไล่ทุกแท่ง ต้องรอตำแหน่งหรือฐานใหม่',
- RANGE_EDGE:'ราคาอยู่ใกล้ขอบกรอบ แต่ 3.0 ไม่ใช้ Range Edge Fade อัตโนมัติ ต้องเห็น acceptance หรือ rejection + structure จริง',
- RANGE_CHOP:'ราคาเดินสลับและ efficiency ต่ำ จุดนี้เสี่ยงถูกหลอกทั้งสองฝั่ง ระบบจึง Observe มากกว่าออกไม้',
- TRANSITION:'องค์ประกอบของตลาดยังไม่เรียงเป็นเรื่องเดียวกันชัด ระบบกำลังอ่าน Swing, แท่ง, HTF และ Flow ต่อ'
+ SHOCK_UNRESOLVED:'ราคาและปริมาณซื้อขายขยายผิดปกติ แต่ 3.0 ยังไม่ถือว่าเป็นจุดเข้า ต้องรอดูว่าแรงนี้ยืนราคาได้ ถูกดูดซับ หมดแรง หรือถูกตีกลับ',
+ BREAKOUT_ATTEMPT:'ราคาพ้นขอบเดิมแล้ว แต่การยอมรับราคายังไม่ครบ จึงยังแยกไม่ได้ว่าเป็นการทะลุกรอบจริง หรือเป็นการกวาดราคาแล้วกลับเข้ากรอบ',
+ BREAKOUT_ACCEPTED:'ราคาพ้นกรอบและแท่งเริ่มยอมรับราคานอกกรอบแล้ว ขั้นต่อไปคือเช็กตำแหน่ง พื้นที่ก่อนชนแนว และแรงซื้อขายสดก่อนเข้า',
+ EXHAUSTION:'ราคายืดจากฐานและพฤติกรรมแท่งเริ่มชะลอหรือถูกดูดซับ จึงหยุดไล่ราคาและเฝ้าดูว่าจะสร้างฐานใหม่หรือกลับตัว',
+ REVERSAL_DEVELOPING:'โครงสร้างเดิมเริ่มเสียและมีพฤติกรรมสวน แต่ยังต้องให้โครงสร้างแตกจริงและแรงซื้อขายระยะสั้นยืนยันฝั่งใหม่ก่อน',
+ COMPRESSION:'ช่วงแท่งล่าสุดหดตัวเมื่อเทียบกับก่อนหน้า ตลาดกำลังสะสมแรง จึงรอการขยายตัวที่มีการยอมรับราคามากกว่าคาดเดาทิศ',
+ PULLBACK:'โครงสร้างหลักยังเอียง'+d+' แต่ราคากำลังย่อกลับฐาน ระบบรอให้การย่อจบและกลับมายืนฐานก่อนพิจารณาไม้ใหม่',
+ TREND_ADVANCE:'จุดสวิงและประสิทธิภาพการเดินราคายังรองรับฝั่ง'+d+' แต่ 3.0 จะไม่ไล่ทุกแท่ง ต้องรอตำแหน่งหรือฐานใหม่',
+ RANGE_EDGE:'ราคาอยู่ใกล้ขอบกรอบ แต่ 3.0 จะไม่สวนจากขอบกรอบอัตโนมัติ ต้องเห็นการยอมรับหรือการปฏิเสธราคา พร้อมโครงสร้างที่ชัด',
+ RANGE_CHOP:'ราคาเดินสลับและประสิทธิภาพการเดินราคาต่ำ จุดนี้เสี่ยงถูกหลอกทั้งสองฝั่ง ระบบจึงเน้นเฝ้าดูมากกว่าออกไม้',
+ TRANSITION:'องค์ประกอบของตลาดยังไม่เรียงเป็นเรื่องเดียวกันชัด ระบบกำลังอ่านจุดสวิง แท่งเทียน กรอบเวลาใหญ่ และแรงซื้อขายต่อ'
  })[r.state]||'กำลังอ่านตลาด';
 }
 
@@ -357,32 +360,34 @@ function buildThesis(reader,ep){
  const s=reader.structure,b=reader.behavior,shock=ep?.shock?.active===false?null:ep?.shock,d=shock?.state==='FAIL'?-shock.d:(reader.dir||ep?.d||s.structuralDir);
  let code='OBSERVE',playbook=null,why='',trigger='',invalidate='',next='';
  if(shock&&['UNRESOLVED','RETEST','ABSORB','EXHAUST'].includes(shock.state)){
-  code='SHOCK_'+shock.state;why=shock.why;trigger=shock.state==='RETEST'?'รอ Retest จบแล้วกลับไปยืนฝั่ง Shock พร้อม Flow':'รอ Shock เปลี่ยนเป็น HOLD หรือ FAIL ที่มี Structure รองรับ';
-  invalidate='ไม่สร้างไม้จน Shock มี resolution';next=shock.state==='EXHAUST'?'เฝ้าฐานใหม่หรือ Structure break ก่อนกลับตัว':'ติดตาม Shock เดิม';
+  code='SHOCK_'+shock.state;why=shock.why;trigger=shock.state==='RETEST'?'รอการกลับมาทดสอบจบ แล้วกลับไปยืนฝั่งแรงกระแทกพร้อมแรงซื้อขาย':'รอแรงกระแทกเฉลยว่า “ยืนราคาได้” หรือ “ถูกตีกลับ” โดยมีโครงสร้างรองรับ';
+  invalidate='ยังไม่สร้างไม้จนแรงกระแทกมีคำตอบชัด';next=shock.state==='EXHAUST'?'เฝ้าฐานใหม่หรือรอให้โครงสร้างแตกก่อนพิจารณากลับตัว':'ติดตามแรงกระแทกเดิม';
  }else if(shock?.state==='HOLD'){
-  code='SHOCK_HOLD';playbook='shock_resolution';why='Shock ถูกยอมรับและยังรักษาพื้นที่ได้';trigger='รักษาพื้นที่ Shock + Flow ตาม + ไม่มี HTF obstacle ใกล้เกิน';invalidate='หลุดโซน Shock / Flow พลิกสวน / Structure เสีย';next='ถ้าย่อ ให้เปลี่ยนเป็น Pullback/Reclaim ใน Episode เดิม';
+  code='SHOCK_HOLD';playbook='shock_resolution';why='แรงกระแทกถูกยอมรับและยังรักษาพื้นที่ได้';trigger='รักษาพื้นที่แรงกระแทก + แรงซื้อขายตาม + ไม่มีแนวจากกรอบเวลาใหญ่ใกล้เกิน';invalidate='หลุดโซนแรงกระแทก / แรงซื้อขายพลิกสวน / โครงสร้างเสีย';next='ถ้าย่อ ให้เปลี่ยนเป็นแผนย่อสร้างฐานแล้วกลับมายืนในเหตุการณ์ตลาดเดิม';
  }else if(shock?.state==='FAIL'){
-  code='SHOCK_FAIL_REVERSAL';playbook='confirmed_reversal';why='Shock เดิมถูกตีกลับและโครงสร้างฝั่งตรงข้ามเริ่มยืนยัน';trigger='Structure break + พฤติกรรมกลับตัว + Micro ตามฝั่งใหม่';invalidate='ราคากลับเข้าและยืนฝั่ง Shock เดิม';next='ถ้ายังไม่ยืนยัน ให้ Observe ไม่สวนทันที';
+  code='SHOCK_FAIL_REVERSAL';playbook='confirmed_reversal';why='แรงกระแทกเดิมถูกตีกลับและโครงสร้างฝั่งตรงข้ามเริ่มยืนยัน';trigger='โครงสร้างแตก + พฤติกรรมกลับตัว + แรงซื้อขายระยะสั้นตามฝั่งใหม่';invalidate='ราคากลับเข้าและยืนฝั่งแรงกระแทกเดิม';next='ถ้ายังไม่ยืนยัน ให้เฝ้าดูและไม่สวนทันที';
  }else if(reader.state==='BREAKOUT_ACCEPTED'){
-  code='BREAKOUT_CONTINUATION';playbook='breakout_continuation';why='ราคาออกจากกรอบและ acceptance เริ่มครบ';trigger='Breakout คงพื้นที่ + มี room + แท่ง/Flow ไม่สวน';invalidate='กลับเข้ากรอบเดิมและปิดรับด้านใน';next='ถ้า retest ให้รอ Pullback/Reclaim แทนการไล่';
+  code='BREAKOUT_CONTINUATION';playbook='breakout_continuation';why='ราคาออกจากกรอบและการยอมรับราคาเริ่มครบ';trigger='การทะลุกรอบยังรักษาพื้นที่ + มีระยะก่อนชนแนว + แท่งและแรงซื้อขายไม่สวน';invalidate='กลับเข้ากรอบเดิมและปิดรับด้านใน';next='ถ้ากลับมาทดสอบ ให้รอย่อสร้างฐานแล้วกลับมายืนแทนการไล่ราคา';
  }else if(reader.state==='BREAKOUT_ATTEMPT'){
-  code='BREAKOUT_WATCH';why='ราคาเพิ่งพ้นกรอบแต่ acceptance ยังไม่ครบ';trigger='แท่งรับราคานอกกรอบและ Flow 60s ไม่สวน';invalidate='ถูกดึงกลับเข้ากรอบ';next='ถ้าหลอก ให้เฝ้า Failed Break แต่ยังไม่สวนจน Structure แตก';
+  code='BREAKOUT_WATCH';why='ราคาเพิ่งพ้นกรอบแต่การยอมรับราคายังไม่ครบ';trigger='แท่งรับราคานอกกรอบและแรงซื้อขาย 60 วินาทีไม่สวน';invalidate='ถูกดึงกลับเข้ากรอบ';next='ถ้าเป็นการทะลุหลอก ให้เฝ้าการกลับเข้ากรอบ แต่ยังไม่สวนจนโครงสร้างแตก';
  }else if(reader.state==='PULLBACK'&&(d>0?b.reclaimUp:b.reclaimDown)){
-  code='PULLBACK_RECLAIM';playbook='pullback_reclaim';why='โครงสร้างเดิมยังอยู่และราคาย่อสร้างฐานก่อน reclaim';trigger='ฐานไม่เสีย + reclaim + Behavior/Micro ยืนยัน';invalidate='หลุด protected swing ของโครงสร้างเดิม';next='ถ้า reclaim ไม่มา ให้รอฐานใหม่ ไม่ไล่';
+  code='PULLBACK_RECLAIM';playbook='pullback_reclaim';why='โครงสร้างเดิมยังอยู่และราคาย่อสร้างฐานก่อนกลับมายืน';trigger='ฐานไม่เสีย + กลับมายืน + พฤติกรรมราคาและแรงซื้อขายระยะสั้นยืนยัน';invalidate='หลุดจุดสวิงป้องกันของโครงสร้างเดิม';next='ถ้ายังกลับมายืนฐานไม่ได้ ให้รอฐานใหม่และไม่ไล่ราคา';
  }else if((d>0?s.reverseUp:s.reverseDown)&&['REVERSAL_DEVELOPING','EXHAUSTION'].includes(reader.state)){
-  code='CONFIRMED_REVERSAL';playbook='confirmed_reversal';why='โครงสร้างเดิมถูกเจาะและมีพฤติกรรมฝั่งใหม่';trigger='Structure break ต้องคงอยู่ + rejection/failed expansion + Micro ตาม';invalidate='ราคา reclaim protected swing เดิมกลับคืน';next='ถ้า break ไม่คง ให้ยกเลิก reversal';
+  code='CONFIRMED_REVERSAL';playbook='confirmed_reversal';why='โครงสร้างเดิมถูกเจาะและมีพฤติกรรมฝั่งใหม่';trigger='โครงสร้างที่แตกต้องคงอยู่ + มีการปฏิเสธราคาหรือการขยายตัวล้มเหลว + แรงซื้อขายระยะสั้นตาม';invalidate='ราคากลับมายืนเหนือ/ใต้จุดสวิงป้องกันเดิมได้อีกครั้ง';next='ถ้าการแตกโครงสร้างไม่คงอยู่ ให้ยกเลิกมุมกลับตัว';
  }else if(reader.state==='TREND_ADVANCE'){
-  code='TREND_WAIT_BASE';why='เทรนด์ยังเดิน แต่ไม่มีฐานใหม่ให้ได้เปรียบพอ';trigger='รอ Pullback/Base แล้ว reclaim';invalidate='ถ้า protected swing เสีย ให้เปลี่ยน thesis';next='ไม่ออกซ้ำเพียงเพราะ Volume เพิ่มในขาเดิม';
+  code='TREND_WAIT_BASE';why='เทรนด์ยังเดิน แต่ไม่มีฐานใหม่ให้ได้เปรียบพอ';trigger='รอการย่อสร้างฐาน แล้วกลับมายืนฐาน';invalidate='ถ้าจุดสวิงป้องกันเสีย ให้เปลี่ยนมุมมอง';next='ไม่ออกซ้ำเพียงเพราะ Volume เพิ่มในขาเดิม';
  }else if(reader.state==='COMPRESSION'){
-  code='COMPRESSION_WATCH';why='ราคาและช่วงแท่งบีบตัว กำลังสะสมแรง';trigger='รอ Expansion + acceptance + Structure';invalidate='ไม่มีทิศให้ยกเลิกจนกว่าจะเลือกทาง';next='Breakout ที่ไม่ถูกยอมรับยังไม่เข้า';
+  code='COMPRESSION_WATCH';why='ราคาและช่วงแท่งบีบตัว กำลังสะสมแรง';trigger='รอการขยายตัว + การยอมรับราคา + โครงสร้าง';invalidate='ไม่มีทิศให้ยกเลิกจนกว่าจะเลือกทาง';next='การทะลุกรอบที่ยังไม่ถูกยอมรับจะยังไม่เข้า';
  }else if(reader.state==='RANGE_EDGE'){
-  code='RANGE_EDGE_OBSERVE';why='ราคาอยู่ขอบกรอบแต่ยังไม่มีเหตุผลพอให้ Fade';trigger='รอ acceptance ออกจากกรอบ หรือ rejection พร้อม Structure break';invalidate='ไม่สร้างไม้จากตำแหน่งขอบเพียงอย่างเดียว';next='ดูว่าขอบกรอบ Hold หรือ Fail';
+  code='RANGE_EDGE_OBSERVE';why='ราคาอยู่ขอบกรอบแต่ยังไม่มีเหตุผลพอให้สวน';trigger='รอการยอมรับราคานอกกรอบ หรือการปฏิเสธราคาพร้อมโครงสร้างแตก';invalidate='ไม่สร้างไม้จากตำแหน่งขอบเพียงอย่างเดียว';next='ดูว่าขอบกรอบยืนได้หรือถูกตีแตก';
  }else{
-  code='OBSERVE';why='ตลาดยังไม่มี thesis ที่มีโครงสร้างพอ';trigger='รอ Episode/Structure ชัดขึ้น';invalidate='—';next='Observe ต่อ';
+  code='OBSERVE';why='ตลาดยังไม่มีมุมมองที่มีโครงสร้างรองรับพอ';trigger='รอเหตุการณ์ตลาดและโครงสร้างให้ชัดขึ้น';invalidate='—';next='เฝ้าดูต่อ';
  }
  return {code,d,playbook,why,trigger,invalidation:invalidate,nextPlan:next};
 }
-function playbookLabel(p){return ({breakout_continuation:'Breakout Continuation',shock_resolution:'Shock Resolution',pullback_reclaim:'Pullback / Reclaim',confirmed_reversal:'Confirmed Reversal'})[p]||'Observe only';}
+function playbookLabel(p){return ({
+ breakout_continuation:'ทะลุกรอบแล้วไปต่อ',shock_resolution:'รอผลหลังแรงกระแทก',pullback_reclaim:'ย่อสร้างฐานแล้วกลับมายืน',confirmed_reversal:'กลับตัวที่ยืนยันแล้ว'
+ })[p]||'เฝ้าดูตลาด';}
 
 /* ---------- Independent Gates ---------- */
 function structureGate(reader,thesis){
@@ -485,7 +490,7 @@ function story(reader,ep,thesis,bundle){
  return {schema:'aris-v3-story-v3',state:reader.state,stateLabel:marketLabel(reader.state),stateDescription:marketDescription(reader),direction:dirLabel(d||reader.evidence.d),
   highEvidence:e.high,lowEvidence:e.low,evidenceParts:e.parts,episodeId:ep?.id||null,episodeFamily:ep?.family||null,episodeDirection:dirLabel(ep?.d||0),
   structuralLegKey:ep?.legKey||null,legIndex:ep?.legIndex||0,episodeDescription:ep?'Episode '+ep.family+' · '+sideThai(ep.d)+' · เก็บเป็นเรื่องเดียวกันจนกว่าจะเกิด Structure reset; ไม้ใหม่ต้องมี structural leg/base ใหม่':'กำลังสร้าง Episode',
-  shockState:ep?.shock?.state||null,shockReason:ep?.shock?.why||null,structure:reader.structure,behavior:reader.behavior,htf:reader.htf,fib,
+  shockState:ep?.shock?.state||null,shockLabel:shockLabel(ep?.shock?.state),shockReason:ep?.shock?.why||null,structure:reader.structure,behavior:reader.behavior,htf:reader.htf,fib,
   thesis,playbook:thesis.playbook,playbookLabel:playbookLabel(thesis.playbook),entryState:bundle?.state||'OBSERVE',gatePassed:bundle?.passed||0,gateTotal:bundle?.total||4,gates:g,
   blocked:unique([...(bundle?.blocked||[]),...(bundle?.developing||[])]),supports:unique(supports).slice(0,10),warnings:unique(warnings).slice(0,10),
   trigger:thesis.trigger,invalidation:thesis.invalidation,nextPlan:thesis.nextPlan,summary,gateText,sameLeg};
@@ -592,7 +597,7 @@ class V3Engine extends BaseEngine{
     regime:regime.mode,stableMode:regime.stableMode,marketPhase:phase.phase,phaseDir:phase.dir,relativeVolume:f.relVolume,volume3Ratio:f.volume3Ratio,bodyAtr:f.bodyAtr,rangeAtr:f.rangeAtr,
     closeLocation:f.closeLocation,liveVolumePace:phase.liveVolumePace,flow:x.flow,coverage:x.coverage||0,book:x.book,bookValid:!!x.bookValid,
     zones:{nearestSupport:nearestZone(z,x.price,'support',a),nearestResistance:nearestZone(z,x.price,'resistance',a)},candleSequence:compactCandles(x.bars,a,10),prior1m:compactBars(x.bars,24),
-    arisRevision:CFG.arisRevision,v3EpisodeId:ep.id,v3EpisodeFamily:ep.family,v3StructuralLegKey:ep.legKey,v3LegIndex:ep.legIndex,v3Thesis:thesis,v3Playbook:thesis.playbook,
+    arisRevision:CFG.arisRevision,v3State:st.state,v3StateLabel:st.stateLabel,v3EpisodeId:ep.id,v3EpisodeFamily:ep.family,v3StructuralLegKey:ep.legKey,v3LegIndex:ep.legIndex,v3Thesis:thesis,v3Playbook:thesis.playbook,v3PlaybookLabel:st.playbookLabel,
     v3GateStates:gateStates(bundle),v3GateDetails:bundle.gates,v3GatePassCount:bundle.passed,v3Higher:reader.htf,v3Fib:reader.fib,v3MarketState:st.state,v3Structure:reader.structure,
     v3Behavior:behaviorForDataset(reader.behavior),v3Micro:microForDataset(bundle.gates.micro),v3ShockState:ep.shock?.state||null,v3InvalidationPrice:invalid,
     v3Trigger:thesis.trigger,v3Invalidation:thesis.invalidation,v3NextPlan:thesis.nextPlan,v3ReasonNewEntry:(ep.issuedLegKeys||[]).length?'new_structural_leg':'first_entry_in_episode'
