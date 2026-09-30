@@ -63,7 +63,8 @@
       active:clone(engine.active),consumed:[...(engine.consumed||new Map()).entries()],
       watchState:clone(engine.watchState),lastWatchRecorded:clone(engine.lastWatchRecorded),
       regimeMode:engine.regimeMode,regimeCandidate:engine.regimeCandidate,regimeCandidateCount:engine.regimeCandidateCount,regimeBarTime:engine.regimeBarTime,
-      v2Candidate:clone(engine.v2Candidate),v2Switch:clone(engine.v2Switch),v2LastSignal:clone(engine.v2LastSignal),v2Memory:clone(engine.v2Memory)
+      v2Candidate:clone(engine.v2Candidate),v2Switch:clone(engine.v2Switch),v2LastSignal:clone(engine.v2LastSignal),v2Memory:clone(engine.v2Memory),
+      v3Episode:clone(engine.v3Episode),v3Candidate:clone(engine.v3Candidate),v3LastSignal:clone(engine.v3LastSignal)
     };
   }
 
@@ -83,11 +84,15 @@
     if(r.v2Switch)engine.v2Switch=r.v2Switch;
     if(r.v2LastSignal)engine.v2LastSignal=r.v2LastSignal;
     if(r.v2Memory)engine.v2Memory=r.v2Memory;
+    if(r.v3Episode)engine.v3Episode=r.v3Episode;
+    if(r.v3Candidate)engine.v3Candidate=r.v3Candidate;
+    if(r.v3LastSignal)engine.v3LastSignal=r.v3LastSignal;
   }
 
   function resetAtTestBoundary(engine){
     engine.signals=[];engine.audit=[];engine.watchSamples=[];
     engine.active=null;engine.v2Candidate=null;engine.v2Switch=null;engine.v2LastSignal=null;
+    engine.v3Episode=null;engine.v3Candidate=null;engine.v3LastSignal=null;
     engine.watchState=null;engine.lastWatchRecorded={HIGH:0,LOW:0};engine.lastId=null;
     engine.consumed=new Map();engine.session=0;
   }
@@ -145,13 +150,14 @@
       minute,startMs:Number(bar.time),endMs:closeTs,open:Number(bar.open),high:Number(bar.high),low:Number(bar.low),close:Number(bar.close),lastTs:closeTs,
       source:'historical_1m'
     });
-    const story=view?.v2Story||view?.phase?.v2View?.story||null;
+    const story=view?.v3Story||view?.phase?.v3View?.story||view?.v2Story||view?.phase?.v2View?.story||null;
     const context=sig.dataset.context1m||(sig.dataset.context1m=[]);
     context.push({
       minute,ts:closeTs,price:Number(bar.close),flow,book:0,bookValid:false,coverage:60,
       regime:view?.regime?.mode||null,phase:view?.phase?.phase||null,trend:view?.f?.trend??null,momentum:view?.f?.mom??null,
       rangePosition:view?.f?.rangePosition??null,room:null,
-      v2State:story?.state||null,v2Playbook:story?.playbook||null,source:'historical_1m_close'
+      v2State:view?.v2Story?story?.state||null:null,v2Playbook:view?.v2Story?story?.playbook||null:null,
+      v3State:view?.v3Story?story?.state||null:null,v3Playbook:view?.v3Story?story?.playbook||null:null,v3EpisodeId:view?.v3Story?story?.episodeId||null:null,source:'historical_1m_close'
     });
   }
 
@@ -164,13 +170,13 @@
       entryTime:signal.entryTime,entryPrice:signal.entryPrice,result:signal.result,
       exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
       entry:{
-        state:e.v2State||null,playbook:e.v2Playbook||null,family:e.v2Family||null,
-        evidence:e.v2EntryEvidence??null,stateConfidence:e.v2StateConfidence??null,
+        state:e.v3State||e.v2State||null,playbook:e.v3Playbook||e.v2Playbook||null,family:e.v3EpisodeFamily||e.v2Family||null,
+        evidence:e.v3GateQuality??e.v2EntryEvidence??null,stateConfidence:e.v2StateConfidence??null,
         atr:e.atr??null,trend:e.trend??null,momentum:e.momentum??null,flow:e.flow??null,
         rangePosition:e.rangePosition??null,relativeVolume:e.relativeVolume??null,
         roomSupport:e.zones?.nearestSupport?.distanceAtr??null,roomResistance:e.zones?.nearestResistance?.distanceAtr??null,
         extensionAtr:signal.features?.extensionAtr??null,
-        fib:e.v2Fib?{valid:!!e.v2Fib.valid,retracement:e.v2Fib.retracement??null,extension:e.v2Fib.extension??null,retraceZone:e.v2Fib.retraceZone??null,extensionZone:e.v2Fib.extensionZone??null,healthy:!!e.v2Fib.healthy,deep:!!e.v2Fib.deep,confluence:!!e.v2Fib.confluence}:null,
+        fib:(e.v3Fib||e.v2Fib)?{valid:!!(e.v3Fib||e.v2Fib).valid,retracement:(e.v3Fib||e.v2Fib).retracement??null,extension:(e.v3Fib||e.v2Fib).extension??null,retraceZone:(e.v3Fib||e.v2Fib).retraceZone??null,extensionZone:(e.v3Fib||e.v2Fib).extensionZone??null,healthy:!!(e.v3Fib||e.v2Fib).healthy,deep:!!(e.v3Fib||e.v2Fib).deep,confluence:!!(e.v3Fib||e.v2Fib).confluence}:null,
         candleFlags:e.v2CandleBehavior?{
           bodyDecay:!!e.v2CandleBehavior.bodyDecay,failedExpansion:!!e.v2CandleBehavior.failedExpansion,
           shock:!!e.v2CandleBehavior.shock,marubozu:!!e.v2CandleBehavior.marubozu
