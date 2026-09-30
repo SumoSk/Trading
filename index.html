@@ -671,6 +671,7 @@ main{padding-top:10px}
 /* Do not leave a giant empty candle column just because the right card is taller. */
 .signal-panel>.signal-card-candle{align-self:start!important;height:auto!important}
 
+.setup-profile-compact .compact-brief-summary:empty{display:none!important}
 </style>
 </head>
 <body data-feed="syncing" class="toolbar-floating">
@@ -3825,7 +3826,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
     $('setup-compact-next').textContent=cleanReportText(st.stateLabel+' · '+st.summary);$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
     $('setup-compact-name').textContent=cleanReportText(st.playbookLabel+(dir?' · '+directionThai(dir):''));$('setup-compact-status').textContent='คะแนนบริบท '+st.stateConfidence+'/100';
-    $('setup-compact-desc').textContent=cleanReportText('ภาพรวม: '+st.summary+' · ฝั่งหลัก '+directionThai(st.primary.direction)+' '+st.primary.evidence+' · ฝั่งรอง '+directionThai(st.alternative.direction)+' '+st.alternative.evidence);
+    $('setup-compact-desc').textContent='';
     const title=$('signal-title')?.textContent||'กำลังเฝ้ากราฟ',es=$('entry-state')?.textContent||'WATCH';$('setup-compact-entry').textContent=cleanReportText(title+' · '+es);
     $('setup-compact-entry-reason').textContent=cleanReportText('Trigger: '+st.trigger+' · ยกเลิกเมื่อ: '+st.invalidation+' · ต่อไป: '+st.nextPlan);
     const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=t;ul.append(li);}};
