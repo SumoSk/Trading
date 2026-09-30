@@ -483,11 +483,13 @@
   }
 
   function setTrainingVersion(version,{silent=false}={}){
-    const supported=globalThis.TrainingEngineRegistryV1?.versions||['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0'];
+    const supported=globalThis.TrainingEngineRegistryV1?.versions||['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0'];
     if(!supported.includes(version))return false;
     selectedTrainingVersion=version;
     const select=byId('train-engine-select');
     if(select)select.value=version;
+    const auditMeta=byId('train-audit-meta');
+    if(auditMeta)auditMeta.textContent=version==='ARIS-2.0.0'?(globalThis.AuditEngineV2?.schema||'trade-audit-v2'):'ไม่ใช้ Audit V2';
     try{localStorage.setItem(TRAINING_VERSION_STORE,version);}catch{}
     if(!silent){
       updateReplayPanel(latestSession);
