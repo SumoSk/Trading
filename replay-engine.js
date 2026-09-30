@@ -157,37 +157,37 @@
 
 
   function compactStoredSignal(signal){
-    const e=signal?.dataset?.entry||{},o=signal?.dataset?.outcome||{},review=signal?.dataset?.review||{},audit=e.auditV2||null,evalv=signal?.dataset?.auditEvaluationV2||null;
-    const keepEntry={
-      capturedAt:e.capturedAt,price:e.price,outputDirection:e.outputDirection,setupType:e.setupType,setupReason:e.setupReason,
-      atr:e.atr,trend:e.trend,momentum:e.momentum,momentumAccel:e.momentumAccel,eff:e.eff,ema8:e.ema8,ema21:e.ema21,
-      rangeWidthAtr:e.rangeWidthAtr,rangePosition:e.rangePosition,relativeVolume:e.relativeVolume,volume3Ratio:e.volume3Ratio,
-      bodyAtr:e.bodyAtr,rangeAtr:e.rangeAtr,closeLocation:e.closeLocation,flow:e.flow,coverage:e.coverage,bookValid:e.bookValid,
-      progress:e.progress,zones:e.zones,arisRevision:e.arisRevision,v2Family:e.v2Family,v2EntryEvidence:e.v2EntryEvidence,
-      v2StructuralReady:e.v2StructuralReady,v2EntryMode:e.v2EntryMode,v2State:e.v2State,v2StateConfidence:e.v2StateConfidence,
-      v2Playbook:e.v2Playbook,v2TrendChangeRisk:e.v2TrendChangeRisk,v2Fib:e.v2Fib?{
-        valid:e.v2Fib.valid,d:e.v2Fib.d,retracement:e.v2Fib.retracement,extension:e.v2Fib.extension,
-        retraceZone:e.v2Fib.retraceZone,extensionZone:e.v2Fib.extensionZone,healthy:e.v2Fib.healthy,deep:e.v2Fib.deep,confluence:e.v2Fib.confluence
-      }:null,
-      v2CandleBehavior:e.v2CandleBehavior?{
-        pressure:e.v2CandleBehavior.pressure,rejection:e.v2CandleBehavior.rejection,engulf:e.v2CandleBehavior.engulf,
-        contraction:e.v2CandleBehavior.contraction,bodyDecay:e.v2CandleBehavior.bodyDecay,shock:e.v2CandleBehavior.shock,
-        failedExpansion:e.v2CandleBehavior.failedExpansion,marubozu:e.v2CandleBehavior.marubozu,tags:e.v2CandleBehavior.tags
-      }:null,
-      auditV2:audit,replay:e.replay
-    };
+    const e=signal?.dataset?.entry||{},o=signal?.dataset?.outcome||{},review=signal?.dataset?.review||{},a=e.auditV2||{},ev=signal?.dataset?.auditEvaluationV2||null;
     return {
-      id:signal.id,version:signal.version,type:signal.type,direction:signal.direction,entryTime:signal.entryTime,entryPrice:signal.entryPrice,
-      expiresAt:signal.expiresAt,result:signal.result,exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
-      features:{atr:signal.features?.atr,trend:signal.features?.trend,flow:signal.features?.flow,progress:signal.features?.progress,rangePosition:signal.features?.rangePosition,relativeVolume:signal.features?.relativeVolume,extensionAtr:signal.features?.extensionAtr},
-      dataset:{
-        schema:signal.dataset?.schema,episodeId:signal.dataset?.episodeId,episodeSequence:signal.dataset?.episodeSequence||1,
-        replay:signal.dataset?.replay,entry:keepEntry,outcome:o,review:{tags:review.tags||[],v2:review.v2||null},
-        auditEvaluationV2:evalv
-      }
+      id:signal.id,version:signal.version,type:signal.type,direction:signal.direction,
+      entryTime:signal.entryTime,entryPrice:signal.entryPrice,result:signal.result,
+      exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
+      entry:{
+        state:e.v2State||null,playbook:e.v2Playbook||null,family:e.v2Family||null,
+        evidence:e.v2EntryEvidence??null,stateConfidence:e.v2StateConfidence??null,
+        atr:e.atr??null,trend:e.trend??null,momentum:e.momentum??null,flow:e.flow??null,
+        rangePosition:e.rangePosition??null,relativeVolume:e.relativeVolume??null,
+        roomSupport:e.zones?.nearestSupport?.distanceAtr??null,roomResistance:e.zones?.nearestResistance?.distanceAtr??null,
+        extensionAtr:signal.features?.extensionAtr??null,
+        fib:e.v2Fib?{valid:!!e.v2Fib.valid,retracement:e.v2Fib.retracement??null,extension:e.v2Fib.extension??null,retraceZone:e.v2Fib.retraceZone??null,extensionZone:e.v2Fib.extensionZone??null,healthy:!!e.v2Fib.healthy,deep:!!e.v2Fib.deep,confluence:!!e.v2Fib.confluence}:null,
+        candleFlags:e.v2CandleBehavior?{
+          bodyDecay:!!e.v2CandleBehavior.bodyDecay,failedExpansion:!!e.v2CandleBehavior.failedExpansion,
+          shock:!!e.v2CandleBehavior.shock,marubozu:!!e.v2CandleBehavior.marubozu
+        }:null,
+        audit:a?.schema?{
+          score:a.score,confidence:a.confidence,grade:a.grade,components:a.components,
+          risks:(a.riskFlags||[]).map(x=>x.code),critical:(a.criticalAdjustments||[]).map(x=>x.code)
+        }:null
+      },
+      outcome:{
+        directionalMoveAtr:o.directionalMoveAtr??null,mfeAtr:o.mfeAtr??null,maeAtr:o.maeAtr??null,
+        mfeAtMinute:o.mfeAtMinute??null,maeAtMinute:o.maeAtMinute??null
+      },
+      tags:review.tags||[],
+      auditEvaluation:ev?{band:ev.band??null,missType:ev.auditMissType??null}:null,
+      replay:{sessionId:signal.dataset?.replay?.sessionId||null,mode:signal.dataset?.replay?.mode||null,dataQuality:signal.dataset?.replay?.dataQuality||null}
     };
   }
-
   async function storeSettled(run,signal){
     const compact=compactStoredSignal(signal);
     const record={
