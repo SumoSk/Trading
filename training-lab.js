@@ -48,8 +48,20 @@
       .training-lab-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px 18px;border-bottom:1px solid #26364a;background:#0e1825}
       .training-lab-head span{display:block;font-size:7px;letter-spacing:.7px;color:#8d79df;font-weight:700}
       .training-lab-head h2{margin:3px 0 3px;font-size:17px;font-weight:600}.training-lab-head p{margin:0;color:#8295ad;font-size:8px}
+      .training-head-actions{display:flex;align-items:center;gap:7px}
+      .training-guide-open{min-height:30px;padding:0 11px;border:1px solid #6557a3;border-radius:7px;background:#211b3a;color:#ddd5ff;font-size:8px;font-weight:600}
       .training-lab-close{width:30px;height:30px;padding:0;border:1px solid #304157;border-radius:7px;background:#111d2a;color:#9cafc4;font-size:16px}
       .training-lab-body{overflow:auto;padding:14px 16px 18px;display:grid;gap:10px}
+      #training-guide-dialog{width:min(720px,calc(100vw - 18px));max-height:88vh;padding:0;border:1px solid #3d4860;border-radius:13px;background:#0d1622;color:#d6e0ec;box-shadow:0 24px 80px #000b}
+      #training-guide-dialog::backdrop{background:#02060bd6;backdrop-filter:blur(4px)}
+      .training-guide-shell{display:grid;grid-template-rows:auto 1fr;max-height:88vh}
+      .training-guide-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #27364a;background:#101a27}
+      .training-guide-head h2{margin:0;font-size:15px;font-weight:600}.training-guide-close{width:30px;height:30px;padding:0;border:1px solid #34455b;border-radius:7px;background:#111d2a;color:#aebed1;font-size:16px}
+      .training-guide-body{overflow:auto;padding:14px 16px 18px;display:grid;gap:8px}
+      .training-guide-step{border:1px solid #26364a;border-radius:9px;background:#0c1520;padding:10px}
+      .training-guide-step h3{margin:0 0 5px;font-size:9px;color:#c8d5e5}.training-guide-step p{margin:0;font-size:7.5px;line-height:1.6;color:#889bb1}
+      .training-guide-step b{color:#cdd8e8;font-weight:600}
+      .training-guide-rule{padding:8px 10px;border:1px solid #5a4f2f;border-radius:8px;background:#201c13;color:#cfba7f;font-size:7.5px;line-height:1.55}
       .train-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:10px}
       .train-card{border:1px solid #26374c;border-radius:10px;background:#0f1926;padding:11px}
       .train-card h3{font-size:10px;margin:0 0 8px;color:#c8d7e8}.train-card>p{font-size:7px;line-height:1.45;color:#71869f;margin:0 0 8px}
@@ -113,14 +125,16 @@
     dialog.innerHTML=`
       <div class="training-lab-shell">
         <header class="training-lab-head">
-          <div><span>PHASE 1–3 · DATA + REPLAY + ANALYTICS</span><h2>ARIS TRAINING LAB</h2><p>Historical Training แบบย่อ · Replay แยกจาก Live · วิเคราะห์หลายร้อย/หลายพันไม้โดยไม่แบกข้อมูลแท่งสดทั้งหมด</p></div>
-          <button type="button" class="training-lab-close" id="training-lab-close">×</button>
+          <div><h2>ARIS TRAINING LAB</h2></div>
+          <div class="training-head-actions">
+            <button type="button" class="training-guide-open" id="training-guide-open">คู่มือการเทรน</button>
+            <button type="button" class="training-lab-close" id="training-lab-close">×</button>
+          </div>
         </header>
         <div class="training-lab-body">
           <div class="train-grid">
             <section class="train-card">
               <h3>1 · ตั้งค่าชุดข้อมูล</h3>
-              <p>BTCUSDT Futures · 1 นาที · จะเพิ่ม Warm-up ก่อนช่วงทดสอบเพื่อเตรียม EMA / ATR / Swing / Fib ใน Phase 2</p>
               <div class="train-presets">
                 <button type="button" data-train-days="7">7 วัน</button>
                 <button type="button" data-train-days="30" class="active">30 วัน</button>
@@ -165,7 +179,7 @@
 
           <section class="train-card">
             <h3>3 · Data Quality</h3>
-            <div id="train-quality-empty"><p>หลังโหลด ระบบจะตรวจ Missing candle, Duplicate, OHLC ผิดรูป, Coverage ของข้อมูลเสริม และระบุสิ่งที่ไม่มีจริงเพื่อป้องกันการสร้างข้อมูลย้อนหลังปลอมค่ะ</p></div>
+            <div id="train-quality-empty"></div>
             <div id="train-quality-result" hidden>
               <div class="quality-hero">
                 <div class="quality-grade" id="train-quality-grade">—</div>
@@ -183,16 +197,14 @@
 
           <section class="train-card">
             <h3>4 · Training Sessions ล่าสุด</h3>
-            <p>กด “ดู” เพื่อเลือก Session สำหรับ Replay แต่ละ Session จำช่วงเวลา, Warm-up, Engine SHA และ Data Quality ไว้ครบค่ะ</p>
             <div class="session-list" id="training-session-list"><div class="session-row"><div><strong>กำลังอ่าน Training DB</strong></div></div></div>
           </section>
 
           <section class="train-card replay-card">
             <div class="replay-head">
-              <div><h3>5 · Phase 2 · Historical Replay Engine</h3><p>เปิดเผยข้อมูลทีละแท่งตามเวลา → 2.0 วิเคราะห์ → freeze entry/Audit → ตัดสินผลจากแท่ง +10 โดยไม่ส่งข้อมูลอนาคตเข้าจุดเข้า</p></div>
-              <div class="replay-mode"><b>1m BAR-CLOSE</b><br>NO LOOKAHEAD<br>LIVE แยก 100%</div>
+              <div><h3>5 · Phase 2 · Historical Replay Engine</h3></div>
             </div>
-            <div class="replay-session" id="train-replay-session"><b>ยังไม่ได้เลือก Session</b><br>เลือก Session ที่ Data Quality พร้อมก่อนเริ่ม Replay</div>
+            <div class="replay-session" id="train-replay-session"><b>ยังไม่ได้เลือก Session</b></div>
             <div class="replay-controls">
               <select id="train-replay-speed" aria-label="ความเร็ว Replay"><option value="fast">FAST</option><option value="balanced">BALANCED</option><option value="safe">SAFE</option></select>
               <button type="button" class="train-primary" id="train-replay-start" disabled>เริ่ม Replay</button>
@@ -213,19 +225,17 @@
               <div class="replay-kpi"><span>Pending</span><b id="train-replay-pending">0</b></div>
               <div class="replay-kpi"><span>Speed</span><b id="train-replay-bps">—</b></div>
             </div>
-            <p class="replay-note">Replay V1 ไม่สร้าง Order Book/Tick ปลอม: ใช้ OHLCV + Taker Buy/Sell ของแท่งที่ปิดแล้ว และยืนยัน entry ที่ราคาปิด จึงเหมาะกับการเทียบ pattern/Calibration แต่ไม่ใช่การจำลอง Live tick-for-tick ค่ะ</p>
             <div class="replay-result" id="train-replay-result" hidden><strong id="train-replay-result-title">Replay complete</strong><span id="train-replay-result-copy"></span></div>
           </section>
 
           <section class="train-card analytics-card">
             <h3>6 · Phase 3 · Training Analytics</h3>
-            <p>สรุปจาก Compact Training records เท่านั้น ไม่โหลด raw bars หรือ timeline รายจุดกลับมาทำรีพอร์ตค่ะ</p>
             <div class="analytics-actions">
               <button type="button" class="train-primary" id="train-analytics-build" disabled>วิเคราะห์ Phase 3</button>
               <button type="button" class="train-secondary" id="train-analytics-export" disabled>Export JSON แบบย่อ</button>
               <span class="train-status-badge" id="train-analytics-status">รอผล Replay</span>
             </div>
-            <div id="train-analytics-empty" class="analytics-empty">เมื่อ Replay มีไม้ที่ตัดสินแล้ว กดวิเคราะห์เพื่อสร้าง Calibration และสรุป pattern ค่ะ</div>
+            <div id="train-analytics-empty" class="analytics-empty">ยังไม่มีผลวิเคราะห์</div>
             <div id="train-analytics-result" hidden>
               <div class="analytics-grid">
                 <div class="analytics-kpi"><span>Scored trades</span><b id="analytics-trades">—</b></div>
@@ -239,17 +249,39 @@
                 <div class="analytics-panel"><h4>รูปแบบที่เจอบ่อย</h4><div id="analytics-patterns"></div></div>
                 <div class="analytics-panel"><h4>MFE / MAE + Audit miss</h4><div id="analytics-quality"></div></div>
               </div>
-              <p class="analytics-note" id="analytics-note">Historical 1m bar-close · ใช้เพื่อวิจัย/Calibration ก่อน Phase 4 validation</p>
+              <p class="analytics-note" id="analytics-note" hidden></p>
             </div>
           </section>
         </div>
-        <footer class="training-lab-foot">
-          <span id="training-lab-foot-status">Phase 1–3 · Data + Replay + Compact Analytics</span>
-          <div class="phase-next"><b>ถัดไป Phase 4</b><button type="button" disabled>Validation / Walk-forward Lab</button></div>
-        </footer>
       </div>`;
     document.body.append(dialog);
+    ensureGuideDialog();
     return dialog;
+  }
+
+  function ensureGuideDialog(){
+    let guide=byId('training-guide-dialog');
+    if(guide)return guide;
+    guide=document.createElement('dialog');
+    guide.id='training-guide-dialog';
+    guide.innerHTML=`
+      <div class="training-guide-shell">
+        <header class="training-guide-head">
+          <h2>คู่มือการเทรน</h2>
+          <button type="button" class="training-guide-close" id="training-guide-close">×</button>
+        </header>
+        <div class="training-guide-body">
+          <section class="training-guide-step"><h3>1 · โหลดข้อมูลย้อนหลัง</h3><p>เลือกช่วง <b>7 / 30 / 90 วัน</b> หรือกำหนดเอง แล้วกด <b>โหลดข้อมูลย้อนหลัง</b> ระบบใช้ BTCUSDT Futures 1 นาที และเพิ่ม Warm-up เพื่อเตรียม EMA, ATR, Swing และ Fib ก่อนช่วงที่ใช้ทดสอบ</p></section>
+          <section class="training-guide-step"><h3>2 · ตรวจ Data Quality</h3><p>ระบบตรวจ Missing candle, Duplicate, OHLC ผิดรูป และ Coverage ของข้อมูลเสริม ถ้าข้อมูลขาดจริง ระบบจะไม่สร้าง Order Book, Tick flow หรือข้อมูลย้อนหลังที่ไม่มีอยู่ขึ้นมาเอง</p></section>
+          <section class="training-guide-step"><h3>3 · เลือก Training Session</h3><p>Session เก็บช่วงเวลา, Warm-up, Engine snapshot และ Data Quality แยกจาก Live Journal กด <b>ดู</b> ที่ Session ที่ต้องการก่อนทำ Replay</p></section>
+          <section class="training-guide-step"><h3>4 · Historical Replay</h3><p>Replay เปิดข้อมูลตามลำดับเวลาแบบ <b>1m bar-close</b> ให้เครื่องยนต์วิเคราะห์ทีละแท่ง จุดเข้าจะถูก freeze ณ ตอนนั้น และตัดสินผลหลังครบ 10 แท่ง จึงไม่ส่งอนาคตย้อนกลับไปช่วยจุดเข้า สามารถ Pause, Resume และ Stop ได้</p></section>
+          <section class="training-guide-step"><h3>5 · Training Analytics</h3><p>หลัง Replay มีไม้ที่ตัดสินแล้ว กด <b>วิเคราะห์ Phase 3</b> เพื่อดู Win rate, Audit calibration, State / Playbook, รูปแบบแพ้ชนะ และ MFE / MAE จาก Compact Training records</p></section>
+          <section class="training-guide-step"><h3>6 · Validation / Walk-forward</h3><p>Phase 4 แบ่งข้อมูลตามเวลาเป็น <b>Train 60% / Validation 20% / Holdout 20%</b> Candidate ถูกสร้างจาก Train เท่านั้น แล้วค่อยสอบกับข้อมูลที่ไม่เคยเห็น พร้อม Walk-forward หลายช่วงเพื่อจับ overfitting</p></section>
+          <div class="training-guide-rule"><b>หลักสำคัญ:</b> ผล Historical Training เป็นหลักฐานสำหรับวิจัยและปรับ Candidate ไม่ใช่คำสั่งให้แก้ Live อัตโนมัติ แม้ผล Phase 4 ผ่าน ระบบก็ยังเก็บเป็นรุ่นทดลอง/Shadow ก่อนค่ะ</div>
+        </div>
+      </div>`;
+    document.body.append(guide);
+    return guide;
   }
 
   function ensureButton(){
@@ -389,7 +421,8 @@
       latestSession=session;
       showQuality(session);
       status(session.replayReady?'โหลดครบ · พร้อม Phase 2':'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.replayReady?'ready':'warn');
-      byId('training-lab-foot-status').textContent=session.replayReady
+      const footStatus=byId('training-lab-foot-status');
+      if(footStatus)footStatus.textContent=session.replayReady
         ?'Phase 1 พร้อม · เลือก Session นี้แล้วเริ่ม Phase 2 ได้'
         :'Phase 1 โหลดแล้ว แต่ Data Quality ต้องตรวจ';
       await updateReplayPanel(session);
@@ -454,7 +487,7 @@
   async function updateReplayPanel(session=latestSession){
     const box=byId('train-replay-session');if(!box)return;
     if(!session){
-      box.innerHTML='<b>ยังไม่ได้เลือก Session</b><br>กด “ดู” ที่ Training Session ก่อนเริ่ม Replay';
+      box.innerHTML='<b>ยังไม่ได้เลือก Session</b>';
       replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);await updateAnalyticsPanel(null);return;
     }
     latestSession=session;
@@ -561,7 +594,8 @@
       miss.map(x=>'<span>'+esc(x.type)+' ×'+fmtInt(x.n)+'</span>').join('')+'</div>';
 
     const h=report.auditCalibration?.health;
-    byId('analytics-note').textContent=
+    const analyticsNote=byId('analytics-note');
+    if(analyticsNote)analyticsNote.textContent=
       'Historical 1m bar-close · Audit ordering '+(Number.isFinite(h?.orderingPct)?h.orderingPct+'%':'ยังวัดไม่ได้')+
       ' · Samples '+fmtInt(h?.samples||0)+' · Phase 4 จะใช้ holdout/walk-forward ยืนยันก่อนแตะ Live';
   }
@@ -638,6 +672,10 @@
     });
     byId('training-lab-close').addEventListener('click',()=>dialog.close());
     dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
+    const guide=ensureGuideDialog();
+    byId('training-guide-open').addEventListener('click',()=>{if(!guide.open)guide.showModal();});
+    byId('training-guide-close').addEventListener('click',()=>guide.close());
+    guide.addEventListener('click',e=>{if(e.target===guide)guide.close();});
 
     document.querySelectorAll('[data-train-days]').forEach(b=>b.addEventListener('click',()=>{
       const v=b.dataset.trainDays;setPreset(v==='custom'?'custom':Number(v));
