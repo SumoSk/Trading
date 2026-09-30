@@ -958,7 +958,7 @@ const ARIS_V12_CONFIG=Object.freeze({...ARIS_V11_CONFIG,
  arisMacroHardExtension:3.60
 });
 const ARIS_V2_CONFIG=Object.freeze({...ARIS_V12_CONFIG,
- version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r1',
+ version:'ARIS-2.0.0',arisRevision:'market-observer-v2-r2',
  v2RangeLookback:20,v2RangeEdgeAtr:.14,v2RangeBalancedEff:.38,v2CompressionRatio:.72,
  v2BreakBuffer:.04,v2BreakAccepted:.08,v2FakeBreakBuffer:.05,
  v2FibZoneAtr:.15,v2ZoneNearAtr:.25,
@@ -2506,7 +2506,7 @@ if(root.ContinuousDirection){
 root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timingScore,detectSetup};
 })(typeof globalThis!=='undefined'?globalThis:window);
 </script>
-<script src="v2.js"></script>
+<script src="v2.js?v=20260930-r2"></script>
 <script>
 'use strict';
 (() => {
@@ -3971,7 +3971,7 @@ function openReport(){
    else rows.push(v.reason||'ยังไม่มี trigger จุดเข้า');
    const m=gate?.metrics;
    if(m&&v.event){
-    if(CFG.version==='ARIS-2.0.0'&&Number.isFinite(m.evidence))rows.push('V2 Entry evidence '+Math.round(m.evidence)+'/100');
+    if(CFG.version==='ARIS-2.0.0'&&Number.isFinite(m.evidence))rows.push('V2 Entry evidence '+Math.round(m.evidence)+'/100 · ENTER ≥ '+CFG.v2EntryEnter);
     if(CFG.version==='ARIS-2.0.0'&&Number.isFinite(m.stateConfidence))rows.push('Market State confidence '+Math.round(m.stateConfidence)+'/100');
     if(CFG.version!=='ARIS-2.0.0'&&CFG.version.startsWith('ARIS-')&&Number.isFinite(m.bias))rows.push('ARIS Bias '+(m.bias>=0?'+':'')+m.bias.toFixed(2)+' · ENTER ต้อง |Bias| ≥ '+CFG.arisBiasEnter.toFixed(2));
     if(CFG.version.startsWith('ARIS-')&&Number.isFinite(m.timing))rows.push('Timing '+Math.round(m.timing)+'/100 · ENTER ≥ '+CFG.arisTimingEnter);
@@ -4021,7 +4021,8 @@ function openReport(){
     :d?`มุมมอง ${d>0?'HIGH':'LOW'} · Entry ยังรอ trigger`
     :contextMode?'บริบท '+tf+' · '+idle:idle;
 
-   $('event-detail').textContent=e?`${phaseThai(v.phase?.phase||'TRANSITION')} · ${tfHumanText(preview?.reason||'กำลังประเมินช่วงตลาด')} · โมเดลมอง ${directionThai(modelD>0?'HIGH':'LOW')}${preview?.direction?' → ระบบเลือก '+directionThai(preview.direction):''} · แนวสำคัญ ${money(e.level)} · ช่วงราคา ${money(e.entryLow)}–${money(e.entryHigh)}${Number.isFinite(e.evidenceScore)?' · คะแนนหลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}${contextMode?' · ไม่บันทึกเป็นไม้จริง':''}`:'';
+   const eventRange=e&&Number.isFinite(e.entryLow)&&Number.isFinite(e.entryHigh)?' · ช่วงราคา '+money(e.entryLow)+'–'+money(e.entryHigh):'';
+   $('event-detail').textContent=e?`${phaseThai(v.phase?.phase||'TRANSITION')} · ${tfHumanText(preview?.reason||'กำลังประเมินช่วงตลาด')} · โมเดลมอง ${directionThai(modelD>0?'HIGH':'LOW')}${preview?.direction?' → ระบบเลือก '+directionThai(preview.direction):''} · แนวสำคัญ ${money(e.level)}${eventRange}${Number.isFinite(e.evidenceScore)?' · คะแนนหลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}${contextMode?' · ไม่บันทึกเป็นไม้จริง':''}`:'';
    if(v.f){
     setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);
     const ph=$('analysis-phase');ph.textContent=phaseThai(v.phase?.phase)+(v.phase?.dir?' '+(v.phase.dir>0?'↑':'↓'):'');ph.className=['IMPULSE','MATURE_IMPULSE','REVERSAL'].includes(v.phase?.phase)?'up':v.phase?.phase==='EXHAUSTION'?'down':'neutral';
