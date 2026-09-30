@@ -3,6 +3,7 @@
 
   const SCHEMA='audit-calibration-v2';
   const AUDIT_SCHEMA='trade-audit-v2';
+  const CURRENT_AUDIT_REVISION='weakness-guard-r1';
   const TARGET_VERSION='ARIS-2.0.0';
   const isClosed=s=>s&&['correct','incorrect'].includes(s.result);
   const pct=(w,n)=>n?Math.round((w/n)*1000)/10:null;
@@ -29,6 +30,7 @@
     const evaluation={
       schema:SCHEMA,
       auditSchema:audit.schema,
+      auditRevision:audit.revision||'legacy',
       frozenAuditScore:Number(audit.score),
       rawComposite:Number(audit.rawComposite),
       frozenAuditConfidence:Number(audit.confidence),
@@ -120,6 +122,7 @@
       const a=auditOf(s),ev=isClosed(s)?ensureEvaluation(s):null;
       return {
         id:s.id,entryTime:s.entryTime,direction:s.direction,type:s.type,
+        auditRevision:a.revision||'legacy',
         score:a.score,rawComposite:a.rawComposite,confidence:a.confidence,
         band:bandFor(a.score)?.key||null,grade:a.grade,scoreOrigin:a.scoreOrigin,
         state:a.context?.state||null,playbook:a.context?.playbook||null,
@@ -133,18 +136,36 @@
     const all=(signals||[]).filter(s=>s?.version===TARGET_VERSION&&auditOf(s));
     const closed=all.filter(isClosed);
     for(const s of closed)ensureEvaluation(s);
-    const bands=bandRows(closed);
-    const prospectiveClosed=closed.filter(s=>auditOf(s)?.scoreOrigin==='prospective').length;
-    const backfilledClosed=closed.filter(s=>auditOf(s)?.scoreOrigin==='backfilled_entry_snapshot').length;
+
+    // ห้ามปน calibration รุ่นเก่ากับ Weakness Guard รุ่นใหม่
+    const current=closed.filter(s=>auditOf(s)?.revision===CURRENT_AUDIT_REVISION);
+    const legacy=closed.filter(s=>auditOf(s)?.revision!==CURRENT_AUDIT_REVISION);
+    const bands=bandRows(current);
+    const legacyBands=bandRows(legacy);
+    const prospectiveClosed=current.filter(s=>auditOf(s)?.scoreOrigin==='prospective').length;
+    const backfilledClosed=current.filter(s=>auditOf(s)?.scoreOrigin==='backfilled_entry_snapshot').length;
+
     return {
-      schema:SCHEMA,auditSchema:AUDIT_SCHEMA,generatedAt:new Date().toISOString(),
-      totalAudited:all.length,totalClosed:closed.length,prospectiveClosed,backfilledClosed,
-      bands,health:calibrationHealth(bands,closed.length),
-      byState:group(closed,(s,a)=>a.context?.state||s.dataset?.entry?.v2State||'UNKNOWN').slice(0,30),
-      byPlaybook:group(closed,(s,a)=>a.context?.playbook||s.dataset?.entry?.v2Playbook||s.type||'UNKNOWN').slice(0,30),
-      byDirection:group(closed,s=>s.direction||'UNKNOWN'),
-      byExpedite:group(closed,s=>s.dataset?.entry?.v2ExpediteRequested?'EXPEDITE':'NORMAL'),
-      misses:missSummary(closed)
+      schema:SCHEMA,auditSchema:AUDIT_SCHEMA,auditRevision:CURRENT_AUDIT_REVISION,generatedAt:new Date().toISOString(),
+      totalAudited:all.length,totalClosed:closed.length,
+      currentAudited:all.filter(s=>auditOf(s)?.revision===CURRENT_AUDIT_REVISION).length,
+      currentClosed:current.length,legacyClosed:legacy.length,
+      prospectiveClosed,backfilledClosed,
+      bands,legacyBands,health:calibrationHealth(bands,current.length),
+      byState:group(current,(s,a)=>a.context?.state||s.dataset?.entry?.v2State||'UNKNOWN').slice(0,30),
+      byPlaybook:group(current,(s,a)=>a.context?.playbook||s.dataset?.entry?.v2Playbook||s.type||'UNKNOWN').slice(0,30),
+      byDirection:group(current,s=>s.direction||'UNKNOWN'),
+      byExpedite:group(current,s=>s.dataset?.entry?.v2ExpediteRequested?'EXPEDITE':'NORMAL'),
+      byEpisodeCrowding:group(current,(s,a)=>{
+        const n=Number(a.context?.episodeSameDirection)||0;
+        return n>=4?'4+ SAME-DIRECTION':n>=2?'2-3 SAME-DIRECTION':n===1?'1 SAME-DIRECTION':'NO OVERLAP';
+      }),
+      misses:missSummary(current),
+      legacy:{
+        bands:legacyBands,
+        health:calibrationHealth(legacyBands,legacy.length),
+        byPlaybook:group(legacy,(s,a)=>a.context?.playbook||s.dataset?.entry?.v2Playbook||s.type||'UNKNOWN').slice(0,30)
+      }
     };
   }
 
@@ -153,5 +174,5 @@
     return report(signals);
   }
 
-  globalThis.AuditCalibrationV2={schema:SCHEMA,bandFor,ensureEvaluation,history,report,update};
+  globalThis.AuditCalibrationV2={schema:SCHEMA,auditRevision:CURRENT_AUDIT_REVISION,bandFor,ensureEvaluation,history,report,update};
 })();
