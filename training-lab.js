@@ -525,8 +525,8 @@
         signal:activeController.signal,
         engineMeta:{
           engineVersion:selectedTrainingVersion,
-          engineBlobSha:TRAINING_ENGINE_BUILD,
-          auditSchema:globalThis.AuditEngineV2?.schema||'trade-audit-v2'
+          engineBlobSha:selectedTrainingVersion+'@'+TRAINING_ENGINE_BUILD,
+          auditSchema:selectedTrainingVersion==='ARIS-2.0.0'?(globalThis.AuditEngineV2?.schema||'trade-audit-v2'):null
         },
         onProgress:showProgress
       });
@@ -842,7 +842,7 @@
     });
 
     const engineMeta=byId('train-engine-meta');if(engineMeta)engineMeta.textContent=TRAINING_ENGINE_BUILD;
-    const auditMeta=byId('train-audit-meta');if(auditMeta)auditMeta.textContent=globalThis.AuditEngineV2?.schema||'trade-audit-v2';
+    const auditMeta=byId('train-audit-meta');if(auditMeta)auditMeta.textContent=selectedTrainingVersion==='ARIS-2.0.0'?(globalThis.AuditEngineV2?.schema||'trade-audit-v2'):'ไม่ใช้ Audit V2';
     restoreTrainingVersion();
     setPreset(30);
     showStorage();
