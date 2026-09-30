@@ -96,8 +96,9 @@ function rangeBehavior(f,x){
   if(q.low<pl-a*(CFG.v2FakeBreakBuffer||.05)&&q.close>=pl){fakeDir=-1;fakeLevel=pl;}
  }
  let age=0;for(let i=b.length-1;i>=0;i--){const q=b[i];if(q.close<lo-a*.08||q.close>hi+a*.08)break;age++;}
+ const rotationQuality=clip((Math.max(...r.map(q=>q.close))-Math.min(...r.map(q=>q.close)))/w,0,1);
  return {hi,lo,widthAtr:w/a,pos,upperTouches:upTouches,lowerTouches:loTouches,upperRejectAvg:avg(ur.slice(-2)),lowerRejectAvg:avg(lr.slice(-2)),
-  upperWeakening:weak(ur),lowerWeakening:weak(lr),lowSlope,highSlope,compression,compressionRatio:ratio,balanced,edgePressureDir:pressure,
+  upperWeakening:weak(ur),lowerWeakening:weak(lr),lowSlope,highSlope,compression,compressionRatio:ratio,balanced,edgePressureDir:pressure,rotationQuality,
   breakDir,breakProgress:breakDir>0?bu:breakDir<0?bd:0,fakeDir,fakeLevel,ageBars:age};
 }
 function fibContext(f,x,z){
@@ -114,7 +115,8 @@ function fibContext(f,x,z){
  const levels=fibRatios.map(r=>({ratio:r,price:end-d*m*r}));let nearest=null;
  for(const q of levels){const dist=Math.abs(x.price-q.price)/a;if(!nearest||dist<nearest.distanceAtr)nearest={...q,distanceAtr:dist};}
  const confluence=nearest&&nearest.distanceAtr<=(CFG.v2FibZoneAtr||.15)&&(z||[]).some(q=>Math.abs(q.price-nearest.price)/a<=(CFG.v2FibZoneAtr||.15));
- return {valid:true,d,start,end,moveAtr:m/a,retracement:retr,extension:ext,levels,nearest,confluence,healthy:retr>=.236&&retr<=.618,deep:retr>.618&&retr<=.786};
+ const extensionZone=ext>=1.618?'เหนือ 161.8%':ext>=1.272?'127.2–161.8%':ext>=1?'100–127.2%':'ยังไม่เกินปลาย impulse';
+ return {valid:true,d,start,end,moveAtr:m/a,retracement:retr,extension:ext,extensionZone,levels,nearest,confluence,healthy:retr>=.236&&retr<=.618,deep:retr>.618&&retr<=.786};
 }
 function candleBehavior(f,x){
  const a=Math.max(f.atr,1e-9),b=f.b.slice(-8),last=b.at(-1),prev=b.at(-2),live=x.current||x.bars?.at(-1)||last,p=x.price;
@@ -143,7 +145,7 @@ function zoneContext(f,x,z){
  return {support,resistance,nearSupport:!!support&&support.distanceAtr<=(CFG.v2ZoneNearAtr||.25),nearResistance:!!resistance&&resistance.distanceAtr<=(CFG.v2ZoneNearAtr||.25)};
 }
 function remember(engine,x,f,state,key){
- const m=engine.v2Memory||(engine.v2Memory={snapshots:[],history:[],lastKey:null,lastLog:0});
+ const m=engine.v2Memory||(engine.v2Memory={snapshots:[],history:[],lastKey:null,lastLog:0,lastBreakout:null});
  if(!m.snapshots.length||m.snapshots.at(-1).ts!==x.ts)m.snapshots.push({ts:x.ts,price:x.price,state,flow:x.flow||0});
  if(m.snapshots.length>(CFG.v2SnapshotMemory||240))m.snapshots.splice(0,m.snapshots.length-(CFG.v2SnapshotMemory||240));
  while(m.snapshots.length&&x.ts-m.snapshots[0].ts>(CFG.v2StateMemoryMs||3600000))m.snapshots.shift();
@@ -178,13 +180,26 @@ function observe(engine,f,x,z,regime,phase){
  if(!stateDir)stateDir=evidenceDir;
 
  const rem=remember(engine,x,f,state,state+'|'+stateDir+'|'+r.edgePressureDir+'|'+r.fakeDir),speed=rem.speed;
+ if(accepted)rem.memory.lastBreakout={ts:x.ts,d:breakD,level:breakD>0?r.hi:r.lo};
+ const lastBreakout=rem.memory.lastBreakout,breakoutRetest=lastBreakout&&x.ts-lastBreakout.ts<=180000&&Math.abs(x.price-lastBreakout.level)/a<=.14&&lastBreakout.d*(x.price-lastBreakout.level)>=-.06?{...lastBreakout,distanceAtr:Math.abs(x.price-lastBreakout.level)/a}:null;
+ const reaccel=!!trendDir&&trendDir*(f.momAccel||0)>=.10&&trendDir*flow>=.025&&(c.oneSided===trendDir||c.liveDir===trendDir);
+ const shockFailure=!!c.failedExpansion;
  const absorption=flow>=.10&&Math.abs(speed)<.012?-1:flow<=-.10&&Math.abs(speed)<.012?1:0;
  const ext=stateDir?stateDir*(x.price-f.ema21)/a:0;
  let change=0;if((zone.nearResistance&&trendDir>0)||(zone.nearSupport&&trendDir<0))change++;if(Math.abs(ext)>=1.6)change++;if((trendDir>0&&c.rejection<0)||(trendDir<0&&c.rejection>0))change++;if(trendDir*(f.momAccel||0)<-.15)change++;if(trendDir*flow<-.04)change++;if(fib.valid&&fib.extension>=1.272)change++;
  const trendChangeRisk=change>=4?'สูง':change>=2?'กลาง':'ต่ำ';
+ if(['TREND','MATURE_TREND'].includes(state)&&trendChangeRisk==='สูง'&&trendDir){state='REVERSAL_WATCH';stateDir=-trendDir;conf=Math.max(conf,78);}
+ else if(state==='TRANSITION'&&c.shock&&c.liveDir){state='EXPANSION';stateDir=c.liveDir;conf=74;}
+ else if(state==='TRANSITION'&&shockFailure){state='EXPANSION';stateDir=shockFailure;conf=72;}
 
  let play='observe_conflict',d=stateDir||evidenceDir,trigger='รอ behavior ชัดขึ้น',invalid='ยังไม่มี thesis หลัก',next='ประเมิน State ใหม่เมื่อพฤติกรรมเปลี่ยน';
- if(state==='BALANCED_RANGE'){
+ if(breakoutRetest&&state!=='FALSE_BREAK'){
+  d=breakoutRetest.d;play='breakout_retest';trigger='retest จุด breakout แล้วต้องรับอยู่ + flow กลับตาม';invalid='หลุดกลับเข้ากรอบลึกและยืนไม่ได้';next='ถ้า retest fail → Failed Break / Trap Reversal';
+ }else if(shockFailure&&state!=='FALSE_BREAK'){
+  d=shockFailure;play='shock_failure';trigger='แท่ง expansion ถูกกินกลับ + flow สนับสนุนฝั่งสวน';invalid='กลับไปยืนตามทิศ shock เดิม';next='ถ้า fail → กลับ Trend/Range เดิม';
+ }else if(reaccel&&['PULLBACK','TREND'].includes(state)){
+  d=trendDir;play='trend_reacceleration';trigger='momentum + flow กลับมาเร่งหลังพัก และ micro structure ยังอยู่';invalid='แรงเร่งดับและหลุดฐานพัก';next='ถ้า fail → Pullback ต่อ / Reversal Watch';
+ }else if(state==='BALANCED_RANGE'){
   if(r.pos<=.24){play='range_edge_fade';d=1;trigger='รอ rejection + flow กลับจากขอบล่าง';invalid='หลุดขอบล่างและเกิด acceptance';next='Breakout LOW';}
   else if(r.pos>=.76){play='range_edge_fade';d=-1;trigger='รอ rejection + flow กลับจากขอบบน';invalid='ทะลุขอบบนและเกิด acceptance';next='Breakout HIGH';}
   else{play='range_rotation';d=0;trigger='รอราคาเข้าใกล้ขอบ ไม่เล่นกลางกรอบ';invalid='เกิด edge pressure / breakout';next='Compression Breakout';}
@@ -192,17 +207,19 @@ function observe(engine,f,x,z,regime,phase){
  else if(state==='EDGE_PRESSURE'){d=r.edgePressureDir;play='edge_pressure_breakout';trigger='รอขอบที่ถูกกดแตกและเกิด acceptance';invalid='เกิด rejection ใหญ่กลับกลางกรอบ';next='Range Rotation / Failed Break';}
  else if(state==='BREAKOUT_ATTEMPT'){d=breakD;play='breakout_follow';trigger='รอ acceptance หรือ micro pullback ที่รับอยู่';invalid='กลับเข้ากรอบเร็ว';next='Failed Break Reversal';}
  else if(state==='BREAKOUT_ACCEPTED'){d=breakD;play=r.breakProgress<=.28?'breakout_follow':'breakout_micro_pullback';trigger=r.breakProgress<=.28?'Follow ถ้ายังสด':'รอย่อสั้น / retest แล้ว reclaim';invalid='กลับเข้ากรอบและ flow พลิก';next='Failed Break / Trap Reversal';}
- else if(state==='FALSE_BREAK'){d=-r.fakeDir;play='failed_break_reversal';trigger='กลับเข้า range + flow/rejection หนุนฝั่งสวน';invalid='กลับไปยืนฝั่ง breakout เดิม';next='Breakout Follow ฝั่งเดิม';}
+ else if(state==='FALSE_BREAK'){d=-r.fakeDir;play=c.failedExpansion===d?'breakout_trap_reversal':'failed_break_reversal';trigger='กลับเข้า range + flow/rejection หนุนฝั่งสวน';invalid='กลับไปยืนฝั่ง breakout เดิม';next='Breakout Follow ฝั่งเดิม';}
  else if(state==='PULLBACK'){d=trendDir;play=fib.valid&&fib.nearest?.distanceAtr<=(CFG.v2FibZoneAtr||.15)?'fib_pullback':'trend_pullback';trigger='รอแรงย่อหยุด + reclaim / flow กลับตามเทรนด์';invalid='หลุด Fib 78.6% พร้อมเสีย swing structure';next='Transition / Reversal Watch';}
  else if(state==='IMPULSE'){d=stateDir;play=c.shock?'shock_follow':'continuation';trigger='Follow เมื่อ flow ยังหนุนและ extension ไม่แพง';invalid='Expansion ถูกกินกลับและ flow พลิก';next='Shock Failure / Pullback';}
  else if(state==='MATURE_TREND'){d=stateDir;play='mature_recovery';trigger='ไม่ไล่ รอ pullback / retest ใหม่';invalid='structure แตก + flow พลิก';next='Exhaustion / Reversal Watch';}
  else if(state==='EXHAUSTION'){d=-stateDir;play='exhaustion_reversal';trigger='รอ flow พลิก + rejection + micro structure break';invalid='ขาเดิมทำ new extreme พร้อม flow';next='Trend Continuation';}
+ else if(state==='REVERSAL_WATCH'){d=stateDir;play='exhaustion_reversal';trigger='ถึงแนวสำคัญแล้ว · รอ rejection + flow พลิก + micro structure break ก่อนสวน';invalid='trend เดิมทะลุแนวและทำ new extreme พร้อม flow';next='ถ้าไม่กลับ → Trend Continuation / Breakout Follow';}
+ else if(state==='EXPANSION'){d=stateDir;play=shockFailure?'shock_failure':'shock_follow';trigger=shockFailure?'รอการกินกลับยืนยัน + flow ฝั่งสวน':'รอ follow-through ของ shock โดยไม่ถูกกินกลับ';invalid=shockFailure?'กลับไปยืนตาม shock เดิม':'ถูกกินกลับเกินครึ่งแท่ง expansion';next=shockFailure?'Return to prior state':'Micro Pullback / Shock Failure';}
  else if(state==='REVERSAL_CONFIRMED'){d=stateDir;play='reversal_follow';trigger='ตาม reversal หลัง micro pullback / reclaim';invalid='reversal fail และ reclaim trend เดิม';next='Failed Reversal → Continuation';}
  else if(state==='TREND'){d=stateDir;play='trend_pullback';trigger='รอย่อที่ยังรักษา structure แล้ว flow กลับ';invalid='เสีย swing structure + flow สวน';next='Reversal Watch';}
  else if(state==='CHOP'){d=0;play='observe_conflict';trigger='รอกรอบหรือทิศชัด ไม่ไล่กลาง swing';invalid='เกิด compression / directional expansion';next='Range หรือ Breakout playbook';}
 
  const supports=[],warnings=[];
- if(r.balanced)supports.push('Sideway ตอบสนองทั้งขอบบนและขอบล่าง');
+ if(r.balanced)supports.push('Sideway ตอบสนองทั้งขอบบนและขอบล่าง · rotation '+Math.round(r.rotationQuality*100)+'% ของกรอบ');
  if(r.compression)supports.push('กรอบกำลังบีบ · width ล่าสุด '+r.compressionRatio.toFixed(2)+' เท่าช่วงก่อน');
  if(r.edgePressureDir)supports.push('ราคาเกาะ'+(r.edgePressureDir>0?'ขอบบน':'ขอบล่าง')+' · มี edge pressure');
  if(r.upperWeakening)warnings.push('แรง reject ขอบบนอ่อนลง · resistance อาจกำลังถูกกัด');
@@ -216,6 +233,7 @@ function observe(engine,f,x,z,regime,phase){
  if(Math.abs(speed)>=.055)supports.push('ความเร็วราคาเปลี่ยนชัด · behavior shift');
  if(fib.valid&&fib.nearest&&fib.nearest.distanceAtr<=(CFG.v2FibZoneAtr||.15))supports.push('ใกล้ Fib '+(fib.nearest.ratio*100).toFixed(1)+'%'+(fib.confluence?' + zone confluence':''));
  if(fib.valid&&fib.extension>=1.618)warnings.push('เกิน Fib extension 161.8% · ขาเดินไกลมาก เพิ่ม exhaustion / reversal watch');
+ else if(fib.valid&&fib.extension>=1.618)warnings.push('เกิน Fib extension 161.8% · exhaustion / trend-change watch สูงขึ้น');
  else if(fib.valid&&fib.extension>=1.272)warnings.push('เกิน Fib extension 127.2% · เพิ่ม exhaustion watch');
  if(zone.nearResistance)warnings.push('ใกล้ resistance '+zone.resistance.distanceAtr.toFixed(2)+' ATR');
  if(zone.nearSupport)warnings.push('ใกล้ support '+zone.support.distanceAtr.toFixed(2)+' ATR');
@@ -231,7 +249,7 @@ function observe(engine,f,x,z,regime,phase){
  const conflict=(evidenceDir&&d&&evidenceDir!==d)||(!d&&Math.abs(high-low)<10);if(conflict&&['TRANSITION','CHOP'].includes(state)){state='CONFLICT';conf=Math.max(conf,66);}
  return {schema:'aris-v2-story-v1',state,stateLabel:stateLabel(state),stateConfidence:conf,stateDirection:stateDir,highEvidence:high,lowEvidence:low,evidenceDirection:evidenceDir,
   primary,alternative,playbook:play,playbookLabel:playbookLabel(play),playDirection:d,trigger,invalidation:invalid,nextPlan:next,summary,
-  supports:[...new Set(supports)].slice(0,6),warnings:[...new Set(warnings)].slice(0,6),range:r,fib,candle:c,zone,higher:{m5:h5,m15:h15},flow,book,speedAtrPerSec:speed,absorption,trendChangeRisk,
+  supports:[...new Set(supports)].slice(0,6),warnings:[...new Set(warnings)].slice(0,6),range:r,fib,candle:c,zone,higher:{m5:h5,m15:h15},flow,book,speedAtrPerSec:speed,absorption,trendChangeRisk,breakoutRetest,reacceleration:reaccel,shockFailure,
   metrics:{trend:f.trend,momentum:f.mom,momentumAccel:f.momAccel,eff:f.eff,extensionAtr:ext,relativeVolume:f.relVolume,liveVolumePace:phase?.liveVolumePace||0}};
 }
 function entryOpportunity(f,x,s){
@@ -245,9 +263,10 @@ function entryOpportunity(f,x,s){
 
  if(s.playbook==='range_edge_fade'){level=d>0?r.lo:r.hi;progress=d*(p-level)/a;add(d>0?r.pos<=.24:r.pos>=.76,10,'อยู่ขอบ Sideway');add(c.rejection===d||flow>=.03,8,'มีแรงกลับเข้ากรอบ');mode='Rejection';}
  else if(['compression_breakout','edge_pressure_breakout','breakout_follow'].includes(s.playbook)){level=d>0?r.hi:r.lo;progress=d*(p-level)/a;add(r.breakDir===d,10,'พ้นขอบจริง');add(progress>=(CFG.v2BreakBuffer||.04)&&progress<=.36,8,'ยัง follow ได้');const ca=d>0?c.liveCloseLoc:1-c.liveCloseLoc;add(ca>=.62,6,'แท่งสดปิดใกล้ปลาย');add(c.shock||c.liveRangeAtr>=.42,5,'มี expansion');mode='Immediate Follow';}
- else if(s.playbook==='failed_break_reversal'){level=r.fakeLevel??(d>0?r.lo:r.hi);progress=d*(p-level)/a;add(r.fakeDir===-d,12,'fake break ยืนยัน');add(c.rejection===d||c.failedExpansion===d,8,'มี trap/rejection');mode='Failed Break Reversal';}
+ else if(s.playbook==='breakout_retest'){level=s.breakoutRetest?.level??(d>0?r.hi:r.lo);progress=d*(p-level)/a;add(Math.abs(p-level)/a<=.16,10,'กลับมาทดสอบ breakout level');add(d*(p-level)/a>=-.06,7,'ยังยืนฝั่ง breakout');add(flow>=.025||c.rejection===d,8,'flow/rejection รับ retest');mode='Breakout Retest';}
+ else if(['failed_break_reversal','breakout_trap_reversal','shock_failure'].includes(s.playbook)){level=r.fakeLevel??(s.breakoutRetest?.level??(d>0?r.lo:r.hi));progress=d*(p-level)/a;add(r.fakeDir===-d||c.failedExpansion===d,12,'failure/trap ยืนยัน');add(c.rejection===d||c.failedExpansion===d||flow>=.04,8,'มี flow/rejection ฝั่งสวน');mode=s.playbook==='shock_failure'?'Shock Failure':'Failed Break Reversal';}
  else if(['trend_pullback','fib_pullback'].includes(s.playbook)){level=fib.valid&&fib.nearest?fib.nearest.price:f.ema8;progress=d*(p-level)/a;add(fib.valid&&fib.retracement>=.20&&fib.retracement<=.786,8,'อยู่ retracement zone');add(fib.confluence,5,'Fib + zone');add(d*(p-f.ema8)/a>=-.12,5,'เริ่ม reclaim ฐาน');mode=fib.valid?'Fib Reclaim':'Pullback Reclaim';}
- else if(['continuation','shock_follow'].includes(s.playbook)){level=f.b.at(-1)?.close??p;progress=d*(p-level)/a;add(ext<=(CFG.v2MaxFollowExtension||1.75),7,'ยังไม่ยืดเกิน');add(c.shock||d*(f.momAccel||0)>=.08,8,'กำลัง re-accelerate');mode='Continuation';}
+ else if(['continuation','shock_follow','trend_reacceleration'].includes(s.playbook)){level=f.b.at(-1)?.close??p;progress=d*(p-level)/a;add(ext<=(CFG.v2MaxFollowExtension||1.75),7,'ยังไม่ยืดเกิน');add(c.shock||d*(f.momAccel||0)>=.08,8,'กำลัง re-accelerate');mode=s.playbook==='shock_follow'?'Shock Follow':s.playbook==='trend_reacceleration'?'Re-Acceleration':'Continuation';}
  else if(['exhaustion_reversal','reversal_follow'].includes(s.playbook)){level=f.ema8;progress=d*(p-level)/a;const n=[c.rejection===d,c.engulf===d,flow>=.04,s.state==='REVERSAL_CONFIRMED',d*(p-f.ema8)/a>=.03].filter(Boolean).length;add(n>=(CFG.v2ReversalEvidence||3),15,'reversal มีหลายหลักฐาน');add(s.state==='REVERSAL_CONFIRMED',8,'structure reversal ยืนยัน');mode='Reversal Confirm';}
  score=Math.round(clip(score,0,100));
  return {type:typeForPlaybook(s.playbook),d,level,progress,score,ready:score>=(CFG.v2EntryReady||58),enter:score>=(CFG.v2EntryEnter||66),mode,reasons,
@@ -317,5 +336,5 @@ if(root.ContinuousDirection){
  };
 }
 
-root.ArisV2Engine={version:'ARIS-2.0.0',observe,entryOpportunity,rangeBehavior,fibContext,candleBehavior};
+root.ArisV2Engine={version:'ARIS-2.0.0',observe,entryOpportunity,rangeBehavior,fibContext,candleBehavior,higherContext,zoneContext};
 })(typeof globalThis!=='undefined'?globalThis:window);
