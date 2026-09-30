@@ -412,8 +412,7 @@
     section.className='train-card validation-card';section.id='train-validation-card';
     section.innerHTML=[
       '<div class="validation-head">',
-      '<div><h3>7 · Phase 4 · Validation / Walk-forward Lab</h3><p>แบ่งเวลา 60/20/20 แบบเรียงตามจริง · Candidate เรียนจาก Train เท่านั้น · Validation / Holdout ห้ามช่วยเลือกกฎ</p></div>',
-      '<div><b>NO LIVE MUTATION</b><small>ไม่แก้ ARIS 2.0 · ไม่สุ่ม split · ไม่ใช้อนาคต</small></div>',
+      '<div><h3>7 · Phase 4 · Validation / Walk-forward Lab</h3></div>',
       '</div>',
       '<div class="validation-actions">',
       '<button type="button" class="train-primary" id="train-validation-run" disabled>รัน Phase 4</button>',
@@ -425,7 +424,7 @@
       '<div class="validation-slice"><span>VALIDATION · 20%</span><b id="validation-val-n">—</b></div>',
       '<div class="validation-slice"><span>HOLDOUT · 20%</span><b id="validation-hold-n">—</b></div>',
       '</div>',
-      '<div id="validation-empty" class="analytics-empty">เลือก Session ที่ Replay มีผลแล้ว จากนั้นรัน Phase 4 เพื่อสอบ Candidate กับข้อมูลที่มันไม่เคยเห็นค่ะ</div>',
+      '<div id="validation-empty" class="analytics-empty">ยังไม่มีผล Validation</div>',
       '<div id="validation-result" hidden>',
       '<div class="validation-candidate"><span>Experimental candidate</span><b id="validation-candidate-label">—</b></div>',
       '<div id="validation-compare"></div>',
@@ -522,16 +521,7 @@
     catch(err){setStatus('Export ไม่สำเร็จ · '+String(err?.message||err),'error');}
   }
 
-  function decorateLab(){
-    const head=document.querySelector('#training-lab-dialog .training-lab-head span');
-    if(head)head.textContent='PHASE 1–4 · DATA + REPLAY + ANALYTICS + VALIDATION';
-    const p=document.querySelector('#training-lab-dialog .training-lab-head p');
-    if(p)p.textContent='Historical Training แบบแยก Live · Replay → Analytics → Validation / Walk-forward โดยกันข้อมูลอนาคตออกจากการเลือกกฎ';
-    const foot=byId('training-lab-foot-status');
-    if(foot)foot.textContent='Phase 1–4 · Historical Training Pipeline พร้อมใช้งาน';
-    const next=document.querySelector('#training-lab-dialog .phase-next');
-    if(next)next.innerHTML='<b>Phase 4</b><button type="button" disabled>Validation / Walk-forward · No Live Auto</button>';
-  }
+  function decorateLab(){}
 
   function bindUi(){
     const runBtn=byId('train-validation-run');
