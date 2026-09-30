@@ -43,6 +43,7 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .review-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:8px}.review-table{width:100%;border-collapse:collapse;min-width:620px}.review-table th,.review-table td{padding:8px 10px;border-bottom:1px solid #1b2737;text-align:left;font:11px 'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}.review-table th{color:var(--muted);background:#0c1420}.review-table tr:last-child td{border-bottom:0}.review-tags{display:flex;gap:6px;flex-wrap:wrap}.review-tag{padding:4px 7px;border:1px solid var(--border);border-radius:999px;font-size:10px;color:#c3d0e2}.review-tag.bad{border-color:#704353;color:#ff9bb0}.review-tag.good{border-color:#366657;color:#8fe6ca}.report-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.report-card{padding:12px;border:1px solid var(--border);border-radius:9px;background:#0c1420}.report-card h4{font-size:12px;margin:0 0 8px}.report-card p{font-size:11px;color:var(--muted);margin:4px 0}.report-bar{height:5px;background:#253246;border-radius:4px;overflow:hidden;margin-top:7px}.report-bar>i{display:block;height:100%;background:#76cdb4}details.raw-details{border:1px solid var(--border);border-radius:8px;padding:9px 11px;background:#0c1420}details.raw-details summary{cursor:pointer;color:#bfcde0;font-size:12px}
 @media(max-width:850px){.history-actions{margin-left:0;justify-content:flex-start;width:100%}.review-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.report-groups{grid-template-columns:1fr}}@media(max-width:480px){.review-dialog{width:calc(100% - 10px);max-height:96dvh}.review-modal{max-height:94dvh}.review-head,.review-body,.review-foot{padding-left:14px;padding-right:14px}.review-kpis{grid-template-columns:1fr 1fr}.history-actions button{flex:1 1 auto}}
 .danger-button{border-color:#704353!important;color:#ff9bb0!important;background:#241721!important}.danger-button:hover{background:#34202b!important}
+.market-recorder-button{border-color:#3f675e!important;color:#91e3c9!important;background:#10231f!important}.market-recorder-button.recording{border-color:#875061!important;color:#ff9fb2!important;background:#2b1820!important;box-shadow:0 0 0 1px #ff708a22 inset}.market-recorder-button.recording::before{content:'●';margin-right:6px}.market-recorder-status{font-size:10px!important;color:#8fa5bf!important;margin-top:5px!important}.market-recorder-status.active{color:#91e3c9!important}.recorder-dialog{width:min(1040px,calc(100% - 20px))}.recorder-preview-wrap{display:grid;gap:12px}.recorder-preview-wrap img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:10px;background:#07101a}.recorder-summary{padding:11px 12px;border:1px solid var(--border);border-radius:9px;background:#0c1420;font-size:12px;line-height:1.55;color:#b7c5d8}.recorder-summary b{color:#e2ebf7}.recorder-summary.good{border-color:#356655}.recorder-summary.warn{border-color:#73515c}.recorder-summary.neutral{border-color:#46566d}@media(max-width:480px){.recorder-dialog{width:calc(100% - 8px)}.recorder-preview-wrap{gap:8px}}
 
 .version-filter-label{display:flex;align-items:center;gap:7px;padding:0 4px 0 0;color:var(--muted);font-size:11px;white-space:nowrap}
 .version-filter-label select{min-height:38px;padding:0 30px 0 10px;border:1px solid var(--border);border-radius:7px;background:#0c1420;color:var(--text);font:12px 'Segoe UI',sans-serif;outline:none}
@@ -979,7 +980,7 @@ main{padding-top:10px}
 </aside>
 
 </div>
-<section class="prediction-log"><div class="prediction-log-head"><div><h2>ประวัติสัญญาณ</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">V <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">รีพอร์ต</button><button id="export-training-csv">CSV</button><button id="export-history">JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button></div></div><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบเวลา</th><th>ราคาตัดสิน</th><th>ผล</th><th>Live %</th><th>สรุป</th><th>V</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+<section class="prediction-log"><div class="prediction-log-head"><div><h2>ประวัติสัญญาณ</h2><p id="history-summary"></p><p id="observed-rate"></p><p id="storage-status"></p><p id="dataset-status"></p></div><div class="history-actions"><label class="version-filter-label">V <select id="version-filter" aria-label="กรองประวัติตามเวอร์ชัน"><option value="all">ทั้งหมด</option></select></label><button id="report-history">รีพอร์ต</button><button id="export-training-csv">CSV</button><button id="export-history">JSON</button><button id="purge-old-versions" class="danger-button">ลบเวอร์ชันเก่า</button><button id="market-recorder-toggle" class="market-recorder-button" type="button">บันทึกข้อมูลกราฟ</button></div></div><p id="market-recorder-status" class="market-recorder-status"></p><div class="prediction-table-wrap"><table class="prediction-table"><thead><tr><th>เข้า</th><th>จังหวะ</th><th>ฝั่ง</th><th>ราคาเข้า</th><th>ครบเวลา</th><th>ราคาตัดสิน</th><th>ผล</th><th>Live %</th><th>สรุป</th><th>V</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
 <dialog id="engine-guide-dialog" class="review-dialog engine-guide-dialog"><div class="review-modal">
   <div class="review-head"><div><span class="eyebrow">คู่มือระบบ</span><h2>4 วิธีคิดสำหรับตลาด +10 นาที</h2><p>แต่ละระบบมีบุคลิกต่างกัน เก็บไว้เพื่อเปรียบเทียบว่าแนวคิดแบบไหนเหมาะกับสภาพตลาดแบบใด</p></div><button type="button" class="review-close" data-close-dialog="engine-guide-dialog" aria-label="ปิด">×</button></div>
   <div class="review-body">
@@ -1061,6 +1062,7 @@ main{padding-top:10px}
 
 <dialog id="trade-review-dialog" class="review-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปและรายละเอียดไม้</span><h2 id="review-title">รายละเอียดไม้</h2><p id="review-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="trade-review-dialog" aria-label="ปิด">×</button></div><div id="review-body" class="review-body"></div><div class="review-foot"><button type="button" data-close-dialog="trade-review-dialog">ปิด</button></div></div></dialog>
 <dialog id="report-dialog" class="review-dialog report-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">สรุปข้อมูลเพื่อพัฒนาระบบ</span><h2>สรุปข้อมูลทั้งหมด</h2><p id="report-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="report-dialog" aria-label="ปิด">×</button></div><div id="report-body" class="review-body"></div><div class="review-foot"><button type="button" id="report-export-json">ข้อมูลเทรน JSON</button><button type="button" id="report-export-csv">ข้อมูลเทรน CSV</button><button type="button" data-close-dialog="report-dialog">ปิด</button></div></div></dialog>
+<dialog id="market-recorder-dialog" class="review-dialog recorder-dialog"><div class="review-modal"><div class="review-head"><div><span class="eyebrow">ARIS MARKET RECORD</span><h2 id="market-recorder-title">รีพอร์ตการบันทึกกราฟ</h2><p id="market-recorder-subtitle"></p></div><button type="button" class="review-close" data-close-dialog="market-recorder-dialog" aria-label="ปิด">×</button></div><div class="review-body"><div class="recorder-preview-wrap"><div id="market-recorder-summary" class="recorder-summary neutral">กำลังสร้างรีพอร์ต</div><img id="market-recorder-preview" alt="รีพอร์ตการบันทึกกราฟ"></div></div><div class="review-foot"><button type="button" id="market-recorder-download">บันทึกรูป PNG</button><button type="button" data-close-dialog="market-recorder-dialog">ปิด</button></div></div></dialog>
 </main>
 <script>
 /*!
@@ -5093,6 +5095,7 @@ function openReport(){
    if(tf==='1m'){
     if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
    }
+   marketRecorderCapture();
   }
 
   function normalizeKline(row){return {time:Math.floor(Number(row[0])/1000),open:+row[1],high:+row[2],low:+row[3],close:+row[4],volume:+row[5],closed:Number(row[6])<Date.now()};}
@@ -5773,6 +5776,223 @@ function openReport(){
       health:setupFeedHealth()
     };
   }
+
+  /* ---------- Read-only market recorder ---------- */
+  const MARKET_RECORDER_STORE='btc-market-recorder-v1';
+  const marketRecorder={active:false,id:null,startedAt:0,lastCaptureAt:0,lastSignature:'',snapshots:[],startSignalIds:new Set(),latest:null,previewUrl:null};
+  function recorderGateState(v){return v==='PASS'?'ผ่าน':v==='DEVELOPING'?'กำลังก่อตัว':v==='BLOCK'?'ไม่ผ่าน':v||'—';}
+  function recorderCompactSnapshot(s){
+   const v=s?.v3||null,g=v?.gates||{};
+   return {
+    at:s?.capturedAt||Date.now(),tf:s?.tf||state.analysisTf,price:s?.quote?.price??null,
+    atr:s?.features?.atr??null,state:v?.state||null,stateLabel:v?.stateLabel||null,direction:v?.direction||s?.direction?.direction||null,
+    high:v?.highEvidence??s?.direction?.high??null,low:v?.lowEvidence??s?.direction?.low??null,
+    playbook:v?.playbook||null,playbookLabel:v?.playbookLabel||null,entryState:v?.entryState||s?.setup?.gate?.state||null,
+    gatePassed:v?.gatePassed??null,gateTotal:v?.gateTotal??4,
+    gates:{
+     structure:g.structure?{state:g.structure.state||null,reason:g.structure.reason||null}:null,
+     location:g.location?{state:g.location.state||null,reason:g.location.reason||null}:null,
+     behavior:g.behavior?{state:g.behavior.state||null,reason:g.behavior.reason||null}:null,
+     micro:g.micro?{state:g.micro.state||null,reason:g.micro.reason||null}:null
+    },
+    reason:v?.thesis?.why||s?.setup?.reason||null,trigger:v?.trigger||v?.thesis?.trigger||null,
+    invalidation:v?.invalidation||v?.thesis?.invalidation||null,blocker:s?.setup?.gate?.blocker||null,
+    waitingFor:Array.isArray(s?.setup?.gate?.waitingFor)?s.setup.gate.waitingFor.slice(0,4):[],
+    fib:v?.fib?{valid:!!v.fib.valid,retracement:v.fib.retracement??null,extension:v.fib.extension??null,retraceZone:v.fib.retraceZone||null,extensionZone:v.fib.extensionZone||null}:null,
+    flow:{s15:s?.flow?.['15s']??null,s60:s?.flow?.['60s']??null,s180:s?.flow?.['180s']??null,composite:s?.flow?.composite??null},
+    fresh:!!s?.fresh
+   };
+  }
+  function marketRecorderSignature(s){
+   const g=s.gates||{};
+   return [s.tf,s.state,s.direction,s.entryState,s.gatePassed,
+    g.structure?.state,g.location?.state,g.behavior?.state,g.micro?.state,
+    s.playbook,Number.isFinite(s.price)?Math.round(s.price):''].join('|');
+  }
+  function marketRecorderStatus(){
+   const el=$('market-recorder-status'),btn=$('market-recorder-toggle');if(!el||!btn)return;
+   if(!marketRecorder.active){el.textContent=marketRecorder.latest?'รีพอร์ตล่าสุด '+marketRecorder.latest.id+' · กดบันทึกเพื่อเริ่มรอบใหม่':'';el.className='market-recorder-status';btn.textContent='บันทึกข้อมูลกราฟ';btn.classList.remove('recording');return;}
+   const sec=Math.max(0,Math.floor((Date.now()-marketRecorder.startedAt)/1000)),m=Math.floor(sec/60),ss=String(sec%60).padStart(2,'0');
+   el.textContent='กำลังบันทึก '+m+':'+ss+' · '+marketRecorder.snapshots.length+' จุดข้อมูล · ไม่กระทบเอนจิ้น';
+   el.className='market-recorder-status active';btn.textContent='หยุดและสร้างรีพอร์ต';btn.classList.add('recording');
+  }
+  function marketRecorderCapture(force=false){
+   if(!marketRecorder.active||!state.booted||!state.quote)return;
+   const now=Date.now(),raw=readOnlySituationSnapshot(),snap=recorderCompactSnapshot(raw),sig=marketRecorderSignature(snap);
+   const changed=sig!==marketRecorder.lastSignature;
+   if(!force&&!changed&&now-marketRecorder.lastCaptureAt<1500)return;
+   if(!force&&now-marketRecorder.lastCaptureAt<700)return;
+   marketRecorder.snapshots.push(snap);
+   if(marketRecorder.snapshots.length>3600)marketRecorder.snapshots.shift();
+   marketRecorder.lastCaptureAt=now;marketRecorder.lastSignature=sig;
+   marketRecorderStatus();
+  }
+  function marketRecorderStart(){
+   if(marketRecorder.active)return;
+   const now=Date.now(),stamp=new Date(now).toLocaleString('sv-SE',{timeZone:'Asia/Bangkok'}).replace(/[-: ]/g,'').slice(0,14);
+   marketRecorder.active=true;marketRecorder.id='REC-'+stamp;marketRecorder.startedAt=now;marketRecorder.lastCaptureAt=0;marketRecorder.lastSignature='';marketRecorder.snapshots=[];
+   marketRecorder.startSignalIds=new Set(engine.signals.map(s=>s.id));
+   marketRecorderCapture(true);marketRecorderStatus();
+  }
+  function marketRecorderGateDurations(snaps,endAt){
+   const out={structure:0,location:0,behavior:0,micro:0},keys=Object.keys(out);
+   for(let i=0;i<snaps.length;i++){
+    const a=snaps[i],b=snaps[i+1],dt=Math.max(0,Math.min(5000,(b?.at||endAt)-a.at));
+    for(const k of keys)if(a.gates?.[k]&&a.gates[k].state!=='PASS')out[k]+=dt;
+   }
+   return out;
+  }
+  function marketRecorderFirst(snaps,pred){return snaps.find(pred)||null;}
+  function marketRecorderDiagnostic(rec){
+   const s=rec.snapshots||[],start=s[0],end=s.at(-1),signals=rec.signals||[];
+   const firstOpportunity=marketRecorderFirst(s,x=>['HIGH','LOW'].includes(x.direction)&&(x.gatePassed??0)>=2);
+   const firstSL=marketRecorderFirst(s,x=>x.gates?.structure?.state==='PASS'&&x.gates?.location?.state==='PASS');
+   const first3=marketRecorderFirst(s,x=>(x.gatePassed??0)>=3);
+   const first4=marketRecorderFirst(s,x=>(x.gatePassed??0)>=4);
+   const signal=signals[0]||null,signalAt=signal?.entryTime||null;
+   const base=firstOpportunity||firstSL||start,refEnd=signal?{at:signal.entryTime,price:signal.entryPrice}:end;
+   const atr=base?.atr||start?.atr||null,priceMove=Number.isFinite(base?.price)&&Number.isFinite(refEnd?.price)?refEnd.price-base.price:null;
+   const dir=base?.direction==='LOW'?-1:1,moveAtr=Number.isFinite(priceMove)&&Number.isFinite(atr)&&atr>0?dir*priceMove/atr:null;
+   const latency=signalAt&&base?.at?signalAt-base.at:null,durations=marketRecorderGateDurations(s,rec.endedAt);
+   const ranked=Object.entries(durations).sort((a,b)=>b[1]-a[1]),top=ranked[0]||[null,0];
+   const threeRatio=s.length?s.filter(x=>(x.gatePassed??0)>=3).length/s.length:0;
+   const endMove=Number.isFinite(start?.price)&&Number.isFinite(end?.price)&&Number.isFinite(start?.atr)&&start.atr>0?(end.price-start.price)/start.atr:null;
+   let verdict='ยังไม่มีหลักฐานชัดว่า V3 ช้า',tone='neutral',why='ข้อมูลช่วงนี้ยังไม่แสดงว่าระบบเห็นโอกาสชัดแล้วปล่อยให้ราคาวิ่งไปไกลก่อนออกไม้';
+   if(signal&&((latency??0)>=120000||(moveAtr??0)>=.45)){
+    verdict='มีหลักฐานว่า V3 ออกช้าในช่วงนี้';tone='warn';why='ระบบเริ่มเห็นโอกาสก่อนออกจริงพอสมควร และราคาขยับไปแล้วก่อนสัญญาณออก';
+   }else if(!signal&&threeRatio>=.35&&Math.abs(endMove??0)>=.7){
+    verdict='มีหลักฐานว่า V3 อาจช้าในช่วงนี้';tone='warn';why='หลายช่วงผ่านอย่างน้อย 3/4 เงื่อนไข แต่ไม่มีสัญญาณ ทั้งที่ราคาขยับจากต้นช่วงมากพอให้ตรวจต่อ';
+   }else if(!signal&&threeRatio<.2){
+    verdict='ยังไม่ใช่หลักฐานว่า V3 ช้า';tone='good';why='ช่วงส่วนใหญ่ยังไม่ถึง 3/4 เงื่อนไข การไม่ออกไม้จึงสอดคล้องกับข้อมูลที่เอนจิ้นเห็นขณะนั้น';
+   }
+   return {firstOpportunity,firstSL,first3,first4,signal,latency,moveAtr,durations,ranked,topBlocker:top[0],topBlockerMs:top[1],threeRatio,endMove,verdict,tone,why};
+  }
+  function marketRecorderStateSummary(snaps){
+   const counts=new Map();for(const s of snaps){const k=s.stateLabel||'กำลังอ่านตลาด';counts.set(k,(counts.get(k)||0)+1);}
+   return [...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);
+  }
+  function marketRecorderSave(rec){
+   try{
+    const rows=JSON.parse(localStorage.getItem(MARKET_RECORDER_STORE)||'[]');rows.push(rec);
+    localStorage.setItem(MARKET_RECORDER_STORE,JSON.stringify(rows.slice(-12)));
+   }catch(err){console.warn('market recorder save failed',err);}
+  }
+  function recorderRounded(ctx,x,y,w,h,r,fill,stroke){
+   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else ctx.rect(x,y,w,h);
+   if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
+  }
+  function recorderText(ctx,text,x,y,maxWidth,lineHeight=32,maxLines=4){
+   const words=String(text??'').split(/\s+/),lines=[];let line='';
+   for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=word;if(lines.length>=maxLines-1)break;}else line=test;}
+   if(line&&lines.length<maxLines)lines.push(line);
+   for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],x,y+i*lineHeight);
+   return lines.length*lineHeight;
+  }
+  function recorderClock(ms){return new Date(ms).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+  function recorderDuration(ms){if(!Number.isFinite(ms))return '—';const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s';}
+  function recorderGateChip(ctx,label,state0,x,y,w){
+   const pass=state0==='PASS',dev=state0==='DEVELOPING';ctx.font="600 21px 'Segoe UI',Tahoma,sans-serif";
+   recorderRounded(ctx,x,y,w,40,10,pass?'#12372f':dev?'#3b3420':'#3a2028',pass?'#2c8f75':dev?'#8f7733':'#8a4355');
+   ctx.fillStyle=pass?'#8fe6ca':dev?'#e7c979':'#ff9bb0';ctx.fillText(label+' '+recorderGateState(state0),x+12,y+27);
+  }
+  function marketRecorderCanvas(rec){
+   const diag=rec.diagnostic||marketRecorderDiagnostic(rec),snaps=rec.snapshots||[],W=1440,H=2920,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+   const ctx=canvas.getContext('2d');ctx.fillStyle='#08111b';ctx.fillRect(0,0,W,H);
+   ctx.fillStyle='#dce8f7';ctx.font="700 44px 'Segoe UI',Tahoma,sans-serif";ctx.fillText('ARIS MARKET RECORD',70,82);
+   ctx.font="500 24px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#91a5bd';ctx.fillText(rec.id+' · '+rec.engineVersion+' · '+rec.tf,70,122);
+   ctx.textAlign='right';ctx.fillStyle='#c8d6e8';ctx.fillText(recorderClock(rec.startedAt)+' → '+recorderClock(rec.endedAt),W-70,82);ctx.fillText(recorderDuration(rec.endedAt-rec.startedAt)+' · '+snaps.length+' snapshots',W-70,122);ctx.textAlign='left';
+
+   recorderRounded(ctx,70,160,W-140,180,18,'#0e1926','#25364a');
+   ctx.font="700 30px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle=diag.tone==='warn'?'#ff9bb0':diag.tone==='good'?'#8fe6ca':'#dce8f7';ctx.fillText(diag.verdict,96,210);
+   ctx.font="400 23px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#b1c1d5';recorderText(ctx,diag.why,96,250,W-210,34,2);
+   const start=snaps[0]||{},end=snaps.at(-1)||{},sig=diag.signal;
+   ctx.font="600 22px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#8fa4bd';
+   ctx.fillText('เริ่ม '+(Number.isFinite(start.price)?money(start.price):'—'),96,314);
+   ctx.fillText('จบ '+(Number.isFinite(end.price)?money(end.price):'—'),350,314);
+   ctx.fillText('สัญญาณ '+(sig?(sig.direction+' @ '+money(sig.entryPrice)):'ไม่มี'),610,314);
+   ctx.fillText('3/4 ขึ้นไป '+Math.round((diag.threeRatio||0)*100)+'% ของช่วง',970,314);
+
+   const chartX=70,chartY=380,chartW=W-140,chartH=520;
+   recorderRounded(ctx,chartX,chartY,chartW,chartH,18,'#0b1521','#223247');
+   ctx.font="600 26px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#d4e0ef';ctx.fillText('กราฟช่วงที่บันทึก',chartX+24,chartY+42);
+   const bars=(rec.bars||[]).filter(b=>Number.isFinite(b.time)&&Number.isFinite(b.close));
+   if(bars.length){
+    const padL=28,padR=110,padT=72,padB=48,px=chartX+padL,py=chartY+padT,pw=chartW-padL-padR,ph=chartH-padT-padB;
+    const hi=Math.max(...bars.map(b=>b.high)),lo=Math.min(...bars.map(b=>b.low)),range=Math.max(hi-lo,1);
+    const yy=p=>py+(hi-p)/range*ph,step=pw/Math.max(bars.length,1),bodyW=Math.max(3,Math.min(14,step*.58));
+    ctx.strokeStyle='#1b2b3d';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y0=py+ph*i/4;ctx.beginPath();ctx.moveTo(px,y0);ctx.lineTo(px+pw,y0);ctx.stroke();}
+    bars.forEach((b,i)=>{const x=px+step*(i+.5),up=b.close>=b.open,col=up?'#44dfb5':'#ff708a';ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,yy(b.high));ctx.lineTo(x,yy(b.low));ctx.stroke();const top=yy(Math.max(b.open,b.close)),bot=yy(Math.min(b.open,b.close));ctx.fillRect(x-bodyW/2,top,bodyW,Math.max(2,bot-top));});
+    const marker=(ms,label,col)=>{
+     const sec=ms/1000,minT=bars[0].time,maxT=bars.at(-1).time+60;if(sec<minT||sec>maxT)return;
+     const x=px+(sec-minT)/Math.max(1,maxT-minT)*pw;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([8,7]);ctx.beginPath();ctx.moveTo(x,py);ctx.lineTo(x,py+ph);ctx.stroke();ctx.setLineDash([]);ctx.font="600 18px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle=col;ctx.fillText(label,x+5,py+20);
+    };
+    if(diag.first3)marker(diag.first3.at,'3/4','#e4c56d');if(diag.first4)marker(diag.first4.at,'4/4','#68d9bc');if(sig)marker(sig.entryTime,'SIGNAL','#ff9bb0');
+    ctx.font="500 18px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#8297af';ctx.textAlign='right';ctx.fillText(money(hi),chartX+chartW-20,py+8);ctx.fillText(money(lo),chartX+chartW-20,py+ph);ctx.textAlign='left';
+   }else{ctx.font="400 24px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#8194ab';ctx.fillText('ไม่มีแท่งกราฟในช่วงที่บันทึก',chartX+24,chartY+100);}
+
+   let y=940;ctx.font="700 30px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#dce8f7';ctx.fillText('เวลาที่ระบบใช้ก่อนออกไม้',70,y);y+=34;
+   const metrics=[
+    ['เริ่มเห็นโอกาส',diag.firstOpportunity?recorderClock(diag.firstOpportunity.at):'—'],
+    ['Structure + Location พร้อม',diag.firstSL?recorderClock(diag.firstSL.at):'—'],
+    ['ถึง 3/4',diag.first3?recorderClock(diag.first3.at):'—'],
+    ['ถึง 4/4',diag.first4?recorderClock(diag.first4.at):'—'],
+    ['ออกจริง',sig?recorderClock(sig.entryTime):'ไม่มีสัญญาณ'],
+    ['เริ่มเห็น → ออก',diag.latency!=null?recorderDuration(diag.latency):'—'],
+    ['ราคาวิ่งก่อนออก',Number.isFinite(diag.moveAtr)?diag.moveAtr.toFixed(2)+' ATR':'—'],
+    ['ตัวหน่วงหลัก',diag.topBlocker?({structure:'โครงสร้าง',location:'ตำแหน่ง',behavior:'พฤติกรรมแท่ง',micro:'แรงซื้อขายสั้น'}[diag.topBlocker]||diag.topBlocker)+' · '+recorderDuration(diag.topBlockerMs):'—']
+   ];
+   const mw=(W-140-30)/2;metrics.forEach((m,i)=>{const x=70+(i%2)*(mw+30),yy0=y+Math.floor(i/2)*82;recorderRounded(ctx,x,yy0,mw,64,12,'#0d1824','#223247');ctx.font="500 18px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#8398b0';ctx.fillText(m[0],x+16,yy0+23);ctx.font="600 24px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#d5e1ef';ctx.fillText(m[1],x+16,yy0+51);});
+   y+=4*82+24;
+
+   ctx.font="700 30px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#dce8f7';ctx.fillText('Gate timeline',70,y);y+=28;
+   const significant=[];let prev='';
+   for(const s of snaps){const sig0=[s.state,s.direction,s.entryState,s.gates?.structure?.state,s.gates?.location?.state,s.gates?.behavior?.state,s.gates?.micro?.state].join('|');if(!significant.length||sig0!==prev||s===snaps.at(-1)){significant.push(s);prev=sig0;}}
+   const rows=significant.length<=9?significant:significant.filter((_,i)=>i===0||i===significant.length-1||i%Math.ceil(significant.length/8)===0).slice(0,10);
+   rows.forEach((s,i)=>{const yy0=y+i*74;ctx.font="600 20px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#aebfd3';ctx.fillText(recorderClock(s.at),70,yy0+28);ctx.fillStyle=s.direction==='HIGH'?'#8fe6ca':s.direction==='LOW'?'#ff9bb0':'#b7c5d8';ctx.fillText(s.direction||'—',185,yy0+28);recorderGateChip(ctx,'โครง',s.gates?.structure?.state,300,yy0,230);recorderGateChip(ctx,'ตำแหน่ง',s.gates?.location?.state,550,yy0,250);recorderGateChip(ctx,'แท่ง',s.gates?.behavior?.state,820,yy0,230);recorderGateChip(ctx,'แรงสั้น',s.gates?.micro?.state,1070,yy0,260);});
+   y+=rows.length*74+32;
+
+   ctx.font="700 30px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#dce8f7';ctx.fillText('ภาพรวมตลาดระหว่างบันทึก',70,y);y+=42;
+   const states=marketRecorderStateSummary(snaps);ctx.font="400 23px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#b2c2d4';
+   const stateText=states.length?states.map(([k,n])=>k+' '+Math.round(n/snaps.length*100)+'%').join(' · '):'ไม่มีข้อมูลสถานะ';
+   recorderText(ctx,stateText,70,y,W-140,34,2);y+=74;
+   const gateNames={structure:'โครงสร้าง',location:'ตำแหน่งราคา',behavior:'พฤติกรรมแท่ง',micro:'แรงซื้อขายระยะสั้น'};
+   ctx.font="600 22px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#c9d6e6';ctx.fillText('เวลาที่ Gate ยังไม่ผ่าน',70,y);y+=32;
+   diag.ranked.forEach(([k,ms],i)=>{const max=Math.max(1,diag.ranked[0]?.[1]||1),bw=760*(ms/max);ctx.fillStyle='#1c2b3d';ctx.fillRect(70,y+i*52,760,22);ctx.fillStyle=i===0?'#ff8da1':'#7fa1c5';ctx.fillRect(70,y+i*52,bw,22);ctx.font="500 20px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#aebfd3';ctx.fillText((gateNames[k]||k)+' · '+recorderDuration(ms),855,y+i*52+19);});
+   y+=diag.ranked.length*52+36;
+
+   ctx.font="700 28px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#dce8f7';ctx.fillText('สรุปสำหรับปรับ V3',70,y);y+=38;
+   const blocker=diag.topBlocker?gateNames[diag.topBlocker]||diag.topBlocker:'ยังระบุไม่ได้';
+   const finalText=diag.tone==='warn'
+    ?'จุดที่ควรตรวจต่อคือ '+blocker+' เพราะใช้เวลาขวางนานที่สุด อย่าเพิ่งลดทุกเกณฑ์พร้อมกัน ควรเทียบรีพอร์ตหลายรอบก่อนปรับสูตร'
+    :'รีพอร์ตนี้ยังไม่พอให้สรุปว่าต้องลดเกณฑ์ จุดที่ควรทำต่อคือเก็บหลายช่วงตลาดแล้วดูว่าตัวหน่วงเดิมเกิดซ้ำหรือไม่';
+   ctx.font="400 23px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#b4c4d6';recorderText(ctx,finalText,70,y,W-140,35,3);
+   ctx.font="400 18px 'Segoe UI',Tahoma,sans-serif";ctx.fillStyle='#71859c';ctx.fillText('รีพอร์ตนี้ใช้ข้อมูลที่ถูกบันทึกตามเวลา ไม่ใช้ผลอนาคตย้อนกลับไปแก้ Snapshot ก่อนหน้า',70,H-46);
+   return canvas;
+  }
+  function marketRecorderOpenReport(rec){
+   rec.diagnostic=rec.diagnostic||marketRecorderDiagnostic(rec);marketRecorder.latest=rec;
+   const canvas=marketRecorderCanvas(rec);canvas.toBlob(blob=>{
+    if(!blob)return;if(marketRecorder.previewUrl)URL.revokeObjectURL(marketRecorder.previewUrl);marketRecorder.previewUrl=URL.createObjectURL(blob);
+    const img=$('market-recorder-preview');if(img)img.src=marketRecorder.previewUrl;
+    const d=rec.diagnostic,sum=$('market-recorder-summary');if(sum){sum.className='recorder-summary '+d.tone;sum.innerHTML='<b>'+esc(d.verdict)+'</b><br>'+esc(d.why);}
+    $('market-recorder-title').textContent='รีพอร์ต '+rec.id;$('market-recorder-subtitle').textContent=rec.engineVersion+' · '+rec.tf+' · '+recorderClock(rec.startedAt)+' → '+recorderClock(rec.endedAt);
+    const dlg=$('market-recorder-dialog');if(dlg&&!dlg.open)dlg.showModal();
+   },'image/png');
+  }
+  function marketRecorderStop(){
+   if(!marketRecorder.active)return;
+   marketRecorderCapture(true);const endedAt=Date.now(),tf=marketRecorder.snapshots[0]?.tf||state.analysisTf,startSec=marketRecorder.startedAt/1000,endSec=endedAt/1000;
+   const bars=(state.bars[tf]||[]).filter(b=>b.time>=startSec-300&&b.time<=endSec+60).map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close,volume:b.volume,closed:!!b.closed}));
+   const signals=engine.signals.filter(s=>!marketRecorder.startSignalIds.has(s.id)&&s.entryTime>=marketRecorder.startedAt&&s.entryTime<=endedAt).map(s=>({id:s.id,entryTime:s.entryTime,entryPrice:s.entryPrice,direction:s.direction,type:s.type,version:s.version}));
+   const rec={schema:'aris-market-record-v1',id:marketRecorder.id,engineVersion:CFG.version,tf,startedAt:marketRecorder.startedAt,endedAt,snapshots:[...marketRecorder.snapshots],bars,signals};
+   rec.diagnostic=marketRecorderDiagnostic(rec);marketRecorderSave(rec);marketRecorder.active=false;marketRecorderStatus();marketRecorderOpenReport(rec);
+  }
+  function marketRecorderToggle(){marketRecorder.active?marketRecorderStop():marketRecorderStart();}
+  function marketRecorderDownload(){
+   const rec=marketRecorder.latest;if(!rec)return;
+   const canvas=marketRecorderCanvas(rec);canvas.toBlob(blob=>{if(!blob)return;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ARIS-Market-Record-'+rec.id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);},'image/png');
+  }
+
   globalThis.LiveAnalysisBridgeV1={schema:'live-analysis-bridge-v1',snapshot:readOnlySituationSnapshot};
   if(globalThis.__TEST_MODE__)globalThis.__appTest={state,engine,candleState,candleBehaviorAssess,candleMaybeIssue,candleSettle,ingest,analyseNow,trainingBundle};
   async function startPersistentApp(){await restoreJournalBeforeBoot();drawHistory();persist(true);boot();}
@@ -5781,8 +6001,8 @@ function openReport(){
   $('main-version-inline').textContent=versionDisplay(CFG.version);
   state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
-  $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog')])d.addEventListener('click',e=>{if(e.target===d)d.close();});startPersistentApp();
-  setInterval(()=>{if(state.booted&&!document.hidden&&!state.orderHistoryRecoveryBusy&&engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);},1000);
+  $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('market-recorder-toggle')?.addEventListener('click',marketRecorderToggle);$('market-recorder-download')?.addEventListener('click',marketRecorderDownload);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog'),$('market-recorder-dialog')])d?.addEventListener('click',e=>{if(e.target===d)d.close();});marketRecorderStatus();startPersistentApp();
+  setInterval(()=>{if(state.booted&&!document.hidden&&!state.orderHistoryRecoveryBusy&&engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);marketRecorderStatus();},1000);
   window.addEventListener('pagehide',()=>{persist(true);candlePersist();});
 })();
 
