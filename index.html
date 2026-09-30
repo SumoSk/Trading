@@ -635,7 +635,7 @@ main{padding-top:10px}
         <div class="toolbar-more-popover">
           <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
           <button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
-          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.5.0">V6.5.0 · Inverse All</option><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.0.0">V7.0.0 · Market Phase</option><option value="7.0.1">V7.0.1 · Range Edge Confirmation</option><option value="7.1.0">V7.1.0 · สูตรเดิม</option><option value="7.1.1">V7.1.1 · กันไล่ปลายขา</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.0.0">ARIS V1 · T+10 Edge Engine</option><option value="ARIS-1.1.0">ARIS V1.1 · Faster Entry</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option><option value="ARIS-2.0.0">ARIS V2 r6 · Market Observer</option></select></label>
+          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option><option value="ARIS-2.0.0">ARIS V2 r6 · Market Observer</option></select></label>
           <button id="latest" class="quiet">กลับล่าสุด</button>
         </div>
       </details>
@@ -865,7 +865,13 @@ const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v2';
 let SELECTED_ENGINE_VERSION='ARIS-2.0.0';
 try{
  const savedVersion=localStorage.getItem(ACTIVE_VERSION_STORE);
- if(['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0','ARIS-2.0.0'].includes(savedVersion))SELECTED_ENGINE_VERSION=savedVersion;
+ const visibleVersionMap={
+  '6.5.0':'6.6.0',
+  '7.0.0':'7.2.0','7.0.1':'7.2.0','7.1.0':'7.2.0','7.1.1':'7.2.0',
+  'ARIS-1.0.0':'ARIS-1.2.0','ARIS-1.1.0':'ARIS-1.2.0'
+ };
+ const resolvedVersion=visibleVersionMap[savedVersion]||savedVersion;
+ if(['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0'].includes(resolvedVersion))SELECTED_ENGINE_VERSION=resolvedVersion;
 }catch{}
 const V710_CONFIG=Object.freeze({
  version:'7.1.0',horizonMs:600000,settlementToleranceMs:5000,
