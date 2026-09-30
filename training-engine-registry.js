@@ -6,7 +6,8 @@
     {version:'6.6.0',label:'V6.6'},
     {version:'7.2.0',label:'V7.2'},
     {version:'ARIS-1.2.0',label:'ARIS 1.2'},
-    {version:'ARIS-2.0.0',label:'ARIS 2.0'}
+    {version:'ARIS-2.0.0',label:'ARIS 2.0'},
+    {version:'ARIS-3.0.0',label:'ARIS 3.0'}
   ]);
   const allowed=new Set(SUPPORTED.map(x=>x.version));
   const cache=new Map();
@@ -32,7 +33,8 @@
     frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><base href="'+escapeHtml(base)+'"></head><body>'+
       '<script>window.__TRAINING_VERSION='+JSON.stringify(v)+';<\/script>'+
       '<script src="'+escapeHtml(asset('training-engine-core.js','20261001-r1'))+'"><\/script>'+
-      '<script src="'+escapeHtml(asset('v2.js','20260930-r6'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v2.js','20260930-r6'))+'"><\/script>'+ 
+      '<script src="'+escapeHtml(asset('v3.js','20261001-r1'))+'"><\/script>'+
       '</body></html>';
     document.body.append(frame);
 
