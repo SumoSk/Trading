@@ -526,6 +526,10 @@
     const rows=Array.isArray(signals)?signals:[];
     for(const s of rows)if(s?.version===TARGET_VERSION&&s.dataset?.entry)ensureAudit(s,rows);
     globalThis.AuditCalibrationV2?.update?.(rows);
+    const panel=ensureUI();
+    const activeVersion=globalThis.EventSignalV6?.CFG?.version||null;
+    if(panel)panel.hidden=activeVersion!==TARGET_VERSION;
+    if(activeVersion!==TARGET_VERSION)return null;
     const latest=[...rows].reverse().find(s=>s?.version===TARGET_VERSION&&s.dataset?.entry);
     const audit=latest?ensureAudit(latest,rows):null;
     render(audit,latest,rows);
