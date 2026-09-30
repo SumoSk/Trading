@@ -381,7 +381,12 @@ function buildThesis(reader,ep){
  }else if(reader.state==='BREAKOUT_ACCEPTED'){
   code='BREAKOUT_CONTINUATION';playbook='breakout_continuation';why='ราคาออกจากกรอบและเริ่มยืนด้านนอกได้';trigger='รักษาพื้นที่นอกกรอบ + มีระยะไปต่อ + แท่งหรือแรงซื้อขายยังหนุน';invalidate='กลับเข้ากรอบเดิมและยืนด้านใน';next='ถ้าย่อกลับมาทดสอบ ให้เปลี่ยนเป็นแผนย่อแล้วกลับมายืน';
  }else if(reader.state==='BREAKOUT_ATTEMPT'){
-  code='BREAKOUT_WATCH';why='ราคาเพิ่งพ้นกรอบแต่ยังยืนไม่ชัด';trigger='แท่งรับราคานอกกรอบและแรงซื้อขาย 60 วินาทีไม่สวน';invalidate='ถูกดึงกลับเข้ากรอบ';next='ถ้ารับราคานอกกรอบได้ จะเปลี่ยนเป็นแผนตามการทะลุ';
+  const breakAligned=(b.breakoutUp&&d>0)||(b.breakoutDown&&d<0);
+  if(observerFollow&&breakAligned){
+   code='BREAKOUT_EARLY_FOLLOW';playbook='trend_continuation';why='ราคากำลังพ้นกรอบไปทางเดียวกับโครงสร้างและน้ำหนักหลัก';trigger='โครงสร้างกับตำแหน่งผ่าน และแท่งหรือแรงซื้อขายอย่างน้อยหนึ่งด้านยืนยัน';invalidate='ถูกดึงกลับเข้ากรอบพร้อมแรงสวนชัด';next='ตามการเคลื่อนไหวแบบเฝ้าสด ไม่ต้องรอให้สถานะเปลี่ยนชื่อก่อน';
+  }else{
+   code='BREAKOUT_WATCH';why='ราคาเพิ่งพ้นกรอบแต่ยังยืนไม่ชัด';trigger='แท่งรับราคานอกกรอบและแรงซื้อขาย 60 วินาทีไม่สวน';invalidate='ถูกดึงกลับเข้ากรอบ';next='ถ้ารับราคานอกกรอบได้ จะเปลี่ยนเป็นแผนตามการทะลุ';
+  }
  }else if(reader.state==='PULLBACK'&&(d>0?b.reclaimUp:b.reclaimDown)){
   code='PULLBACK_RECLAIM';playbook='pullback_reclaim';why='โครงสร้างเดิมยังอยู่และราคาย่อแล้วเริ่มกลับมายืน';trigger='ฐานไม่เสีย + กลับมายืน + แท่งหรือแรงซื้อขายระยะสั้นยืนยัน';invalidate='หลุดจุดสวิงป้องกันของโครงสร้างเดิม';next='ถ้ายังยืนฐานไม่ได้ ให้รอฐานใหม่และไม่ไล่ราคา';
  }else if((d>0?s.reverseUp:s.reverseDown)&&['REVERSAL_DEVELOPING','EXHAUSTION'].includes(reader.state)){
