@@ -16,7 +16,7 @@ function stateLabel(s){
  return ({
   FRESH_RANGE:'Fresh Sideway',BALANCED_RANGE:'Sideway สมดุล',RANGE_COMPRESSION:'Sideway กำลังบีบ',
   EDGE_PRESSURE:'Sideway กดขอบ',CHOP:'Swing / Chop',BREAKOUT_ATTEMPT:'Breakout Attempt',
-  BREAKOUT_ACCEPTED:'Breakout Accepted',FALSE_BREAK:'False Break',EXPANSION:'Expansion',
+  BREAKOUT_ACCEPTED:'Breakout Accepted',BREAKOUT_RETEST:'Breakout Retest',FALSE_BREAK:'False Break',EXPANSION:'Expansion',
   IMPULSE:'Impulse',TREND:'Trend',PULLBACK:'Pullback',MATURE_TREND:'Mature Trend',
   EXHAUSTION:'Exhaustion',REVERSAL_WATCH:'Reversal Watch',REVERSAL_CONFIRMED:'Reversal Confirmed',
   CONFLICT:'Conflict / No Edge',TRANSITION:'Transition'
