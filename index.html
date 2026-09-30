@@ -688,6 +688,22 @@ main{padding-top:10px}
 .auto-fib-status{fill:#c4cfdd;font:600 8px 'Segoe UI',Tahoma,sans-serif}
 .auto-fib-anchor-label{fill:#9fb0c6;font:600 8px 'Segoe UI',Tahoma,sans-serif}
 </style>
+
+<style id="aris-v2-chart-label-size-fix">
+/* UI-only compact chart labels; engine logic remains untouched. */
+.signal-card-main .entry-request-button{min-height:29px!important;padding:5px 7px!important}
+.signal-card-main .entry-request-button strong{font-size:8px!important;line-height:1.15!important}
+.signal-card-main .entry-request-button strong small{font-size:6.5px!important;line-height:1.15!important}
+.left-line-label{font-size:7px!important;padding:2px 4px!important;gap:3px!important;border-radius:4px!important}
+.left-line-label.signal{font-size:7px!important;padding:2px 4px!important}
+.right-order-label{font-size:7px!important;padding:2px 4px!important;gap:3px!important;border-radius:4px!important;right:58px!important}
+@media(max-width:560px){
+ .signal-card-main .entry-request-button strong{font-size:7.5px!important}
+ .signal-card-main .entry-request-button strong small{font-size:6px!important}
+ .left-line-label,.left-line-label.signal,.right-order-label{font-size:6.5px!important;padding:2px 3px!important}
+ .right-order-label{right:52px!important}
+}
+</style>
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
@@ -2976,9 +2992,13 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   }
 
   function renderAutoFibOverlay(svg,make,w,h){
-   if(SELECTED_ENGINE_VERSION!=='ARIS-2.0.0')return;
+   const activeVersion=globalThis.EventSignalV6?.CFG?.version;
+   if(activeVersion!=='ARIS-2.0.0')return;
    const fib=lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib;
-   if(!fib?.valid||!Number.isFinite(fib.start)||!Number.isFinite(fib.end))return;
+   if(!fib?.valid||!Number.isFinite(fib.start)||!Number.isFinite(fib.end)){
+    const waiting=make('text',{x:8,y:13,class:'auto-fib-status'});
+    waiting.textContent='AUTO FIB · รอ Swing ยืนยัน';svg.append(waiting);return;
+   }
 
    const ext=Array.isArray(fib.extensions)?fib.extensions:[];
    const extPrice=ratio=>{
@@ -2995,7 +3015,10 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    const levels=raw.map(q=>({...q,y:state.candleSeries.priceToCoordinate(q.price)}))
     .filter(q=>Number.isFinite(q.price)&&Number.isFinite(q.y)&&q.y>=-40&&q.y<=h+40)
     .sort((a,b)=>a.y-b.y);
-   if(levels.length<2)return;
+   if(levels.length<2){
+    const offscreen=make('text',{x:8,y:13,class:'auto-fib-status'});
+    offscreen.textContent='AUTO FIB · Leg อยู่นอกช่วงกราฟ';svg.append(offscreen);return;
+   }
 
    const sp=drawingScreenPoint({time:Number(fib.startTime),price:Number(fib.start)});
    const ep=drawingScreenPoint({time:Number(fib.endTime),price:Number(fib.end)});
