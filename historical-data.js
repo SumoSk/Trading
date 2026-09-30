@@ -105,6 +105,7 @@
       await deleteChunksForDataset(session.datasetId);
       await txDelete('datasets',session.datasetId);
     }
+    await clearReplayArtifacts(sessionId);
     await txDelete('sessions',sessionId);
     return true;
   }
@@ -309,6 +310,77 @@
     }
   }
 
+
+  async function putMany(storeName,values){
+    const rows=(values||[]).filter(Boolean);
+    if(!rows.length)return 0;
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(storeName,'readwrite'),store=tx.objectStore(storeName);
+      for(const row of rows)store.put(row);
+      tx.oncomplete=()=>resolve(rows.length);
+      tx.onerror=()=>reject(tx.error||new Error('บันทึก Training records ไม่สำเร็จ'));
+      tx.onabort=()=>reject(tx.error||new Error('Training records transaction ถูกยกเลิก'));
+    });
+  }
+
+  async function getBySession(storeName,sessionId){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(storeName,'readonly'),store=tx.objectStore(storeName);
+      if(!store.indexNames.contains('sessionId')){resolve([]);return;}
+      const req=store.index('sessionId').getAll(IDBKeyRange.only(sessionId));
+      req.onsuccess=()=>resolve(req.result||[]);
+      req.onerror=()=>reject(req.error||new Error('อ่าน Training records ไม่สำเร็จ'));
+    });
+  }
+
+  async function deleteBySession(storeName,sessionId){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(storeName,'readwrite'),store=tx.objectStore(storeName);
+      if(!store.indexNames.contains('sessionId')){resolve(true);return;}
+      const req=store.index('sessionId').openCursor(IDBKeyRange.only(sessionId));
+      req.onsuccess=()=>{const c=req.result;if(c){c.delete();c.continue();}};
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>reject(tx.error||new Error('ลบ Training records ไม่สำเร็จ'));
+    });
+  }
+
+  async function getDatasetBars(datasetIdValue){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction('barChunks','readonly'),idx=tx.objectStore('barChunks').index('datasetId');
+      const req=idx.getAll(IDBKeyRange.only(datasetIdValue));
+      req.onsuccess=()=>{
+        const chunks=(req.result||[]).sort((a,b)=>(a.chunkNo||0)-(b.chunkNo||0));
+        const bars=chunks.flatMap(c=>Array.isArray(c.bars)?c.bars:[]).sort((a,b)=>a.time-b.time);
+        resolve(bars);
+      };
+      req.onerror=()=>reject(req.error||new Error('อ่านแท่ง Training ไม่สำเร็จ'));
+    });
+  }
+
+  async function saveSession(session){return txPut('sessions',session);}
+  async function saveReport(sessionId,report){
+    return txPut('reports',{id:sessionId+':phase2',sessionId,updatedAt:Date.now(),...report});
+  }
+  async function getReport(sessionId){
+    return txGet('reports',sessionId+':phase2');
+  }
+  async function saveCheckpoint(sessionId,payload){
+    return txPut('checkpoints',{id:sessionId+':latest',sessionId,updatedAt:Date.now(),...payload});
+  }
+  async function getCheckpoint(sessionId){return txGet('checkpoints',sessionId+':latest');}
+  async function clearCheckpoint(sessionId){return txDelete('checkpoints',sessionId+':latest');}
+  async function clearReplayArtifacts(sessionId){
+    await deleteBySession('signals',sessionId);
+    await deleteBySession('audit',sessionId);
+    await deleteBySession('reports',sessionId);
+    await deleteBySession('checkpoints',sessionId);
+    return true;
+  }
+
   async function getDatasetSummary(datasetIdValue){
     return txGet('datasets',datasetIdValue);
   }
@@ -323,7 +395,8 @@
     dbVersion:DB_VERSION,
     stores:['sessions','datasets','barChunks','signals','audit','reports','checkpoints'],
     endpoint:BINANCE_FUTURES_KLINES,
-    alignMinute,lastClosedOpenTime,openDb,storageEstimate,listSessions,getSession,getDatasetSummary,
+    alignMinute,lastClosedOpenTime,openDb,storageEstimate,listSessions,getSession,getDatasetSummary,getDatasetBars,
+    saveSession,putMany,getBySession,deleteBySession,saveReport,getReport,saveCheckpoint,getCheckpoint,clearCheckpoint,clearReplayArtifacts,
     deleteSession,downloadDataset
   };
 })();
