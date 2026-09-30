@@ -92,6 +92,7 @@ function rangeBehavior(f,x){
  if(Number.isInteger(lastLower)&&base.length-lastLower>=3){const after=base.slice(lastLower+1);if(after.length)upRotationReach=clip((Math.max(...after.map(q=>q.high))-lo)/w,0,1.5);}
  if(Number.isInteger(lastUpper)&&base.length-lastUpper>=3){const after=base.slice(lastUpper+1);if(after.length)downRotationReach=clip((hi-Math.min(...after.map(q=>q.low)))/w,0,1.5);}
  const bullRotationFailure=Number.isFinite(upRotationReach)&&upRotationReach<.55,bearRotationFailure=Number.isFinite(downRotationReach)&&downRotationReach<.55;
+ const rotationSamples=[upRotationReach,downRotationReach].filter(Number.isFinite),rotationQuality=rotationSamples.length?clip(avg(rotationSamples),0,1.5):1;
  const upperWeakening=weak(ur),lowerWeakening=weak(lr);
  const upperPressure=(pos>=.62?1:0)+(lowSlope>=.035?1:0)+(compression?1:0)+(upperWeakening||upTouches>=3?1:0)+(bearRotationFailure?1:0);
  const lowerPressure=(pos<=.38?1:0)+(highSlope<=-.035?1:0)+(compression?1:0)+(lowerWeakening||loTouches>=3?1:0)+(bullRotationFailure?1:0);
@@ -112,7 +113,7 @@ function rangeBehavior(f,x){
  let age=0;for(let i=b.length-1;i>=0;i--){const q=b[i];if(q.close<lo-a*.08||q.close>hi+a*.08)break;age++;}
  return {hi,lo,widthAtr:w/a,pos,upperTouches:upTouches,lowerTouches:loTouches,upperRejectAvg:avg(ur.slice(-2)),lowerRejectAvg:avg(lr.slice(-2)),
   upperWeakening,lowerWeakening,lowSlope,highSlope,compression,compressionRatio:ratio,balanced,edgePressureDir:pressure,upperPressure,lowerPressure,
-  upRotationReach,downRotationReach,bullRotationFailure,bearRotationFailure,
+  upRotationReach,downRotationReach,bullRotationFailure,bearRotationFailure,rotationQuality,
   breakDir,breakProgress:breakDir>0?bu:breakDir<0?bd:0,fakeDir,fakeLevel,fakeAgeBars,ageBars:age};
 }
 function fibContext(f,x,z){
