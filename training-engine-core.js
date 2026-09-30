@@ -130,7 +130,8 @@ const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3BookAssist:.08,v3BookAgainstMax:.10,
  v3ConfirmTicks:2,v3ConfirmMs:500,v3ShockResolveMinMs:700,
  v3EpisodeMaxAgeMs:720000,v3EpisodeFlipAtr:.12,v3NewLegPullbackAtr:.35,v3NewLegMinMoveAtr:.65,
- v3ReversalMinExtension:1.40
+ v3ReversalMinExtension:1.40,
+ v3FibZoneAtr:.15,v3FibMaxAgeBars:25
 });
 const V650_SELECT_CONFIG=Object.freeze({
  version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
