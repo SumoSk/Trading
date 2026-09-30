@@ -170,12 +170,12 @@ function microContext(x,d){
  const composite=finite(x.flow)?x.flow:0,bookComposite=x.bookValid&&finite(x.book)?x.book:null;
  const aligned15=f15===null?null:d*f15,aligned60=f60===null?null:d*f60,aligned180=f180===null?null:d*f180,alignedComposite=d*composite,alignedBook=bookComposite===null?null:d*bookComposite;
  const historical=source==='historical_1m_adapter'||m.replay===true;
- let state='DEVELOPING',reason='Microstructure ยังไม่ยืนยัน';
+ let state='DEVELOPING',reason='แรงซื้อขายระยะสั้นยังไม่ยืนยัน';
  const checks=[];
  if(historical){
   const pass=alignedComposite>=CFG.v3ReplayMinFlow,block=alignedComposite<=-CFG.v3ReverseFlow;
   state=pass?'PASS':block?'BLOCK':'DEVELOPING';
-  reason=pass?'Historical 1m flow adapter หนุนทิศ':'Historical 1m flow ยังไม่หนุนพอ';
+  reason=pass?'แรงซื้อขายจากข้อมูลย้อนหลัง 1 นาทีหนุนทิศ':'แรงซื้อขายจากข้อมูลย้อนหลัง 1 นาทียังไม่หนุนพอ';
   checks.push({key:'replay_flow',label:'1m taker-flow adapter',value:alignedComposite,pass});
  }else{
   const coveragePass=coverage>=CFG.v3FlowCoverageSec;
@@ -189,7 +189,7 @@ function microContext(x,d){
   const pass=coveragePass&&!longOppose&&!bookAgainst&&(strong||(mediumPass&&(shortPass===true||bookPass===true||f15===null)));
   const block=coveragePass&&(mediumOppose&&(shortOppose||bookAgainst));
   state=pass?'PASS':block?'BLOCK':'DEVELOPING';
-  reason=pass?'Flow หลายช่วงเวลาไม่ขัดกันและ Micro ยืนยัน':block?'Flow/Book สวน thesis ชัด':'Flow ยังต้องสะสมหลักฐาน';
+  reason=pass?'แรงซื้อขายหลายช่วงเวลาไม่ขัดกันและข้อมูลระยะสั้นยืนยัน':block?'แรงซื้อขายหรือสมุดคำสั่งสวนมุมมองชัด':'แรงซื้อขายยังต้องสะสมหลักฐาน';
   checks.push({key:'coverage',label:'Flow coverage',value:coverage,pass:coveragePass},{key:'flow15',label:'Flow 15s',value:aligned15,pass:shortPass},
    {key:'flow60',label:'Flow 60s',value:aligned60??alignedComposite,pass:mediumPass},{key:'flow180',label:'Flow 180s ไม่สวน',value:aligned180,pass:!longOppose},
    {key:'book',label:'Order book',value:alignedBook,pass:bookPass});
@@ -271,9 +271,9 @@ function shockSnapshot(reader,x,existing){
   else if(progress<=-.03)state=reverseBreak?'FAIL':'RETEST';
   else state='ABSORB';
  }else state='UNRESOLVED';
- why=state==='HOLD'?'แรง Shock รักษาพื้นที่และ Flow ยังตาม':state==='RETEST'?'ราคากลับทดสอบพื้นที่ Shock':
-  state==='FAIL'?'Shock ถูกตีกลับพร้อม Structure break ฝั่งตรงข้าม':state==='ABSORB'?'Volume สูงแต่ราคาไม่คืบและเกิดการดูดซับ':
-  state==='EXHAUST'?'Shock อยู่ปลายขาและมีสัญญาณหมดแรง':'ยังไม่มีคำตอบว่าตลาดจะ Hold หรือ Fail';
+ why=state==='HOLD'?'แรงกระแทกรักษาพื้นที่และแรงซื้อขายยังตาม':state==='RETEST'?'ราคากลับมาทดสอบพื้นที่ของแรงกระแทก':
+  state==='FAIL'?'แรงกระแทกถูกตีกลับพร้อมการแตกโครงสร้างฝั่งตรงข้าม':state==='ABSORB'?'ปริมาณซื้อขายสูงแต่ราคาไม่คืบและเกิดการดูดซับ':
+  state==='EXHAUST'?'แรงกระแทกเกิดช่วงปลายขาและมีสัญญาณหมดแรง':'ยังไม่มีคำตอบว่าราคาจะยืนต่อได้หรือถูกตีกลับ';
  return {...s,state,why,age,progress,alignedFlow:flow,lastPrice:x.price};
 }
 function episodeSeed(reader){
@@ -405,7 +405,7 @@ function structureGate(reader,thesis){
  checks.push({label:'Protected swing ยังไม่เสียในฝั่ง thesis',pass:protectedOK},{label:'Swing/Trend structure รองรับ',pass:swingAligned||trendAligned},
   {label:'Breakout/Structure break ตาม playbook',pass:thesis.playbook==='confirmed_reversal'?reversalBreak:thesis.playbook==='breakout_continuation'?accepted:true});
  const state=gateState(pass,developing);
- return {state,pass,reason:pass?'โครงสร้างรองรับ thesis':state==='DEVELOPING'?'Structure กำลังก่อตัวแต่ยังไม่ครบ':'Structure boss gate ไม่ผ่าน',
+ return {state,pass,reason:pass?'โครงสร้างรองรับ thesis':state==='DEVELOPING'?'โครงสร้างกำลังก่อตัวแต่ยังไม่ครบ':'เงื่อนไขโครงสร้างหลักยังไม่ผ่าน',
   checks,summary:s.summary,highTag:s.highTag,lowTag:s.lowTag,integrity:s.integrity,dir:s.dir,trendDir:s.trendDir,eff:reader.eff,protectedLow:s.bullProtected,protectedHigh:s.bearProtected,
   reverseUp:s.reverseUp,reverseDown:s.reverseDown};
 }
@@ -425,14 +425,14 @@ function locationGate(reader,thesis,z){
  if(thesis.playbook==='pullback_reclaim')pass=pass&&baseLocation;
  if(thesis.playbook==='confirmed_reversal')pass=roomOK&&htfOK&&reversalLocation;
  const developing=!pass&&roomOK&&htfConflict<2&&(thesis.playbook==='pullback_reclaim'?true:extOK);
- const state=gateState(pass,developing),why=!roomOK?'พื้นที่ก่อนชนแนวสำคัญแคบ':!htfOK?'Higher TF มีสิ่งกีดขวาง/สวนแรง':!extOK?'ราคาไกลฐานเกินไป':
-  thesis.playbook==='breakout_continuation'&&chase>CFG.v3BreakoutMaxChaseAtr?'Breakout ถูกไล่ไกลเกินจุดได้เปรียบ':
-  thesis.playbook==='pullback_reclaim'&&!baseLocation?'Pullback ยังไม่อยู่ฐาน/Fib ที่ดี':
-  thesis.playbook==='confirmed_reversal'&&!reversalLocation?'Reversal เกิดกลางทาง ไม่มี location รองรับ':'Location กำลังพัฒนา';
- return {state,pass,reason:pass?'ตำแหน่งราคาเหมาะกับ playbook':why,room:finite(room)?room:null,extension,rangePosition:rangePos,chaseAtr:chase,
+ const state=gateState(pass,developing),why=!roomOK?'พื้นที่ก่อนชนแนวสำคัญแคบ':!htfOK?'กรอบเวลาใหญ่มีแนวขวางหรือสวนแรง':!extOK?'ราคาไกลฐานเกินไป':
+  thesis.playbook==='breakout_continuation'&&chase>CFG.v3BreakoutMaxChaseAtr?'ราคาหลังทะลุกรอบถูกไล่ไกลเกินจุดได้เปรียบ':
+  thesis.playbook==='pullback_reclaim'&&!baseLocation?'การย่อยังไม่อยู่บริเวณฐานหรือฟิโบนัชชีที่เหมาะ':
+  thesis.playbook==='confirmed_reversal'&&!reversalLocation?'จังหวะกลับตัวเกิดกลางทางและไม่มีตำแหน่งราคาที่รองรับ':'ตำแหน่งราคากำลังก่อตัว';
+ return {state,pass,reason:pass?'ตำแหน่งราคาเหมาะกับแผนปัจจุบัน':why,room:finite(room)?room:null,extension,rangePosition:rangePos,chaseAtr:chase,
   htfConflict,htfObstacleAtr:finite(htfObstacle)?htfObstacle:null,support,resistance,fib,checks:[
-   {label:'มีพื้นที่ก่อนชนแนวสำคัญ',pass:roomOK},{label:'ไม่ไล่ไกลจากฐานเกิน',pass:extOK},{label:'Higher TF ไม่ขวางหนัก',pass:htfOK},
-   {label:'ตำแหน่งเฉพาะ playbook เหมาะสม',pass:thesis.playbook==='pullback_reclaim'?baseLocation:thesis.playbook==='confirmed_reversal'?reversalLocation:thesis.playbook==='breakout_continuation'?chase<=CFG.v3BreakoutMaxChaseAtr:true}
+   {label:'มีพื้นที่ก่อนชนแนวสำคัญ',pass:roomOK},{label:'ไม่ไล่ไกลจากฐานเกิน',pass:extOK},{label:'กรอบเวลาใหญ่ไม่ขวางหนัก',pass:htfOK},
+   {label:'ตำแหน่งราคาเหมาะกับแผนนี้',pass:thesis.playbook==='pullback_reclaim'?baseLocation:thesis.playbook==='confirmed_reversal'?reversalLocation:thesis.playbook==='breakout_continuation'?chase<=CFG.v3BreakoutMaxChaseAtr:true}
   ]};
 }
 function behaviorGate(reader,thesis){
@@ -441,27 +441,27 @@ function behaviorGate(reader,thesis){
  if(thesis.playbook==='breakout_continuation'){
   const accepted=d>0?b.acceptedUp:b.acceptedDown,notFail=b.failedExpansion!==-d,follow=alignedClose>=.60&&(b.expansion||b.oneSided===d||b.pressure*d>.12);
   pass=accepted&&notFail&&follow;developing=!pass&&accepted&&notFail;
-  checks.push({label:'Breakout acceptance',pass:accepted},{label:'ไม่เกิด failed expansion',pass:notFail},{label:'แท่งมี follow-through',pass:follow});
+  checks.push({label:'Breakout acceptance',pass:accepted},{label:'ยังไม่เกิดการขยายตัวแล้วล้มเหลว',pass:notFail},{label:'แท่งมีแรงไปต่อ',pass:follow});
  }else if(thesis.playbook==='shock_resolution'){
   const hold=shock?.state==='HOLD',notAbsorb=!b.absorption,notExhaust=!b.exhaustion;
   pass=hold&&notAbsorb&&notExhaust;developing=!pass&&hold;
-  checks.push({label:'Shock = HOLD',pass:hold},{label:'ไม่ถูกดูดซับ',pass:notAbsorb},{label:'ไม่อยู่ exhaustion',pass:notExhaust});
+  checks.push({label:'แรงกระแทกยืนราคาได้',pass:hold},{label:'ไม่ถูกดูดซับ',pass:notAbsorb},{label:'ยังไม่อยู่ช่วงหมดแรง',pass:notExhaust});
  }else if(thesis.playbook==='pullback_reclaim'){
   const pull=d>0?b.pullbackUp:b.pullbackDown,reclaim=d>0?b.reclaimUp:b.reclaimDown,close=alignedClose>=.55,notFail=b.failedExpansion!==-d;
   pass=pull&&reclaim&&close&&notFail;developing=!pass&&pull;
-  checks.push({label:'เกิด Pullback จริง',pass:pull},{label:'Reclaim ฐานกลับแล้ว',pass:reclaim},{label:'แท่งปิดหนุนทิศ',pass:close},{label:'ไม่มี failed expansion สวน',pass:notFail});
+  checks.push({label:'เกิดการย่อจริง',pass:pull},{label:'ราคากลับมายืนฐานแล้ว',pass:reclaim},{label:'แท่งปิดหนุนทิศ',pass:close},{label:'ไม่มีการขยายตัวล้มเหลวฝั่งสวน',pass:notFail});
  }else if(thesis.playbook==='confirmed_reversal'){
   const rejection=b.rejection===d||b.failedExpansion===d||b.engulf===d,close=alignedClose>=.55,notAbsorb=!b.absorption||b.rejection===d;
   pass=rejection&&close&&notAbsorb;developing=!pass&&(rejection||b.exhaustion);
-  checks.push({label:'มี rejection/failed expansion/engulf ฝั่งใหม่',pass:rejection},{label:'แท่งปิดรับฝั่งใหม่',pass:close},{label:'ไม่ถูกดูดซับกลับทันที',pass:notAbsorb});
+  checks.push({label:'มีการปฏิเสธราคา การขยายตัวล้มเหลว หรือแท่งกลืนฝั่งใหม่',pass:rejection},{label:'แท่งปิดรับฝั่งใหม่',pass:close},{label:'ไม่ถูกดูดซับกลับทันที',pass:notAbsorb});
  }
  const state=gateState(pass,developing);
- return {state,pass,reason:pass?'พฤติกรรมราคา confirm playbook':state==='DEVELOPING'?'Behavior เริ่มมาแต่ sequence ยังไม่ครบ':'Behavior ยังไม่ยืนยัน',
+ return {state,pass,reason:pass?'พฤติกรรมราคายืนยันแผนปัจจุบัน':state==='DEVELOPING'?'พฤติกรรมราคาเริ่มมาแต่ลำดับยังไม่ครบ':'พฤติกรรมราคายังไม่ยืนยัน',
   checks,tags:b.tags,pressure:b.pressure,compression:b.compression,expansion:b.expansion,absorption:b.absorption,exhaustion:b.exhaustion,rejection:b.rejection,failedExpansion:b.failedExpansion,
   pullback:d>0?b.pullbackUp:b.pullbackDown,reclaim:d>0?b.reclaimUp:b.reclaimDown,closeLocation:b.live.closeLoc,bodyAtr:b.live.bodyAtr,rangeAtr:b.live.rangeAtr};
 }
 function entryBundle(reader,thesis,z,x,ep){
- if(!thesis.playbook||!thesis.d)return {entryReady:false,state:'OBSERVE',gates:null,passed:0,blocked:['ยังไม่มี Entry Playbook']};
+ if(!thesis.playbook||!thesis.d)return {entryReady:false,state:'OBSERVE',gates:null,passed:0,blocked:['ยังไม่มีแผนที่อนุญาตให้เข้า']};
  reader.episodeShock=ep?.shock||null;reader.episodeBase=!!ep?.baseConfirmed;reader.f=reader._f;
  const structure=structureGate(reader,thesis),location=locationGate(reader,thesis,z),behavior=behaviorGate(reader,thesis),micro=microContext(x,thesis.d);
  const gates={structure,location,behavior,micro},list=Object.values(gates),passed=list.filter(g=>g.state==='PASS').length;
@@ -486,10 +486,10 @@ function story(reader,ep,thesis,bundle){
  if(m15.available)(m15.dir===d?supports:warnings).push('15m '+(m15.dir===d?'หนุน':'เอนสวน/กลาง')+' · '+m15.structure.highTag+'/'+m15.structure.lowTag);
  const gateText=bundle?.gates?Object.entries(bundle.gates).map(([k,v])=>k.toUpperCase()+' '+v.state).join(' · '):'Observe';
  const sameLeg=ep&&(ep.issuedLegKeys||[]).includes(ep.legKey);
- const summary=marketLabel(reader.state)+' · '+thesis.why+(sameLeg?' · Episode นี้ออกไม้ใน leg ปัจจุบันแล้ว':'');
+ const summary=marketLabel(reader.state)+' · '+thesis.why+(sameLeg?' · เหตุการณ์ตลาดนี้ออกไม้ในขาปัจจุบันแล้ว':'');
  return {schema:'aris-v3-story-v3',state:reader.state,stateLabel:marketLabel(reader.state),stateDescription:marketDescription(reader),direction:dirLabel(d||reader.evidence.d),
   highEvidence:e.high,lowEvidence:e.low,evidenceParts:e.parts,episodeId:ep?.id||null,episodeFamily:ep?.family||null,episodeDirection:dirLabel(ep?.d||0),
-  structuralLegKey:ep?.legKey||null,legIndex:ep?.legIndex||0,episodeDescription:ep?'Episode '+ep.family+' · '+sideThai(ep.d)+' · เก็บเป็นเรื่องเดียวกันจนกว่าจะเกิด Structure reset; ไม้ใหม่ต้องมี structural leg/base ใหม่':'กำลังสร้าง Episode',
+  structuralLegKey:ep?.legKey||null,legIndex:ep?.legIndex||0,episodeDescription:ep?'Episode '+ep.family+' · '+sideThai(ep.d)+' · ระบบถือเป็นเรื่องเดียวกันจนกว่าโครงสร้างจะรีเซ็ต ไม้ใหม่ต้องมีขาโครงสร้างหรือฐานใหม่':'กำลังสร้างเหตุการณ์ตลาด',
   shockState:ep?.shock?.state||null,shockLabel:shockLabel(ep?.shock?.state),shockReason:ep?.shock?.why||null,structure:reader.structure,behavior:reader.behavior,htf:reader.htf,fib,
   thesis,playbook:thesis.playbook,playbookLabel:playbookLabel(thesis.playbook),entryState:bundle?.state||'OBSERVE',gatePassed:bundle?.passed||0,gateTotal:bundle?.total||4,gates:g,
   blocked:unique([...(bundle?.blocked||[]),...(bundle?.developing||[])]),supports:unique(supports).slice(0,10),warnings:unique(warnings).slice(0,10),
@@ -517,7 +517,7 @@ class V3Engine extends BaseEngine{
   const broken=obs.some(q=>q.structureBroken===true),flowFlip=obs.some(q=>q.flowFlipped===true),episodeChanged=obs.some(q=>q.episodeChanged===true);
   sig.dataset.review.v3={revision:e.arisRevision,episodeId:e.v3EpisodeId,playbook:e.v3Playbook,gateStates:e.v3GateStates,observations:obs.length,
    structureBroken:broken,flowFlipped:flowFlip,episodeChanged,causality:'post_entry_labels_only'};
-  sig.dataset.review.summary+=' · V3 '+(e.v3Playbook||sig.type)+' · '+(broken?'พบ structure break หลังเข้า':'structure ยังไม่ถูกบันทึกว่าแตก')+' · follow-up เป็น label หลังเข้า ไม่ใช้ย้อนกลับเป็น predictor';
+  sig.dataset.review.summary+=' · V3 '+(e.v3Playbook||sig.type)+' · '+(broken?'พบการแตกโครงสร้างหลังเข้า':'ยังไม่พบการแตกโครงสร้างในข้อมูลที่บันทึก')+' · ข้อมูลติดตามหลังเข้าเป็นป้ายกำกับเพื่อเรียนรู้เท่านั้น ไม่ใช้ย้อนกลับไปช่วยตัดสินตอนเข้า';
  }
  step(x){
   const f=features(x.bars,x.price,x.horizonBars||10);
@@ -552,7 +552,7 @@ class V3Engine extends BaseEngine{
    reasons:[st.stateLabel,thesis.why,...st.blocked.slice(0,2)],reason:st.summary};
   base.watch=watch;
 
-  if(!prev||x.ts-prev.ts>5000){this.v3Candidate=null;return this.lastView={...base,status:'warming',reason:'ARIS V3 · กำลังต่อ Market Episode จากข้อมูลสด',gate:{state:'WATCH',direction:watch.direction,code:'v3_warming',blocker:'รอข้อมูลต่อเนื่อง',waitingFor:[thesis.nextPlan],metrics:gateMetrics(st,bundle,ep)}};}
+  if(!prev||x.ts-prev.ts>5000){this.v3Candidate=null;return this.lastView={...base,status:'warming',reason:'ARIS V3 · กำลังต่อเรื่องราวตลาดจากข้อมูลสด',gate:{state:'WATCH',direction:watch.direction,code:'v3_warming',blocker:'รอข้อมูลต่อเนื่อง',waitingFor:[thesis.nextPlan],metrics:gateMetrics(st,bundle,ep)}};}
 
   if(!thesis.playbook||!thesis.d){
    this.v3Candidate=null;
@@ -561,15 +561,15 @@ class V3Engine extends BaseEngine{
 
   if((ep.issuedLegKeys||[]).includes(ep.legKey)){
    this.v3Candidate=null;
-   return this.lastView={...base,status:'issued',reason:'ARIS V3 · Episode เดิม / Structural leg เดิม · ไม่ออกซ้ำ',gate:{state:'WAIT',direction:dirLabel(thesis.d),code:'v3_same_leg',
-    blocker:'ไม้ใน structural leg นี้ถูกใช้แล้ว',waitingFor:['รอ Pullback/Base + Reclaim สร้าง leg ใหม่ หรือ Structure reset'],metrics:gateMetrics(st,bundle,ep)}};
+   return this.lastView={...base,status:'issued',reason:'ARIS V3 · เหตุการณ์ตลาดเดิม / ขาโครงสร้างเดิม · ไม่ออกซ้ำ',gate:{state:'WAIT',direction:dirLabel(thesis.d),code:'v3_same_leg',
+    blocker:'ไม้ในขาโครงสร้างนี้ถูกใช้แล้ว',waitingFor:['รอการย่อสร้างฐานและกลับมายืน เพื่อสร้างขาใหม่ หรือรอโครงสร้างรีเซ็ต'],metrics:gateMetrics(st,bundle,ep)}};
   }
 
   if(!bundle.entryReady){
    this.v3Candidate=null;
    const waiting=unique([...bundle.blocked,...bundle.developing,thesis.trigger]).slice(0,7);
    return this.lastView={...base,status:bundle.state==='BLOCKED'?'tracking':'confirming',reason:'ARIS V3 · '+st.summary,
-    gate:{state:bundle.state==='BLOCKED'?'WATCH':'READY',direction:dirLabel(thesis.d),code:'v3_independent_gates',blocker:waiting[0]||'Independent Gates ยังไม่ครบ',waitingFor:waiting,metrics:gateMetrics(st,bundle,ep)}};
+    gate:{state:bundle.state==='BLOCKED'?'WATCH':'READY',direction:dirLabel(thesis.d),code:'v3_independent_gates',blocker:waiting[0]||'เงื่อนไขอิสระยังไม่ครบ',waitingFor:waiting,metrics:gateMetrics(st,bundle,ep)}};
   }
 
   const d=thesis.d,invalid=invalidationLevel(reader,d,thesis),candidateKey=ep.id+':'+ep.legKey+':'+thesis.playbook+':'+d;
@@ -580,8 +580,8 @@ class V3Engine extends BaseEngine{
     candidate:{schema:'aris-v3-candidate-v2',episodeId:ep.id,legKey:ep.legKey,thesis:thesis.code,playbook:thesis.playbook,gateStates:gateStates(bundle)}});}
   const confirmMs=CFG.v3ConfirmMs||500;
   if(cand.ticks<(CFG.v3ConfirmTicks||2)||x.ts-cand.evidenceSince<confirmMs){
-   return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3 · Independent Gates ผ่านครบ · กำลังยืนยันข้อมูลสด',
-    gate:{state:'READY',direction:dirLabel(d),code:'v3_live_confirm',blocker:'รอ live confirmation',waitingFor:['ยืนยันอย่างน้อย '+(CFG.v3ConfirmTicks||2)+' ครั้ง และ '+confirmMs+' ms'],metrics:gateMetrics(st,bundle,ep)}};
+   return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3 · เงื่อนไขทั้ง 4 หมวดผ่านครบ · กำลังยืนยันข้อมูลสด',
+    gate:{state:'READY',direction:dirLabel(d),code:'v3_live_confirm',blocker:'รอการยืนยันจากข้อมูลสด',waitingFor:['ยืนยันอย่างน้อย '+(CFG.v3ConfirmTicks||2)+' ครั้ง และ '+confirmMs+' ms'],metrics:gateMetrics(st,bundle,ep)}};
   }
 
   const out=dirLabel(d),id='ARIS3:'+this.session+':'+x.ts+':'+ep.legIndex,a=Math.max(f.atr,1e-9),entryLow=d>0?x.price-a*.10:x.price-a*.35,entryHigh=d>0?x.price+a*.35:x.price+a*.10;
@@ -601,13 +601,13 @@ class V3Engine extends BaseEngine{
     v3GateStates:gateStates(bundle),v3GateDetails:bundle.gates,v3GatePassCount:bundle.passed,v3Higher:reader.htf,v3Fib:reader.fib,v3MarketState:st.state,v3Structure:reader.structure,
     v3Behavior:behaviorForDataset(reader.behavior),v3Micro:microForDataset(bundle.gates.micro),v3ShockState:ep.shock?.state||null,v3InvalidationPrice:invalid,
     v3Trigger:thesis.trigger,v3Invalidation:thesis.invalidation,v3NextPlan:thesis.nextPlan,v3ReasonNewEntry:(ep.issuedLegKeys||[]).length?'new_structural_leg':'first_entry_in_episode'
-   }},reason:'ARIS V3 · '+st.stateLabel+' · '+playbookLabel(thesis.playbook)+' · Independent Gates ผ่านครบ'};
+   }},reason:'ARIS V3 · '+st.stateLabel+' · '+playbookLabel(thesis.playbook)+' · เงื่อนไขทั้ง 4 หมวดผ่านครบ'};
   this.signals.push(signal);if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(q=>q.result!=='pending');if(i>=0)this.signals.splice(i,1);}
   ep.issuedLegKeys=[...(ep.issuedLegKeys||[]),ep.legKey].slice(-12);ep.lastEntryAt=x.ts;ep.baseConfirmed=false;
   this.v3Candidate=null;this.v3LastSignal=signal;
   this.log('issued',x.ts,{id,episodeId:ep.id,legKey:ep.legKey,legIndex:ep.legIndex,revision:CFG.arisRevision,setupType:typeFor(thesis.playbook),direction:out,price:x.price,v3Playbook:thesis.playbook,gateStates:gateStates(bundle)});
   return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook),issued:true},watch,status:'new',reason:signal.reason,signal,
-   gate:{state:'ENTER',direction:out,code:'v3_enter',blocker:'Structure / Location / Behavior / Micro ผ่านครบ',waitingFor:[],metrics:gateMetrics(st,bundle,ep)}};
+   gate:{state:'ENTER',direction:out,code:'v3_enter',blocker:'โครงสร้าง / ตำแหน่งราคา / พฤติกรรมราคา / แรงซื้อขายระยะสั้น ผ่านครบ',waitingFor:[],metrics:gateMetrics(st,bundle,ep)}};
  }
 }
 function typeFor(p){return ({breakout_continuation:'v3_breakout_continuation',shock_resolution:'v3_shock_resolution',pullback_reclaim:'v3_pullback_reclaim',confirmed_reversal:'v3_confirmed_reversal'})[p]||'v3_observer';}
@@ -628,7 +628,7 @@ const priorAssess=root.ContinuousDirection?.assess;
 if(root.ContinuousDirection){
  root.ContinuousDirection.assess=function(x){
   if(CFG.version!=='ARIS-3.0.0')return priorAssess?priorAssess(x):{available:false,reason:'Direction engine unavailable'};
-  const st=x.phase?.v3View?.story,f=x.features;if(!x.fresh||!st||!f)return {available:false,reason:x.reason||'ARIS V3 · กำลังสร้าง Market Episode'};
+  const st=x.phase?.v3View?.story,f=x.features;if(!x.fresh||!st||!f)return {available:false,reason:x.reason||'ARIS V3 · กำลังสร้างเรื่องราวตลาด'};
   const high=Math.round(st.highEvidence),low=Math.round(st.lowEvidence),direction=Math.abs(high-low)<8?'BALANCED':high>low?'HIGH':'LOW',d=direction==='HIGH'?1:direction==='LOW'?-1:0;
   const room=d?roomAtr(x.zones||[],x.price,d,f.atr):null,extension=d?d*(x.price-f.ema21)/Math.max(f.atr,1e-9):0;
   const risk=st.entryState==='READY'?'ต่ำตามเกณฑ์':st.entryState==='BLOCKED'?'สูง':'กลาง';
