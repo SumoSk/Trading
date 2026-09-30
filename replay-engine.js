@@ -3,7 +3,7 @@
 
   const SCHEMA='historical-replay-v1';
   const MODE='1m_bar_close_replay';
-  const TARGET_VERSION='ARIS-2.0.0';
+  const DEFAULT_VERSION='ARIS-2.0.0';
   const MINUTE=60_000;
   const CONFIRM_OFFSETS=[0,400,800];
   const CHECKPOINT_EVERY=500;
@@ -252,7 +252,7 @@
 
   function checkpointPayload(run,nextIndex){
     return {
-      schema:'replay-checkpoint-v1',mode:MODE,nextIndex,
+      schema:'replay-checkpoint-v1',mode:MODE,nextIndex,engineVersion:run.engineVersion,
       engineState:clone(run.engine.serialize()),runtime:runtimeSnapshot(run.engine),
       pending:[...run.pending.values()].map(x=>({signalId:x.signal.id,entryIndex:x.entryIndex,exitIndex:x.exitIndex})),
       recentBars:clone(run.recentBars),agg5:clone(run.agg5),agg15:clone(run.agg15),previousClose:run.previousClose,
@@ -266,7 +266,8 @@
   }
 
   function hydrateFromCheckpoint(run,cp){
-    const Core=globalThis.EventSignalV6;
+    const Core=run.core;
+    if(cp?.engineVersion&&cp.engineVersion!==run.engineVersion)throw new Error('Checkpoint เป็นคนละเวอร์ชันกับที่เลือกเทรน');
     run.engine=new Core.Engine(cp.engineState||{});
     restoreRuntime(run.engine,cp.runtime||{});
     run.recentBars=cp.recentBars||[];
@@ -315,7 +316,7 @@
     const started=performance.now(),total=run.bars.length;
     await updateSession(run,{
       status:'replaying',phase:2,replaySchema:SCHEMA,replayMode:MODE,replayStartedAt:run.session.replayStartedAt||Date.now(),
-      replayResolution:'1m_close',replayNoLookahead:true,replayEngineVersion:TARGET_VERSION
+      replayResolution:'1m_close',replayNoLookahead:true,replayEngineVersion:run.engineVersion,engineVersion:run.engineVersion
     });
 
     for(let i=run.nextIndex;i<total;i++){
@@ -384,31 +385,38 @@
 
   async function createRun(sessionId,options={}){
     if(state.run&&state.run.running)throw new Error('มี Replay กำลังทำงานอยู่แล้ว');
-    const Core=globalThis.EventSignalV6;
-    if(!Core?.Engine||Core.CFG?.version!==TARGET_VERSION)throw new Error('Phase 2 ต้องเปิด ARIS V2.0 อยู่ก่อนเริ่ม Replay');
     if(!globalThis.HistoricalDataV1)throw new Error('HistoricalDataV1 ไม่พร้อม');
+    if(!globalThis.TrainingEngineRegistryV1)throw new Error('Training Engine Registry ไม่พร้อม');
 
     const session=await globalThis.HistoricalDataV1.getSession(sessionId);
     if(!session)throw new Error('ไม่พบ Training Session');
     if(!session.datasetId)throw new Error('Session ไม่มี Historical Dataset');
     if(!['ready','paused','stopped','replaying','replay_complete'].includes(session.status)&&!session.replayReady)throw new Error('Dataset ยังไม่พร้อม Replay');
 
+    const requestedVersion=String(options.engineVersion||session.engineVersion||DEFAULT_VERSION);
+    const loaded=await globalThis.TrainingEngineRegistryV1.load(requestedVersion);
+    const Core=loaded.Core;
+    if(!Core?.Engine||Core.CFG?.version!==requestedVersion)throw new Error('Training engine '+requestedVersion+' ไม่พร้อม');
+
     const bars=await globalThis.HistoricalDataV1.getDatasetBars(session.datasetId);
     if(!bars.length)throw new Error('ไม่พบแท่งย้อนหลังใน Training DB');
     const testStartIndex=Math.max(0,bars.findIndex(b=>Number(b.time)>=Number(session.analysisStart)));
-    if(testStartIndex<35)throw new Error('Warm-up ไม่พอสำหรับ ARIS V2');
+    if(testStartIndex<35)throw new Error('Warm-up ไม่พอสำหรับการ Replay');
 
     const run={
       running:true,paused:false,stopRequested:false,pauseCheckpointSaved:false,boundaryResetDone:false,
-      session,bars,testStartIndex,nextIndex:0,startIndex:0,
+      session:{...session,engineVersion:requestedVersion},bars,testStartIndex,nextIndex:0,startIndex:0,
+      core:Core,engineVersion:requestedVersion,
       engine:new Core.Engine({}),recentBars:[],agg5:makeAggregate(5),agg15:makeAggregate(15),previousClose:null,
       pending:new Map(),records:new Map(),
       stats:{processedBars:0,testBarsProcessed:0,warmupBarsProcessed:0,signals:0,settled:0,correct:0,incorrect:0,equal:0,missing:0,pending:0},
       speed:options.speed||'fast',onProgress:typeof options.onProgress==='function'?options.onProgress:null
     };
 
-    const resume=!!options.resume;
-    const cp=resume?await globalThis.HistoricalDataV1.getCheckpoint(sessionId):null;
+    const requestedResume=!!options.resume;
+    const storedCp=requestedResume?await globalThis.HistoricalDataV1.getCheckpoint(sessionId):null;
+    const resume=!!storedCp&&(!storedCp.engineVersion||storedCp.engineVersion===requestedVersion);
+    const cp=resume?storedCp:null;
     if(cp){
       hydrateFromCheckpoint(run,cp);
       run.startIndex=run.nextIndex;
@@ -432,10 +440,14 @@
   function resume(){if(state.run?.running&&state.run.paused){state.run.paused=false;state.run.pauseCheckpointSaved=false;return true;}return false;}
   function stop(){if(state.run?.running){state.run.stopRequested=true;state.run.paused=false;return true;}return false;}
   function current(){return state.run;}
-  async function hasCheckpoint(sessionId){return !!(await globalThis.HistoricalDataV1.getCheckpoint(sessionId));}
+  async function hasCheckpoint(sessionId,engineVersion=null){
+    const cp=await globalThis.HistoricalDataV1.getCheckpoint(sessionId);
+    if(!cp)return false;
+    return !engineVersion||!cp.engineVersion||cp.engineVersion===engineVersion;
+  }
 
   globalThis.HistoricalReplayV1={
-    schema:SCHEMA,phase:2,mode:MODE,targetVersion:TARGET_VERSION,
+    schema:SCHEMA,phase:2,mode:MODE,defaultVersion:DEFAULT_VERSION,
     start,pause,resume,stop,current,hasCheckpoint
   };
 })();
