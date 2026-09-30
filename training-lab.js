@@ -4,7 +4,7 @@
   const DAY=86_400_000;
   const MINUTE=60_000;
   const TRAINING_VERSION_STORE='btc-training-engine-version-v1';
-  const TRAINING_ENGINE_BUILD='training-registry-20261001-r1';
+  const TRAINING_ENGINE_BUILD='training-registry-20261001-r2';
   let activeController=null;
   let selectedPreset=30;
   let selectedTrainingVersion='ARIS-2.0.0';
