@@ -1160,6 +1160,77 @@ const VERSION_SETTINGS_SEED=Object.freeze({
  'ARIS-1.2.0':Object.freeze({name:ARIS_V12_PROFILE.name,config:ARIS_V12_CONFIG,strategy:ARIS_V12_PROFILE}),
  'ARIS-2.0.0':Object.freeze({name:ARIS_V2_PROFILE.name,config:ARIS_V2_CONFIG,strategy:ARIS_V2_PROFILE})
 });
+// Permanent code-resident lineage. This is intentionally NOT stored in localStorage:
+ // opening the app from another computer/device must still preserve why each engine existed.
+const VERSION_LINEAGE_ARCHIVE=Object.freeze({
+ '6.5.0':Object.freeze({
+  parent:null,status:'legacy_hidden',
+  story:'จุดเริ่มยุคทดลองกลับฝั่งของ setup เพื่อทดสอบว่าจุดเข้าตามภาพตรงหน้าถูกสวนในกรอบ +10 นาทีบ่อยหรือไม่',
+  lesson:'การตาม setup ตรง ๆ ไม่ได้ดีกว่าเสมอ แต่การกลับทุก setup ก็สุดโต่งเกินไป',
+  ledTo:'6.6.0'
+ }),
+ '6.6.0':Object.freeze({
+  parent:'6.5.0',status:'visible_reference',
+  story:'เอาผลจริงจาก 6.5 มาช่วยตัดสินเป็นราย setup แทนการกลับทุกอย่างแบบเดียวกัน',
+  lesson:'สถิติของ setup ช่วยได้ แต่ถ้าไม่รู้ว่ากำลังอยู่ต้นขา กลางขา หรือปลายขา ก็ยังยิงซ้ำผิดใน impulse เดียวได้',
+  ledTo:'7.0.0'
+ }),
+ '7.0.0':Object.freeze({
+  parent:'6.6.0',status:'legacy_hidden',
+  story:'เพิ่ม Market Phase, Volume และ Impulse เพื่อให้รู้ว่าตลาดกำลังอยู่ช่วงไหนของการเคลื่อนที่ ไม่ใช่รู้แค่ทิศ',
+  lesson:'ต้องแยก early/mid impulse ออกจาก climax และต้องระวังการตามแรงเข้าขอบ range ที่ยังไม่แตก',
+  ledTo:'7.0.1'
+ }),
+ '7.0.1':Object.freeze({
+  parent:'7.0.0',status:'legacy_hidden',
+  story:'เพิ่มการยืนยันขอบกรอบก่อนตาม trend/impulse เพื่อไม่ให้วิ่งตามแรงตรงเข้ากำแพง range',
+  lesson:'บริบทขอบกรอบต้องเป็น gate จริง ไม่ใช่แค่ข้อมูลประกอบ',
+  ledTo:'7.1.0'
+ }),
+ '7.1.0':Object.freeze({
+  parent:'7.0.1',status:'legacy_hidden',
+  story:'จัดกฎ phase, transition และ confirmation ให้เป็นเหตุเป็นผลขึ้นจากการ audit ไม้ที่บันทึกไว้',
+  lesson:'ตัวกรองช่วยลดไม้เสียได้ แต่ถ้าซ้อนมากเกินไปอาจทำให้จุดเข้าช้า',
+  ledTo:'7.1.1'
+ }),
+ '7.1.1':Object.freeze({
+  parent:'7.1.0',status:'legacy_hidden',
+  story:'เพิ่มตัวกันไล่ปลายขาเฉพาะ Mature Impulse หลังพบรูปแบบตามแรงไกลแล้วโดนสวนเร็ว',
+  lesson:'รู้ทิศถูกยังไม่พอ ต้องรู้ว่าราคาแพงเกินจะตามหรือยัง',
+  ledTo:'7.2.0'
+ }),
+ '7.2.0':Object.freeze({
+  parent:'7.1.1',status:'visible_reference',
+  story:'แยกการมองทิศ/WATCH ออกจาก Entry Gate และเพิ่ม WATCH → READY → ENTER → TOO LATE เพื่อจับตลาดให้เร็วขึ้นโดยยังคุม timing',
+  lesson:'การเพิ่ม gate อย่างเดียวทำให้ปลอดภัยขึ้นแต่พลาดต้นขาได้ จึงต้องแยกการมองเห็นออกจากการอนุญาตเข้า',
+  ledTo:'ARIS-1.0.0'
+ }),
+ 'ARIS-1.0.0':Object.freeze({
+  parent:'7.2.0',status:'legacy_hidden',
+  story:'เริ่มเครื่องยนต์ใหม่แบบ Direction → Setup → Timing ลดกฎซ้ำและแยกน้ำหนักทิศออกจากความน่าจะชนะ',
+  lesson:'โครงสร้างชัดขึ้น แต่ gate ซ้อนกันยังทำให้ WATCH มาช้าและออกไม้น้อย',
+  ledTo:'ARIS-1.1.0'
+ }),
+ 'ARIS-1.1.0':Object.freeze({
+  parent:'ARIS-1.0.0',status:'legacy_hidden',
+  story:'คลาย threshold และยืดอายุ candidate เพื่อให้เข้าเร็วขึ้น พร้อมยอมรับ live reclaim แม้พลาด exact cross tick',
+  lesson:'เข้าไวขึ้น แต่ breakout ที่วิ่งเร็วยังพลาดจังหวะแรก และ TOO LATE ยังไม่มีแผนต่อ',
+  ledTo:'ARIS-1.2.0'
+ }),
+ 'ARIS-1.2.0':Object.freeze({
+  parent:'ARIS-1.1.0',status:'visible_reference',
+  story:'เพิ่ม Breakout Follow และ Late Recovery Plan ให้หลังมาช้าแล้วยังรอย่อตามขาเดิม หรือค่อยสวนเมื่อ reversal มีหลักฐานจริง',
+  lesson:'การหาไม้เร็วและ recovery ดีขึ้น แต่ยังมองตลาดเป็นชุด setup มากกว่าการเล่าเรื่องพฤติกรรมทั้งตลาด',
+  ledTo:'ARIS-2.0.0'
+ }),
+ 'ARIS-2.0.0':Object.freeze({
+  parent:'ARIS-1.2.0',status:'visible_current',
+  story:'เปลี่ยนเป็น Observe → Memory → State → Story → Hypothesis → Playbook → Entry → Re-plan → Learning เพื่ออ่านพฤติกรรมต่อเนื่องทั้งตลาด',
+  lesson:'ตัวปัจจุบันต้องพิสูจน์ต่อด้วย forward data ว่าการเข้าใจบริบทมากขึ้นช่วยเพิ่มความแม่นโดยไม่ทำให้ช้าเกินไป',
+  ledTo:null
+ })
+});
+
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
