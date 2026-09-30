@@ -1,7 +1,6 @@
 (() => {
   'use strict';
 
-  const ENGINE_BLOB_SHA='8fe96438fc1b73b7440372baba44edc0552625c5';
   const DAY=86_400_000;
   const MINUTE=60_000;
   const TRAINING_VERSION_STORE='btc-training-engine-version-v1';
