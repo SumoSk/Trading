@@ -1203,7 +1203,8 @@ const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3BookAssist:.08,v3BookAgainstMax:.10,
  v3ConfirmTicks:2,v3ConfirmMs:500,v3ShockResolveMinMs:700,
  v3EpisodeMaxAgeMs:720000,v3EpisodeFlipAtr:.12,v3NewLegPullbackAtr:.35,v3NewLegMinMoveAtr:.65,
- v3ReversalMinExtension:1.40
+ v3ReversalMinExtension:1.40,
+ v3FibZoneAtr:.15,v3FibMaxAgeBars:25
 });
 const V650_SELECT_CONFIG=Object.freeze({
  version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
@@ -2819,7 +2820,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 })(typeof globalThis!=='undefined'?globalThis:window);
 </script>
 <script src="v2.js?v=20260930-r6"></script>
-<script src="v3.js?v=20261001-r1"></script>
+<script src="v3.js?v=20261001-r2"></script>
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
 <script src="audit-engine.js?v=20261001-r2"></script>\n<script src="historical-data.js?v=20261001-r2"></script>
@@ -3034,8 +3035,10 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 
   function renderAutoFibOverlay(svg,make,w,h){
    const activeVersion=globalThis.EventSignalV6?.CFG?.version;
-   if(activeVersion!=='ARIS-2.0.0')return;
-   const fib=lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib;
+   if(!['ARIS-2.0.0','ARIS-3.0.0'].includes(activeVersion))return;
+   const fib=activeVersion==='ARIS-3.0.0'
+    ?(lastView?.v3Story?.fib||lastView?.phase?.v3View?.story?.fib)
+    :(lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib);
    if(!fib?.valid||!Number.isFinite(fib.start)||!Number.isFinite(fib.end)){
     const waiting=make('text',{x:8,y:13,class:'auto-fib-status'});
     waiting.textContent='AUTO FIB · รอ Swing ยืนยัน';svg.append(waiting);return;
@@ -3972,25 +3975,28 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    if(CFG.version==='ARIS-3.0.0'&&v?.v3Story){
     const st=v.v3Story,dir=st.direction==='HIGH'?'HIGH':st.direction==='LOW'?'LOW':null;
     target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
-    $('setup-compact-next').textContent=cleanReportText((st.episodeFamily||'Episode')+' · '+(st.stateLabel||st.state||'Observe'));$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
-    $('setup-compact-name').textContent=cleanReportText((st.playbookLabel||'Observe only')+(dir?' · '+directionThai(dir):''));$('setup-compact-status').textContent='Gate '+Math.round(st.quality||0)+'% · '+(st.episodeId||'กำลังสร้าง episode');
-    $('setup-compact-desc').textContent='Structure เป็น Boss Gate · Volume เป็น Event Detector ไม่ใช่ Trigger';
+    $('setup-compact-next').textContent=cleanReportText((st.stateLabel||st.state||'กำลังอ่านตลาด')+' · '+(st.episodeFamily||'Episode'));$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
+    $('setup-compact-name').textContent=cleanReportText((st.playbookLabel||'Observe only')+(dir?' · '+directionThai(dir):''));
+    $('setup-compact-status').textContent='Gate '+Math.round(st.quality||0)+'% · '+(st.shockState&&st.shockState!=='NONE'?'Shock '+st.shockState:(st.episodeFamily||'Episode'));
+    $('setup-compact-desc').textContent=cleanReportText((st.stateDescription||'')+(st.playbookDescription?' · '+st.playbookDescription:'')+(st.episodeDescription?' · '+st.episodeDescription:''));
     const title=$('signal-title')?.textContent||'กำลังเฝ้ากราฟ',es=$('entry-state')?.textContent||'WATCH';$('setup-compact-entry').textContent=cleanReportText(title+' · '+es);
-    const g=st.gates||{},wait=(st.blocked||[]);
-    $('setup-compact-entry-reason').textContent=cleanReportText(wait.length?'รอ: '+wait.join(' · '):'Structure / Location / Behavior / Micro ผ่านครบ');
-    const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=t;ul.append(li);}};
-    const sup=[],warn=[];
-    if(g.structure?.pass)sup.push('Structure PASS · eff '+Number(g.structure.eff||0).toFixed(2));
-    if(g.location?.pass)sup.push('Location PASS'+(Number.isFinite(g.location.room)?' · room '+g.location.room.toFixed(2)+' ATR':''));
-    if(g.behavior?.pass)sup.push('Behavior PASS');
-    if(g.micro?.pass)sup.push('Micro PASS · flow '+Number(g.micro.flow||0).toFixed(2));
-    if(st.shockState)sup.push('Shock state: '+st.shockState);
-    if(g.structure&&!g.structure.pass)warn.push(g.structure.reason||'Structure ยังไม่ผ่าน');
-    if(g.location&&!g.location.pass)warn.push(g.location.reason||'Location ยังไม่ผ่าน');
-    if(g.behavior&&!g.behavior.pass)warn.push(g.behavior.reason||'Behavior ยังไม่ผ่าน');
-    if(g.micro&&!g.micro.pass)warn.push(g.micro.reason||'Micro ยังไม่ผ่าน');
-    fill('setup-compact-support',sup.slice(0,6),'ยังไม่มี Gate ที่ผ่านครบ');
-    fill('setup-compact-warning',warn.slice(0,6),'ยังไม่พบจุดเตือนเด่น');
+    const wait=(st.blocked||[]);
+    $('setup-compact-entry-reason').textContent=cleanReportText(
+      'Trigger: '+(st.trigger||'รอรูปแบบยืนยัน')+
+      ' · ยกเลิกเมื่อ: '+(st.invalidation||'Structure เสีย')+
+      ' · ต่อไป: '+(st.nextPlan||'ประเมิน Episode ใหม่')+
+      (wait.length?' · ตอนนี้ติด: '+wait.join(' · '):' · Gate ผ่านครบ')
+    );
+    const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=cleanReportText(t);ul.append(li);}};
+    const sup=[...(st.supports||[])],warn=[...(st.warnings||[])],fib=st.fib;
+    if(fib?.valid){
+      const near=fib.nearest;
+      sup.unshift('Fibonacci · '+(fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone));
+      if(near) sup.push('Fib ใกล้สุด '+(near.ratio*100).toFixed(1).replace('.0','')+'% ที่ '+Number(near.price).toFixed(2)+' · ห่าง '+Number(near.distanceAtr).toFixed(2)+' ATR'+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
+      sup.push('Fib leg '+(fib.d>0?'ขึ้น':'ลง')+' '+Number(fib.moveAtr).toFixed(2)+' ATR · Start '+Number(fib.start).toFixed(2)+' → End '+Number(fib.end).toFixed(2));
+    }else warn.push('Fibonacci · '+(fib?.reason||'รอ Swing leg ที่ยืนยัน'));
+    fill('setup-compact-support',sup.slice(0,9),'ยังไม่มีแรงหนุนที่ผ่าน Gate');
+    fill('setup-compact-warning',warn.slice(0,9),'ยังไม่พบจุดเตือนเด่น');
     return;
    }
    if(CFG.version==='ARIS-2.0.0'&&v?.v2Story){
