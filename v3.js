@@ -80,7 +80,7 @@ function structureSnapshot(f,x){
  const alignedEfficiency=f.eff>=CFG.v3StructureEffMin;
  const structuralDir=sw.dir||trendDir;
  return {...sw,trendDir,structuralDir,alignedEfficiency,bullProtected,bearProtected,bullBroken,bearBroken,reverseUp,reverseDown,
-  summary:(sw.highTag+' / '+sw.lowTag)+' · '+(sw.integrity==='BULLISH'?'โครงสร้างขึ้น':sw.integrity==='BEARISH'?'โครงสร้างลง':sw.integrity==='MIXED'?'โครงสร้างผสม':'Swing ยังไม่ครบ')};
+  summary:(sw.highTag+' / '+sw.lowTag)+' · '+(sw.integrity==='BULLISH'?'โครงสร้างขึ้น':sw.integrity==='BEARISH'?'โครงสร้างลง':sw.integrity==='MIXED'?'โครงสร้างผสม':'จุดสวิงยังไม่ครบ')};
 }
 
 /* ---------- Fibonacci / HTF ---------- */
@@ -92,9 +92,9 @@ function fibContext(f,p,z=[],structure=null){
   if(s.type===e.type||m<a*.8)continue;
   leg={start:s,end:e,d:e.price>s.price?1:-1,move:m};
  }
- if(!leg)return {valid:false,reason:'ยังไม่มี Swing leg ที่ยืนยัน'};
+ if(!leg)return {valid:false,reason:'ยังไม่มีขาสวิงที่ยืนยัน'};
  const endIndex=b.findIndex(q=>q.time===leg.end.time);
- if(endIndex>=0&&b.length-1-endIndex>(CFG.v3FibMaxAgeBars||25))return {valid:false,reason:'Swing Fib ล่าสุดเก่าเกินไป'};
+ if(endIndex>=0&&b.length-1-endIndex>(CFG.v3FibMaxAgeBars||25))return {valid:false,reason:'ขาสวิงสำหรับฟิโบนัชชีล่าสุดเก่าเกินไป'};
  const d=leg.d,start=leg.start.price,end=leg.end.price,m=leg.move,retr=d>0?(end-p)/m:(p-end)/m,ext=d*(p-start)/m;
  const levels=fibRatios.map(r=>({ratio:r,price:end-d*m*r}));
  let nearest=null;for(const q of levels){const distanceAtr=Math.abs(p-q.price)/a;if(!nearest||distanceAtr<nearest.distanceAtr)nearest={...q,distanceAtr};}
@@ -102,7 +102,7 @@ function fibContext(f,p,z=[],structure=null){
  const nearestExtension=[...extensions].sort((u,v)=>u.distanceAtr-v.distanceAtr)[0]||null;
  const confluence=!!(nearest&&nearest.distanceAtr<=(CFG.v3FibZoneAtr||.15)&&(z||[]).some(q=>Math.abs(q.price-nearest.price)/a<=(CFG.v3FibZoneAtr||.15)));
  const retraceZone=retr<.20?'ตื้นกว่า 23.6%':retr<=.382?'23.6–38.2%':retr<=.50?'38.2–50%':retr<=.618?'50–61.8%':retr<=.786?'61.8–78.6%':'ลึกเกิน 78.6%';
- const extensionZone=ext<1?'ยังไม่พ้น Swing เดิม':ext<1.272?'100–127.2%':ext<1.618?'127.2–161.8%':'เกิน 161.8%';
+ const extensionZone=ext<1?'ยังไม่พ้นจุดสวิงเดิม':ext<1.272?'100–127.2%':ext<1.618?'127.2–161.8%':'เกิน 161.8%';
  return {valid:true,d,start,end,startTime:leg.start.time,endTime:leg.end.time,confirmedAt:endIndex>=0?b[endIndex+2]?.time:null,
   high:Math.max(start,end),low:Math.min(start,end),moveAtr:m/a,retracement:retr,extension:ext,levels,nearest,extensions,nearestExtension,confluence,
   healthy:retr>=.236&&retr<=.618,deep:retr>.618&&retr<=.786,retraceZone,extensionZone};
@@ -191,7 +191,7 @@ function microContext(x,d){
   state=pass?'PASS':block?'BLOCK':'DEVELOPING';
   reason=pass?'แรงซื้อขายหลายช่วงเวลาไม่ขัดกันและข้อมูลระยะสั้นยืนยัน':block?'แรงซื้อขายหรือสมุดคำสั่งสวนมุมมองชัด':'แรงซื้อขายยังต้องสะสมหลักฐาน';
   checks.push({key:'coverage',label:'Flow coverage',value:coverage,pass:coveragePass},{key:'flow15',label:'Flow 15s',value:aligned15,pass:shortPass},
-   {key:'flow60',label:'Flow 60s',value:aligned60??alignedComposite,pass:mediumPass},{key:'flow180',label:'Flow 180s ไม่สวน',value:aligned180,pass:!longOppose},
+   {key:'flow60',label:'Flow 60s',value:aligned60??alignedComposite,pass:mediumPass},{key:'flow180',label:'แรงซื้อขาย 180 วินาทีไม่สวน',value:aligned180,pass:!longOppose},
    {key:'book',label:'Order book',value:alignedBook,pass:bookPass});
  }
  const liq60=finite(m.liquidationSigned60s)?d*m.liquidationSigned60s:null,liq180=finite(m.liquidationSigned180s)?d*m.liquidationSigned180s:null;
@@ -259,7 +259,7 @@ function shockSnapshot(reader,x,existing){
  if(!existing)return null;
  const s=existing,a=reader.atr,b=reader.behavior,d=s.d,age=x.ts-s.startedAt,flow=d*(x.flow||0),progress=d*(x.price-s.mid)/a;
  const reverseDir=-d,reverseBreak=reverseDir>0?reader.structure.reverseUp:reader.structure.reverseDown;
- let state=s.state||'UNRESOLVED',why='รอให้ Shock เฉลย';
+ let state=s.state||'UNRESOLVED',why='รอให้แรงกระแทกเฉลย';
  if(age<(CFG.v3ShockResolveMinMs||700))state='UNRESOLVED';
  else if(b.exhaustion&&reader.extension>=CFG.v3ShockExhaustExtension)state='EXHAUST';
  else if(b.absorption&&Math.abs(progress)<CFG.v3AbsorbProgressAtr)state='ABSORB';
@@ -375,7 +375,7 @@ function buildThesis(reader,ep){
  }else if((d>0?s.reverseUp:s.reverseDown)&&['REVERSAL_DEVELOPING','EXHAUSTION'].includes(reader.state)){
   code='CONFIRMED_REVERSAL';playbook='confirmed_reversal';why='โครงสร้างเดิมถูกเจาะและมีพฤติกรรมฝั่งใหม่';trigger='โครงสร้างที่แตกต้องคงอยู่ + มีการปฏิเสธราคาหรือการขยายตัวล้มเหลว + แรงซื้อขายระยะสั้นตาม';invalidate='ราคากลับมายืนเหนือ/ใต้จุดสวิงป้องกันเดิมได้อีกครั้ง';next='ถ้าการแตกโครงสร้างไม่คงอยู่ ให้ยกเลิกมุมกลับตัว';
  }else if(reader.state==='TREND_ADVANCE'){
-  code='TREND_WAIT_BASE';why='เทรนด์ยังเดิน แต่ไม่มีฐานใหม่ให้ได้เปรียบพอ';trigger='รอการย่อสร้างฐาน แล้วกลับมายืนฐาน';invalidate='ถ้าจุดสวิงป้องกันเสีย ให้เปลี่ยนมุมมอง';next='ไม่ออกซ้ำเพียงเพราะ Volume เพิ่มในขาเดิม';
+  code='TREND_WAIT_BASE';why='เทรนด์ยังเดิน แต่ไม่มีฐานใหม่ให้ได้เปรียบพอ';trigger='รอการย่อสร้างฐาน แล้วกลับมายืนฐาน';invalidate='ถ้าจุดสวิงป้องกันเสีย ให้เปลี่ยนมุมมอง';next='ไม่ออกซ้ำเพียงเพราะปริมาณซื้อขายเพิ่มในขาเดิม';
  }else if(reader.state==='COMPRESSION'){
   code='COMPRESSION_WATCH';why='ราคาและช่วงแท่งบีบตัว กำลังสะสมแรง';trigger='รอการขยายตัว + การยอมรับราคา + โครงสร้าง';invalidate='ไม่มีทิศให้ยกเลิกจนกว่าจะเลือกทาง';next='การทะลุกรอบที่ยังไม่ถูกยอมรับจะยังไม่เข้า';
  }else if(reader.state==='RANGE_EDGE'){
@@ -392,7 +392,7 @@ function playbookLabel(p){return ({
 /* ---------- Independent Gates ---------- */
 function structureGate(reader,thesis){
  const d=thesis.d,s=reader.structure,b=reader.behavior,checks=[];
- if(!d)return {state:'BLOCK',pass:false,reason:'ยังไม่มีทิศ thesis'};
+ if(!d)return {state:'BLOCK',pass:false,reason:'ยังไม่มีทิศของมุมมอง'};
  const protectedOK=d>0?!s.bullBroken:!s.bearBroken;
  const swingAligned=s.dir===d,trendAligned=s.trendDir===d&&s.alignedEfficiency;
  const reversalBreak=d>0?s.reverseUp:s.reverseDown;
@@ -402,10 +402,10 @@ function structureGate(reader,thesis){
  else if(thesis.playbook==='shock_resolution'){pass=reader.episodeShock?.state==='HOLD'&&protectedOK&&(swingAligned||trendAligned||accepted);developing=!pass&&protectedOK;}
  else if(thesis.playbook==='pullback_reclaim'){pass=protectedOK&&(swingAligned||trendAligned)&&reader.episodeBase===true;developing=!pass&&protectedOK&&(swingAligned||trendAligned);}
  else if(thesis.playbook==='confirmed_reversal'){pass=reversalBreak&&((d>0&&s.bearBroken)||(d<0&&s.bullBroken));developing=!pass&&reversalBreak;}
- checks.push({label:'Protected swing ยังไม่เสียในฝั่ง thesis',pass:protectedOK},{label:'Swing/Trend structure รองรับ',pass:swingAligned||trendAligned},
-  {label:'Breakout/Structure break ตาม playbook',pass:thesis.playbook==='confirmed_reversal'?reversalBreak:thesis.playbook==='breakout_continuation'?accepted:true});
+ checks.push({label:'จุดสวิงป้องกันยังไม่เสียในฝั่งของมุมมอง',pass:protectedOK},{label:'โครงสร้างจุดสวิงหรือเทรนด์รองรับ',pass:swingAligned||trendAligned},
+  {label:'การทะลุกรอบหรือการแตกโครงสร้างตรงตามแผน',pass:thesis.playbook==='confirmed_reversal'?reversalBreak:thesis.playbook==='breakout_continuation'?accepted:true});
  const state=gateState(pass,developing);
- return {state,pass,reason:pass?'โครงสร้างรองรับ thesis':state==='DEVELOPING'?'โครงสร้างกำลังก่อตัวแต่ยังไม่ครบ':'เงื่อนไขโครงสร้างหลักยังไม่ผ่าน',
+ return {state,pass,reason:pass?'โครงสร้างรองรับมุมมอง':state==='DEVELOPING'?'โครงสร้างกำลังก่อตัวแต่ยังไม่ครบ':'เงื่อนไขโครงสร้างหลักยังไม่ผ่าน',
   checks,summary:s.summary,highTag:s.highTag,lowTag:s.lowTag,integrity:s.integrity,dir:s.dir,trendDir:s.trendDir,eff:reader.eff,protectedLow:s.bullProtected,protectedHigh:s.bearProtected,
   reverseUp:s.reverseUp,reverseDown:s.reverseDown};
 }
@@ -480,7 +480,7 @@ function story(reader,ep,thesis,bundle){
  if(g.micro?.state==='PASS')supports.push('Micro: '+g.micro.reason);
  else if(g.micro)warnings.push('Micro: '+g.micro.reason);
  const fib=reader.fib;if(fib?.valid)supports.push('Fib: '+(fib.extension>1?'Extension '+(fib.extension*100).toFixed(1)+'% · '+fib.extensionZone:'Retracement '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+fib.retraceZone)+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
- else warnings.push('Fib: '+(fib?.reason||'ยังไม่มี Swing leg ที่ยืนยัน'));
+ else warnings.push('Fib: '+(fib?.reason||'ยังไม่มีขาสวิงที่ยืนยัน'));
  const m5=reader.htf.m5,m15=reader.htf.m15;
  if(m5.available)(m5.dir===d?supports:warnings).push('5m '+(m5.dir===d?'หนุน':'เอนสวน/กลาง')+' · '+m5.structure.highTag+'/'+m5.structure.lowTag);
  if(m15.available)(m15.dir===d?supports:warnings).push('15m '+(m15.dir===d?'หนุน':'เอนสวน/กลาง')+' · '+m15.structure.highTag+'/'+m15.structure.lowTag);
