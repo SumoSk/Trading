@@ -263,7 +263,11 @@ function shockSnapshot(reader,x,existing){
  else if(progress<=-.08&&flow<=-CFG.v3ReverseFlow&&reverseBreak)state='FAIL';
  else if(Math.abs(progress)<.12&&(b.pullbackUp||b.pullbackDown))state='RETEST';
  else if(progress>=.05&&flow>=CFG.v3MinFlow&&(b.postShockHold===d||b.live.d===d))state='HOLD';
- else state='UNRESOLVED';
+ else if(age>=(CFG.v3ShockMaxResolveMs||15000)){
+  if(progress>=.03&&flow>=-.01)state='HOLD';
+  else if(progress<=-.03)state=reverseBreak?'FAIL':'RETEST';
+  else state='ABSORB';
+ }else state='UNRESOLVED';
  why=state==='HOLD'?'แรง Shock รักษาพื้นที่และ Flow ยังตาม':state==='RETEST'?'ราคากลับทดสอบพื้นที่ Shock':
   state==='FAIL'?'Shock ถูกตีกลับพร้อม Structure break ฝั่งตรงข้าม':state==='ABSORB'?'Volume สูงแต่ราคาไม่คืบและเกิดการดูดซับ':
   state==='EXHAUST'?'Shock อยู่ปลายขาและมีสัญญาณหมดแรง':'ยังไม่มีคำตอบว่าตลาดจะ Hold หรือ Fail';
@@ -282,7 +286,7 @@ function episodeSeed(reader){
 function makeShock(reader,x,d){
  if(!reader.behavior.shock)return null;
  const live=reader.behavior.live;
- return {state:'UNRESOLVED',d:live.d||d||1,startedAt:x.ts,barTime:(x.current||x.bars?.at(-1))?.time||0,high:live.high,low:live.low,mid:(live.high+live.low)/2,
+ return {state:'UNRESOLVED',active:true,d:live.d||d||1,startedAt:x.ts,barTime:(x.current||x.bars?.at(-1))?.time||0,high:live.high,low:live.low,mid:(live.high+live.low)/2,
   price:x.price,rangeAtr:live.rangeAtr,volumePace:reader.behavior.pace};
 }
 function newEpisode(engine,reader,x,reason='new_episode'){
@@ -316,6 +320,10 @@ function updateEpisode(engine,reader,x){
   if(!ep.shock||ep.shock.barTime!==barTime)ep.shock=makeShock(reader,x,seed.d||ep.d);
  }
  ep.shock=shockSnapshot(reader,x,ep.shock);
+ if(ep.shock?.active!==false&&ep.shock?.age>=(CFG.v3ShockReleaseMs||30000)&&!reader.behavior.shock){
+  const terminal=['ABSORB','EXHAUST'].includes(ep.shock.state)||(ep.shock.state==='HOLD'&&['PULLBACK','TREND_ADVANCE','TRANSITION'].includes(reader.state))||(ep.shock.state==='FAIL'&&reader.state!=='SHOCK_UNRESOLVED');
+  if(terminal)ep.shock.active=false;
+ }
  if(ep.shock?.state==='FAIL'&&ep.shock.d)ep.d=-ep.shock.d;
  else if(seed.d&&reader.structure.dir===seed.d)ep.d=seed.d;
 
@@ -346,7 +354,7 @@ function updateEpisode(engine,reader,x){
 
 /* ---------- Thesis / Playbook ---------- */
 function buildThesis(reader,ep){
- const s=reader.structure,b=reader.behavior,shock=ep?.shock,d=shock?.state==='FAIL'?-shock.d:(reader.dir||ep?.d||s.structuralDir);
+ const s=reader.structure,b=reader.behavior,shock=ep?.shock?.active===false?null:ep?.shock,d=shock?.state==='FAIL'?-shock.d:(reader.dir||ep?.d||s.structuralDir);
  let code='OBSERVE',playbook=null,why='',trigger='',invalidate='',next='';
  if(shock&&['UNRESOLVED','RETEST','ABSORB','EXHAUST'].includes(shock.state)){
   code='SHOCK_'+shock.state;why=shock.why;trigger=shock.state==='RETEST'?'รอ Retest จบแล้วกลับไปยืนฝั่ง Shock พร้อม Flow':'รอ Shock เปลี่ยนเป็น HOLD หรือ FAIL ที่มี Structure รองรับ';
