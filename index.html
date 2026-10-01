@@ -1215,6 +1215,58 @@ main{padding-top:10px}
 #storage-status{font-size:8px!important;color:#72daba!important;margin-top:3px!important}#storage-status.down{color:#e6b878!important}
 @media(max-width:560px){.summary-two-col{grid-template-columns:1fr}.diagnostic-grid{grid-template-columns:1fr 1fr}.trade-summary-hero h3,.report-summary-hero h3{font-size:13px}}
 </style>
+<style id="toolbar-green-final">
+/* Final visual authority for the floating toolbar */
+body.toolbar-floating #chart-toolbar{
+ background:rgba(78,118,100,.82)!important;
+ border:1px solid rgba(185,224,206,.28)!important;
+ box-shadow:0 7px 22px rgba(0,0,0,.26),inset 0 1px 0 rgba(220,246,234,.08)!important;
+}
+body.toolbar-floating #chart-toolbar>*{
+ position:relative!important;
+}
+body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
+ content:''!important;
+ display:block!important;
+ position:absolute!important;
+ right:-4px!important;
+ top:7px!important;
+ width:1px!important;
+ height:18px!important;
+ background:rgba(222,244,234,.42)!important;
+ pointer-events:none!important;
+}
+body.toolbar-floating #chart-toolbar .analysis-tf-control>span{
+ color:#d1e5dc!important;
+}
+body.toolbar-floating #chart-toolbar .analysis-tf-control select,
+body.toolbar-floating #chart-toolbar .toolbar-main-button,
+body.toolbar-floating #chart-toolbar .drawing-tools>summary,
+body.toolbar-floating #chart-toolbar .toolbar-more>summary{
+ color:#eef8f3!important;
+}
+body.toolbar-floating #chart-toolbar .indicator-toggle[aria-pressed=true],
+body.toolbar-floating #chart-toolbar #situation-analysis-open{
+ color:#d7fff0!important;
+}
+body.toolbar-floating #chart-toolbar #market-symbol-control select{
+ color:#f2fbf7!important;
+}
+body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important}
+@media(max-width:700px){
+ body.toolbar-floating #chart-toolbar{
+  background:rgba(84,126,106,.86)!important;
+  border-color:rgba(196,229,213,.30)!important;
+ }
+ body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
+  right:-2px!important;
+  top:8px!important;
+  height:16px!important;
+  background:rgba(226,246,236,.38)!important;
+ }
+}
+</style>
+
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
@@ -6559,7 +6611,7 @@ function openReport(){
 
 
 </script>
-<script src="current-analysis.js?v=20261001-r8"></script>
+<script src="current-analysis.js?v=20261001-r9"></script>
 </body>
 </html>
 
