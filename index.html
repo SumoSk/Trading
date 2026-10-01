@@ -1291,26 +1291,40 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
 }
 .v3-check-grid{
  display:grid;
- grid-template-columns:repeat(2,minmax(0,1fr));
+ grid-template-columns:repeat(4,minmax(118px,1fr));
  gap:5px;
+ overflow-x:auto;
+ padding-bottom:2px;
+ scrollbar-width:thin;
+ scrollbar-color:#33465b transparent;
+ -webkit-overflow-scrolling:touch;
 }
+.v3-check-grid::-webkit-scrollbar{height:3px}
+.v3-check-grid::-webkit-scrollbar-thumb{background:#33465b;border-radius:99px}
 .v3-check-card{
- min-width:0;
- padding:6px 7px;
+ min-width:118px;
+ min-height:82px;
+ padding:7px 7px 6px;
  border:1px solid rgba(102,124,151,.20);
- border-radius:7px;
+ border-radius:8px;
  background:rgba(11,19,29,.58);
+ display:flex;
+ flex-direction:column;
+ gap:5px;
  transition:border-color .15s,background .15s;
 }
 .v3-check-card-top{
  display:grid;
- grid-template-columns:15px minmax(0,1fr) auto;
+ grid-template-columns:16px minmax(0,1fr);
+ grid-template-areas:"box name" "state state";
  align-items:center;
- gap:4px;
+ column-gap:5px;
+ row-gap:3px;
 }
 .v3-check-box{
- width:15px;
- height:15px;
+ grid-area:box;
+ width:16px;
+ height:16px;
  display:grid;
  place-items:center;
  border:1px solid #46596f;
@@ -1319,27 +1333,29 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  font:700 9px/1 'Segoe UI',sans-serif;
 }
 .v3-check-card strong{
+ grid-area:name;
  min-width:0;
- overflow:hidden;
- text-overflow:ellipsis;
+ font:650 8px/1.2 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#c3d0df;
  white-space:nowrap;
- font:600 8px/1.2 'IBM Plex Sans Thai','Segoe UI',sans-serif;
- color:#b9c8d8;
 }
 .v3-check-card .v3-check-state{
+ grid-area:state;
+ justify-self:start;
  font:700 6.8px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif;
  color:#788ba2;
  white-space:nowrap;
 }
 .v3-check-card .v3-check-reason{
- display:block;
- min-width:0;
- margin-top:4px;
+ display:-webkit-box;
+ -webkit-box-orient:vertical;
+ -webkit-line-clamp:3;
  overflow:hidden;
- text-overflow:ellipsis;
- white-space:nowrap;
- font:500 7px/1.3 'IBM Plex Sans Thai','Segoe UI',sans-serif;
- color:#71849b;
+ white-space:normal;
+ min-width:0;
+ margin:0;
+ font:500 7.2px/1.4 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#8194aa;
 }
 .v3-check-card.pass{
  border-color:rgba(80,202,165,.38);
@@ -1351,6 +1367,7 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  color:#7ce5c4;
 }
 .v3-check-card.pass .v3-check-state{color:#73ddbd}
+.v3-check-card.pass .v3-check-reason{color:#9fcdbf}
 .v3-check-card.developing{
  border-color:rgba(213,171,94,.32);
  background:rgba(74,54,22,.18);
@@ -1360,6 +1377,7 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  color:#e0b86d;
 }
 .v3-check-card.developing .v3-check-state{color:#dcb36b}
+.v3-check-card.developing .v3-check-reason{color:#c9ad79}
 .v3-check-card.block{
  border-color:rgba(211,91,119,.30);
  background:rgba(79,29,43,.18);
@@ -1369,20 +1387,19 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  color:#e8879d;
 }
 .v3-check-card.block .v3-check-state{color:#e8879d}
+.v3-check-card.block .v3-check-reason{color:#c9919f}
 .v3-check-note{
- margin-top:5px;
+ margin-top:6px;
  font:500 7px/1.35 'IBM Plex Sans Thai','Segoe UI',sans-serif;
  color:#6f829a;
 }
 @media(max-width:560px){
  .v3-entry-checklist{margin-top:6px;padding-top:6px}
- .v3-check-grid{gap:4px}
- .v3-check-card{padding:5px 6px}
- .v3-check-card-top{grid-template-columns:14px minmax(0,1fr) auto;gap:3px}
- .v3-check-box{width:14px;height:14px;font-size:8.5px}
- .v3-check-card strong{font-size:7.4px}
- .v3-check-card .v3-check-state{font-size:6.3px}
- .v3-check-card .v3-check-reason{font-size:6.7px}
+ .v3-check-grid{grid-template-columns:repeat(4,124px);gap:4px}
+ .v3-check-card{min-width:124px;min-height:80px;padding:6px}
+ .v3-check-card strong{font-size:7.6px}
+ .v3-check-card .v3-check-state{font-size:6.5px}
+ .v3-check-card .v3-check-reason{font-size:6.9px;line-height:1.38}
  .v3-check-note{font-size:6.6px}
 }
 </style>
@@ -5367,9 +5384,16 @@ function openReport(){
     card.className='v3-check-card '+(state==='PASS'?'pass':state==='DEVELOPING'?'developing':state==='BLOCK'?'block':'pending');
     const mark=card.querySelector('.v3-check-box'),badge=card.querySelector('.v3-check-state'),reason=card.querySelector('.v3-check-reason');
     if(mark)mark.textContent=state==='PASS'?'✓':state==='DEVELOPING'?'◐':state==='BLOCK'?'×':'□';
-    if(badge)badge.textContent=state==='PENDING'?'รอประเมิน':v3GateThai(state);
+    if(badge)badge.textContent=state==='PASS'?'ผ่านแล้ว':state==='DEVELOPING'?'กำลังทำเงื่อนไข':state==='BLOCK'?'ยังไม่ผ่าน':'รอประเมิน';
     if(reason){
-     reason.textContent=cleanReportText(gate?.reason||gate?.summary||(st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
+     const raw=cleanReportText(gate?.reason||gate?.summary||(st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
+     reason.textContent=state==='PASS'
+      ?'ผ่านแล้ว · '+raw
+      :state==='DEVELOPING'
+       ?'กำลังรอให้ชัดขึ้น · '+raw
+       :state==='BLOCK'
+        ?'ยังไม่ผ่าน · '+raw
+        :'กำลังรอประเมิน · '+raw;
      reason.title=reason.textContent;
     }
    }
@@ -5377,7 +5401,7 @@ function openReport(){
    if(m.entryMode==='EARLY'||m.earlyReady)note.textContent='EARLY พร้อม: โครงสร้าง + ตำแหน่งผ่าน และหลักฐานสดถึงเกณฑ์';
    else if(m.fullReady||passed===4)note.textContent=v?.status==='confirming'?'4/4 ผ่านแล้ว · กำลังยืนยันข้อมูลสดสั้น ๆ ก่อนปล่อยไม้':'4/4 ผ่านครบ';
    else if(m.hardReady&&passed>=2)note.textContent='ด่านหลักผ่านแล้ว · กำลังรอพฤติกรรมแท่ง / แรงซื้อขายระยะสั้น';
-   else if(!st?.playbook)note.textContent='ทั้ง 4 ช่องค้างไว้ให้ดูตลอด · ตอนนี้ยังไม่มี Playbook ที่เปิด Gate';
+   else if(!st?.playbook)note.textContent='ยังไม่มี Playbook ที่เปิด Gate · ทั้ง 4 ช่องจะค้างไว้และอัปเดตสดเมื่อเริ่มประเมิน';
    else note.textContent='EARLY ไม่จำเป็นต้องรอ 4/4 แต่โครงสร้างและตำแหน่งต้องผ่านก่อน';
   }
 
