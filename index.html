@@ -532,6 +532,139 @@ body.toolbar-floating .chart-toolbar{position:fixed;top:6px;left:50%;transform:t
 @media(max-width:900px){.analysis-tf-control{order:0;max-width:none;overflow:visible}.chart-toolbar{flex-wrap:nowrap!important}.toolbar-more-popover{min-width:180px}}
 @media(max-width:560px){.chart-toolbar-slot{min-height:34px}.chart-toolbar{min-height:38px!important;padding:3px 4px!important;gap:3px!important}.analysis-tf-control>span{font-size:7px}.analysis-tf-control select{height:28px;min-height:28px;padding-left:5px;padding-right:17px;font-size:9px}.analysis-tf-control button{height:28px;min-height:28px!important;padding:0 6px}.toolbar-more>summary{width:29px;height:28px}.toolbar-more-popover{position:fixed;top:42px;right:6px;left:auto;width:min(220px,calc(100vw - 12px))}}
 
+
+/* ARIS toolbar polish 2026-10-01 — UI only */
+.chart-toolbar-slot{min-height:50px!important}
+.chart-toolbar{
+ min-height:46px!important;
+ width:min(860px,calc(100vw - 16px))!important;
+ padding:6px 8px!important;
+ gap:6px!important;
+ align-items:center!important;
+ border:1px solid rgba(76,96,124,.58)!important;
+ border-radius:13px!important;
+ background:linear-gradient(180deg,rgba(18,29,43,.96),rgba(11,19,30,.96))!important;
+ box-shadow:0 10px 32px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.025)!important;
+ backdrop-filter:blur(18px) saturate(120%)!important;
+}
+body.toolbar-floating .chart-toolbar{
+ top:8px!important;
+ width:min(860px,calc(100vw - 16px))!important;
+ border:1px solid rgba(76,96,124,.58)!important;
+ border-radius:13px!important;
+ box-shadow:0 12px 34px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.chart-toolbar .timeframes{display:none!important}
+.chart-toolbar .analysis-tf-control{
+ height:34px;
+ display:flex!important;
+ align-items:center!important;
+ gap:6px!important;
+ padding:3px 4px 3px 9px!important;
+ border:1px solid #27384d;
+ border-radius:10px;
+ background:#101a28;
+ color:#7f93ad;
+}
+.chart-toolbar .analysis-tf-control>span{
+ display:block!important;
+ font-size:8px!important;
+ line-height:1;
+ letter-spacing:.15px;
+ color:#7f93ad;
+}
+.chart-toolbar .analysis-tf-control select{
+ height:26px!important;
+ min-height:26px!important;
+ min-width:54px;
+ padding:0 20px 0 7px!important;
+ border:0!important;
+ border-radius:7px!important;
+ background:#172334!important;
+ color:#d8e4f2!important;
+ font:650 10px 'Segoe UI',sans-serif!important;
+}
+.chart-visibility-toggle{
+ position:relative;
+ height:34px!important;
+ min-height:34px!important;
+ display:inline-flex!important;
+ align-items:center;
+ gap:6px;
+ padding:0 9px!important;
+ border:1px solid #31594f!important;
+ border-radius:10px!important;
+ background:#10231f!important;
+ color:#9de5ca!important;
+ font:600 9px 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
+ white-space:nowrap;
+}
+.chart-visibility-toggle::before{
+ content:'';
+ width:6px;height:6px;border-radius:50%;
+ background:#55dfb8;
+ box-shadow:0 0 0 3px rgba(85,223,184,.10);
+ flex:none;
+}
+.chart-visibility-toggle b{
+ font:700 8px 'Segoe UI',sans-serif;
+ color:#6fd8b7;
+ opacity:.92;
+}
+.chart-visibility-toggle[aria-pressed=false]{
+ border-color:#303e52!important;
+ background:#121b28!important;
+ color:#8798ad!important;
+}
+.chart-visibility-toggle[aria-pressed=false]::before{
+ background:#66768a;
+ box-shadow:none;
+}
+.chart-visibility-toggle[aria-pressed=false] b{color:#74859a}
+.order-lines-toggle{border-color:#37635a!important;background:#112720!important}
+.drawing-tools>summary,.toolbar-more>summary{
+ height:34px!important;
+ min-height:34px!important;
+ border-radius:10px!important;
+ background:#101a28!important;
+ border-color:#2b3d53!important;
+}
+.drawing-tools>summary{padding:0 10px!important;color:#bdcce0!important}
+.toolbar-more>summary{width:34px!important;color:#9fb0c5!important}
+.drawing-tools[open]>summary,.drawing-tools.active>summary{
+ border-color:#7665bd!important;background:#211c38!important;color:#ddd5ff!important
+}
+.toolbar-more[open]>summary{border-color:#4a607d!important;background:#172437!important;color:#d4e0ef!important}
+.toolbar-more-popover,.drawing-tools-popover{
+ top:40px!important;
+ border-color:#344861!important;
+ border-radius:12px!important;
+ background:#0d1622!important;
+ box-shadow:0 18px 50px rgba(0,0,0,.55)!important;
+}
+@media(max-width:700px){
+ .chart-toolbar{
+  width:calc(100vw - 10px)!important;
+  padding:5px!important;
+  gap:4px!important;
+  overflow:visible!important;
+ }
+ body.toolbar-floating .chart-toolbar{width:calc(100vw - 10px)!important;top:5px!important}
+ .chart-toolbar .analysis-tf-control{padding-left:5px!important;gap:3px!important}
+ .chart-toolbar .analysis-tf-control>span{display:none!important}
+ .chart-toolbar .analysis-tf-control select{min-width:51px;padding-left:6px!important;padding-right:17px!important}
+ .chart-visibility-toggle{padding:0 7px!important;gap:4px;font-size:8px!important}
+ .chart-visibility-toggle::before{width:5px;height:5px}
+ .chart-visibility-toggle b{display:none}
+ .drawing-tools>summary{padding:0 8px!important;font-size:8px!important}
+}
+@media(max-width:430px){
+ .chart-toolbar{justify-content:space-between!important}
+ .chart-visibility-toggle{padding:0 6px!important}
+ .chart-visibility-toggle.order-lines-toggle span{max-width:48px;overflow:hidden}
+ .drawing-tools>summary{padding:0 7px!important}
+}
+
 .main-signal-head,.probability-head,.candle-kicker,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
 .panel-heading{justify-content:flex-end}
@@ -761,7 +894,8 @@ main{padding-top:10px}
         
         <small id="analysis-tf-active">ใช้อยู่ 1m</small>
       </div>
-      <button id="chart-history-toggle" class="chart-history-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ">แพ้/ชนะ: เปิด</button>
+      <button id="order-lines-toggle" class="chart-visibility-toggle order-lines-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดเส้นออเดอร์ที่กำลังทำงานบนกราฟ"><span>ออเดอร์</span><b id="order-lines-state">เปิด</b></button>
+      <button id="chart-history-toggle" class="chart-visibility-toggle chart-history-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ"><span>แพ้/ชนะ</span><b id="chart-history-state">เปิด</b></button>
       <details class="drawing-tools" id="drawing-tools">
         <summary aria-label="เครื่องมือตีเส้น" title="เครื่องมือตีเส้น">✏ เส้น</summary>
         <div class="drawing-tools-popover">
@@ -2986,7 +3120,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    return analysisContextEngines.get(tf);
   }
   function resetContextEngine(tf){if(tf!=='1m')analysisContextEngines.set(tf,new Engine({}));}
-  let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null,showChartOutcomes=true;
+  let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null,showChartOutcomes=true,showOrderLines=true;
+   try{const saved=localStorage.getItem('btc-show-order-lines');if(saved!==null)showOrderLines=saved!=='0';}catch{}
   const DRAW_STORE='btc-chart-drawings-v1';
   let drawings=[];try{const d=JSON.parse(localStorage.getItem(DRAW_STORE)||'[]');if(Array.isArray(d))drawings=d.filter(x=>x&&['trend','horizontal'].includes(x.type)&&x.p1&&Number.isFinite(x.p1.time)&&Number.isFinite(x.p1.price));}catch{}
   let drawingMode=null,drawingScopeAll=false,drawingDraft=null,selectedDrawingId=null,drawingDrag=null,drawingRenderFrame=0;
@@ -4545,6 +4680,8 @@ function openReport(){
    const host=$('right-order-labels');
    if(!host||!state.chartReady||!state.candleSeries)return;
    host.replaceChildren();
+   if(!showOrderLines){host.style.display='none';return;}
+   host.style.display='block';
    const mapped=[...leftSignalLabels].map(item=>({
     ...item,y:state.candleSeries.priceToCoordinate(item.price)
    })).filter(item=>Number.isFinite(item.y)&&item.y>=0&&item.y<=host.clientHeight).sort((a,b)=>a.y-b.y);
@@ -4568,12 +4705,14 @@ function openReport(){
    activeSignalLines=[];
    const now=Date.now();
    leftSignalLabels=[];
-   for(const s of rows.filter(s=>s.result==='pending'&&Number.isFinite(s.entryPrice)&&Number.isFinite(s.expiresAt))){
-    const isHigh=s.direction==='HIGH',remain=s.expiresAt-now,color=isHigh?'#44dfb5':'#ff708a';
-    activeSignalLines.push(state.candleSeries.createPriceLine({
-     price:s.entryPrice,color,lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''
-    }));
-    const winPct=liveWinPercent(s,now);leftSignalLabels.push({kind:'signal',price:s.entryPrice,color,text:`${s.direction} · ${countdownLabel(remain)}${Number.isFinite(winPct)?' · '+winPct+'%':''}`});
+   if(showOrderLines){
+    for(const s of rows.filter(s=>s.result==='pending'&&Number.isFinite(s.entryPrice)&&Number.isFinite(s.expiresAt))){
+     const isHigh=s.direction==='HIGH',remain=s.expiresAt-now,color=isHigh?'#44dfb5':'#ff708a';
+     activeSignalLines.push(state.candleSeries.createPriceLine({
+      price:s.entryPrice,color,lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''
+     }));
+     const winPct=liveWinPercent(s,now);leftSignalLabels.push({kind:'signal',price:s.entryPrice,color,text:`${s.direction} · ${countdownLabel(remain)}${Number.isFinite(winPct)?' · '+winPct+'%':''}`});
+    }
    }
    if(window.LightweightCharts.createSeriesMarkers){
     if(!markerApi)markerApi=LightweightCharts.createSeriesMarkers(state.candleSeries,[]);
@@ -5631,13 +5770,25 @@ function openReport(){
    if(!drawingDrag)return;drawingDrag=null;saveDrawings();renderDrawingOverlay();
   },{passive:true});
 
-  const chartHistoryToggle=$('chart-history-toggle');
-  chartHistoryToggle?.addEventListener('click',()=>{
-   showChartOutcomes=!showChartOutcomes;
-   chartHistoryToggle.setAttribute('aria-pressed',String(showChartOutcomes));
-   chartHistoryToggle.textContent=showChartOutcomes?'แพ้/ชนะ: เปิด':'แพ้/ชนะ: ปิด';
+  const orderLinesToggle=$('order-lines-toggle'),chartHistoryToggle=$('chart-history-toggle');
+  function syncChartVisibilityButtons(){
+   if(orderLinesToggle)orderLinesToggle.setAttribute('aria-pressed',String(showOrderLines));
+   if($('order-lines-state'))$('order-lines-state').textContent=showOrderLines?'เปิด':'ปิด';
+   if(chartHistoryToggle)chartHistoryToggle.setAttribute('aria-pressed',String(showChartOutcomes));
+   if($('chart-history-state'))$('chart-history-state').textContent=showChartOutcomes?'เปิด':'ปิด';
+  }
+  orderLinesToggle?.addEventListener('click',()=>{
+   showOrderLines=!showOrderLines;
+   try{localStorage.setItem('btc-show-order-lines',showOrderLines?'1':'0');}catch{}
+   syncChartVisibilityButtons();
    drawHistory();
   });
+  chartHistoryToggle?.addEventListener('click',()=>{
+   showChartOutcomes=!showChartOutcomes;
+   syncChartVisibilityButtons();
+   drawHistory();
+  });
+  syncChartVisibilityButtons();
 
   document.querySelectorAll('[data-tf]').forEach(btn=>btn.addEventListener('click',async()=>{
    const tf=btn.dataset.tf,previous=state.selectedTf;
