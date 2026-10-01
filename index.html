@@ -1387,29 +1387,33 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
   -webkit-line-clamp:3;
  }
 }
-@media(max-width:430px){
+@media(max-width:560px){
  .v3-entry-checklist{margin-top:6px;padding-top:6px}
- .v3-check-grid{gap:4px}
+ .v3-check-grid{
+  grid-template-columns:1fr;
+  gap:5px;
+ }
  .v3-check-card{
-  min-height:80px;
-  padding:6px;
+  min-height:68px;
+  padding:7px 8px;
  }
  .v3-check-card-top{
-  grid-template-columns:15px minmax(0,1fr);
-  gap:4px;
+  grid-template-columns:16px minmax(0,1fr);
+  gap:5px;
  }
  .v3-check-box{
-  width:15px;
-  height:15px;
-  font-size:8.5px;
+  width:16px;
+  height:16px;
+  font-size:9px;
  }
- .v3-check-card strong{font-size:7.6px}
+ .v3-check-card strong{font-size:8px}
  .v3-check-card .v3-check-reason{
   margin-top:5px;
-  font-size:7px;
+  font-size:7.2px;
   line-height:1.45;
+  -webkit-line-clamp:3;
  }
- .v3-check-note{font-size:6.7px}
+ .v3-check-note{font-size:6.8px}
 }
 </style>
 
