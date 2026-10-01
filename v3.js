@@ -497,13 +497,15 @@ function entryBundle(reader,thesis,z,x,ep){
  const gates={structure,location,behavior,micro},list=Object.values(gates),passed=list.filter(g=>g.state==='PASS').length;
  const blocked=list.filter(g=>g.state==='BLOCK').map(g=>g.reason),developing=list.filter(g=>g.state==='DEVELOPING').map(g=>g.reason);
  const fullReady=passed===4,hardReady=structure.state==='PASS'&&location.state==='PASS';
- const soft=[behavior,micro],softPass=soft.filter(g=>g.state==='PASS').length,softBlocked=soft.some(g=>g.state==='BLOCK');
+ const soft=[behavior,micro],softPass=soft.filter(g=>g.state==='PASS').length,softDeveloping=soft.filter(g=>g.state==='DEVELOPING').length,softBlocked=soft.some(g=>g.state==='BLOCK');
  const alignedEvidence=thesis.d*(reader.evidence?.raw||0);
  const earlyAllowed=['trend_continuation','breakout_continuation','pullback_reclaim'].includes(thesis.playbook);
- const earlyReady=!fullReady&&earlyAllowed&&hardReady&&!softBlocked&&softPass>=1&&alignedEvidence>=(CFG.v3EarlyMinEvidence||.20);
+ const earlyOnePass=softPass>=1&&alignedEvidence>=(CFG.v3EarlyMinEvidence||.10);
+ const earlyBothDeveloping=softPass===0&&softDeveloping===2&&alignedEvidence>=(CFG.v3EarlyBothDevelopingEvidence||.24);
+ const earlyReady=!fullReady&&earlyAllowed&&hardReady&&!softBlocked&&(earlyOnePass||earlyBothDeveloping);
  const entryReady=fullReady||earlyReady,mode=fullReady?'FULL':earlyReady?'EARLY':'WAIT';
  const state=entryReady?'READY':blocked.length?'BLOCKED':'DEVELOPING';
- return {entryReady,fullReady,earlyReady,hardReady,softBlocked,softPass,alignedEvidence,mode,state,gates,passed,total:4,blocked,developing};
+ return {entryReady,fullReady,earlyReady,hardReady,softBlocked,softPass,softDeveloping,earlyOnePass,earlyBothDeveloping,alignedEvidence,mode,state,gates,passed,total:4,blocked,developing};
 }
 function story(reader,ep,thesis,bundle){
  const e=reader.evidence,d=thesis.d||reader.dir,supports=[],warnings=[],g=bundle?.gates||{};
@@ -604,7 +606,8 @@ class V3Engine extends BaseEngine{
     blocker:'ไม้ในขาโครงสร้างนี้ถูกใช้แล้ว',waitingFor:['รอการย่อสร้างฐานและกลับมายืน เพื่อสร้างขาใหม่ หรือรอโครงสร้างรีเซ็ต'],metrics:gateMetrics(st,bundle,ep)}};
   }
 
-  const d=thesis.d,invalid=invalidationLevel(reader,d,thesis),candidateKey=ep.id+':'+ep.legKey+':'+thesis.playbook+':'+d;
+  const d=thesis.d,invalid=invalidationLevel(reader,d,thesis),continuationFamily=['trend_continuation','breakout_continuation','pullback_reclaim'].includes(thesis.playbook),
+   candidatePlanKey=continuationFamily?'continuation':thesis.playbook,candidateKey=ep.id+':'+ep.legKey+':'+candidatePlanKey+':'+d;
   let cand=this.v3Candidate;
   if(!bundle.entryReady){
    const grace=CFG.v3CandidateGraceMs||1800;
@@ -621,7 +624,7 @@ class V3Engine extends BaseEngine{
   }
 
   if(!cand||cand.key!==candidateKey)cand=this.v3Candidate={id:'V3C:'+this.session+':'+x.ts,key:candidateKey,episodeId:ep.id,legKey:ep.legKey,playbook:thesis.playbook,d,startedAt:x.ts,evidenceSince:x.ts,lastQualifiedAt:x.ts,ticks:1,logged:false,invalidationLevel:invalid,stage:'CONFIRMING',entryMode:bundle.mode};
-  else{cand.ticks++;cand.lastQualifiedAt=x.ts;cand.invalidationLevel=invalid;if(bundle.fullReady)cand.entryMode='FULL';}
+  else{cand.ticks++;cand.lastQualifiedAt=x.ts;cand.invalidationLevel=invalid;cand.playbook=thesis.playbook;if(bundle.fullReady)cand.entryMode='FULL';}
   if(!cand.logged){cand.logged=true;this.log('detected',x.ts,{id:cand.id,candidateId:cand.id,episodeId:ep.id,legKey:ep.legKey,setupType:typeFor(thesis.playbook),detectedAt:x.ts,direction:dirLabel(d),price:x.price,entryMode:bundle.mode,
     candidate:{schema:'aris-v3-candidate-v3',episodeId:ep.id,legKey:ep.legKey,thesis:thesis.code,playbook:thesis.playbook,entryMode:bundle.mode,gateStates:gateStates(bundle)}});}
   const confirmTicks=bundle.fullReady?(CFG.v3ConfirmTicks||2):(CFG.v3EarlyConfirmTicks||2),confirmMs=bundle.fullReady?(CFG.v3ConfirmMs||500):(CFG.v3EarlyConfirmMs||650);
@@ -659,7 +662,7 @@ class V3Engine extends BaseEngine{
 }
 function typeFor(p){return ({breakout_continuation:'v3_breakout_continuation',trend_continuation:'v3_trend_continuation',shock_resolution:'v3_shock_resolution',pullback_reclaim:'v3_pullback_reclaim',confirmed_reversal:'v3_confirmed_reversal'})[p]||'v3_observer';}
 function gateStates(bundle){const g=bundle?.gates||{};return {structure:g.structure?.state||'—',location:g.location?.state||'—',behavior:g.behavior?.state||'—',micro:g.micro?.state||'—'};}
-function gateMetrics(st,bundle,ep){return {episodeId:ep?.id||null,legKey:ep?.legKey||null,legIndex:ep?.legIndex||0,gatePassed:bundle?.passed||0,gateTotal:bundle?.total||4,entryMode:bundle?.mode||'WAIT',earlyReady:!!bundle?.earlyReady,fullReady:!!bundle?.fullReady,gateStates:gateStates(bundle),
+function gateMetrics(st,bundle,ep){return {episodeId:ep?.id||null,legKey:ep?.legKey||null,legIndex:ep?.legIndex||0,gatePassed:bundle?.passed||0,gateTotal:bundle?.total||4,entryMode:bundle?.mode||'WAIT',earlyReady:!!bundle?.earlyReady,fullReady:!!bundle?.fullReady,softPass:bundle?.softPass??0,softDeveloping:bundle?.softDeveloping??0,earlyBothDeveloping:!!bundle?.earlyBothDeveloping,gateStates:gateStates(bundle),
   flow:bundle?.gates?.micro?.aligned60??bundle?.gates?.micro?.alignedComposite??null,room:bundle?.gates?.location?.room??null,extensionAtr:bundle?.gates?.location?.extension??null,
   structurePassed:bundle?.gates?.structure?.state==='PASS',locationPassed:bundle?.gates?.location?.state==='PASS',behaviorPassed:bundle?.gates?.behavior?.state==='PASS',microPassed:bundle?.gates?.micro?.state==='PASS'};}
 function behaviorForDataset(b){return {tags:b.tags,pressure:b.pressure,compression:b.compression,bodyDecay:b.bodyDecay,expansion:b.expansion,unusualVolume:b.unusualVolume,shock:b.shock,
