@@ -15,7 +15,7 @@ try{
   'ARIS-1.0.0':'ARIS-1.2.0','ARIS-1.1.0':'ARIS-1.2.0'
  };
  const resolvedVersion=visibleVersionMap[savedVersion]||savedVersion;
- if(['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0'].includes(resolvedVersion))SELECTED_ENGINE_VERSION=resolvedVersion;
+ if(['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0','ARIS-4.0.0'].includes(resolvedVersion))SELECTED_ENGINE_VERSION=resolvedVersion;
 }catch{}
 if(root.__TRAINING_VERSION)SELECTED_ENGINE_VERSION=String(root.__TRAINING_VERSION);
 const V710_CONFIG=Object.freeze({
@@ -138,6 +138,20 @@ const ARIS_V3_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3ShockMaxResolveMs:15000,v3ShockReleaseMs:30000,
  v3HtfObstacleAtr:.45,v3BreakoutMaxChaseAtr:.75
 });
+const ARIS_V4_CONFIG=Object.freeze({...ARIS_V3_CONFIG,
+ version:'ARIS-4.0.0',arisRevision:'sideway-v4-r1',
+ v4RangeLookback:36,v4TouchBandAtr:.22,
+ v4CompressionAtrRatio:.68,v4CompressionWidthAtr:3.0,
+ v4EffGood:.16,v4EffBad:.44,v4SepGood:.10,v4SepBad:.42,v4SlopeGood:.08,v4SlopeBad:.34,
+ v4CrossTarget:3,v4TouchTarget:2,v4MinWidthAtr:1.80,v4MaxWidthAtr:8.0,
+ v4TrendThreat:.45,v4SlopeThreat:.34,v4TrendEffThreat:.40,
+ v4RangePass:70,v4RangeDevelop:58,
+ v4EdgeInsideAtr:.48,v4EdgeOutsideAtr:.32,v4MiddleLow:.35,v4MiddleHigh:.65,
+ v4ReclaimAtr:.03,v4ExcursionAtr:.05,v4WickMin:.26,v4CloseMin:.56,v4MaxOpposingFlow:.075,
+ v4AcceptedCloseAtr:.08,v4LiveBreakAtr:.18,v4BreakBodyAtr:.55,v4BreakRangeAtr:.80,v4BreakFlow:.05,
+ v4BreakAtrExpansion:1.25,v4BreakRiskPass:42,v4BreakRiskBlock:65,
+ v4ConfirmTicks:2,v4ConfirmMs:450
+});
 const V650_SELECT_CONFIG=Object.freeze({
  version:'6.5.0',horizonMs:600000,settlementToleranceMs:5000,
  rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
@@ -168,7 +182,7 @@ const V700_SELECT_CONFIG=Object.freeze({
  maxHistory:1500,maxAudit:2500
 });
 const V701_SELECT_CONFIG=Object.freeze({...V700_SELECT_CONFIG,version:'7.0.1'});
-const CFG=SELECTED_ENGINE_VERSION==='6.5.0'?V650_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='6.6.0'?V660_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.0'?V700_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.1'?V701_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-3.0.0'?ARIS_V3_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-2.0.0'?ARIS_V2_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_CONFIG:ARIS_V1_CONFIG;
+const CFG=SELECTED_ENGINE_VERSION==='6.5.0'?V650_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='6.6.0'?V660_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.0'?V700_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.0.1'?V701_SELECT_CONFIG:SELECTED_ENGINE_VERSION==='7.1.0'?V710_CONFIG:SELECTED_ENGINE_VERSION==='7.1.1'?V711_CONFIG:SELECTED_ENGINE_VERSION==='7.2.0'?V720_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-4.0.0'?ARIS_V4_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-3.0.0'?ARIS_V3_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-2.0.0'?ARIS_V2_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_CONFIG:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_CONFIG:ARIS_V1_CONFIG;
 const V70_PROFILE=Object.freeze({
  name:'V7.0 Market Phase + Volume/Impulse',
  basis:'V6.6 out-of-sample T+10 dataset + observed impulse failure cluster',
@@ -1230,7 +1244,7 @@ if(typeof module!=='undefined')module.exports=root.EventSignalV6;
 (function arisPlugin(root){
 'use strict';
 const core=root.EventSignalV6;
-if(!core||!core.Engine||!core.CFG||!core.CFG.version.startsWith('ARIS-')||['ARIS-2.0.0','ARIS-3.0.0'].includes(core.CFG.version))return;
+if(!core||!core.Engine||!core.CFG||!core.CFG.version.startsWith('ARIS-')||['ARIS-2.0.0','ARIS-3.0.0','ARIS-4.0.0'].includes(core.CFG.version))return;
 const {Engine,CFG,features,zones,marketPhase}=core;
 const clip=(v,a,b)=>Math.max(a,Math.min(b,v));
 const sign=(v,dead=0)=>v>dead?1:v<-dead?-1:0;
