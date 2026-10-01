@@ -482,7 +482,7 @@
   }
 
   function setTrainingVersion(version,{silent=false}={}){
-    const supported=globalThis.TrainingEngineRegistryV1?.versions||['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0'];
+    const supported=globalThis.TrainingEngineRegistryV1?.versions||['6.6.0','7.2.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0','ARIS-4.0.0'];
     if(!supported.includes(version))return false;
     selectedTrainingVersion=version;
     const select=byId('train-engine-select');
