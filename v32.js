@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-r1';
+const REVISION='stage-brain-b1-r2';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -193,7 +193,9 @@ function rangeReference(bars,a){
   const touchBand=a*CFG.rangeEdgeBand;
   const lowerTouches=base.filter(q=>q.low<=low+touchBand).length;
   const upperTouches=base.filter(q=>q.high>=high-touchBand).length;
-  return {high,low,mid,width,widthAtr,position,crosses,lowerTouches,upperTouches,startTime:base[0].time,endTime:base.at(-1).time};
+  const baseCloses=base.map(q=>q.close);
+  const baseEff=pathEfficiency(baseCloses,Math.min(10,baseCloses.length-1));
+  return {high,low,mid,width,widthAtr,position,crosses,lowerTouches,upperTouches,baseEff,startTime:base[0].time,endTime:base.at(-1).time};
 }
 
 function volumeContext(bars){
@@ -237,7 +239,9 @@ function sequenceContext(bars,a){
 }
 
 function breakoutContext(bars,a,range,vol,seq,flow){
-  if(!range)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,reason:'no_reference_range'};
+  if(!range)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_reference_range'};
+  const baseContext=range.baseEff<=.52||range.crosses>=1||(range.lowerTouches>=2&&range.upperTouches>=2)||seq.compressionRangeRatio<=.82;
+  if(!baseContext)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_breakout_base'};
   const closed=bars.filter(q=>q.closed),last=closed.at(-1),prev=closed.at(-2),recent=closed.slice(-4);
   const upOutside=(last.close-range.high)/Math.max(a,1e-9),downOutside=(range.low-last.close)/Math.max(a,1e-9);
   const attemptDir=upOutside>=CFG.breakoutBufferAtr?1:downOutside>=CFG.breakoutBufferAtr?-1:0;
@@ -269,7 +273,7 @@ function breakoutContext(bars,a,range,vol,seq,flow){
     attemptDir,acceptedDir,failedDir,
     outsideAtr:attemptDir>0?upOutside:attemptDir<0?downOutside:0,
     expansion,volPart,flowAligned,alignedClose,recaptureStrength,
-    priorOutsideUp,priorOutsideDown
+    priorOutsideUp,priorOutsideDown,baseContext:true,reason:'base_context_confirmed'
   };
 }
 
