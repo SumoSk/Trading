@@ -229,7 +229,7 @@
       .market-symbol-control select{height:28px;min-height:28px;width:76px;padding:0 20px 0 7px;border:0;border-radius:7px;background:#172334;color:#dce6f2;font:650 9px 'Segoe UI',sans-serif;outline:none;cursor:pointer}
       .market-symbol-control select:focus{box-shadow:0 0 0 1px #4d867f}
       @media(max-width:700px){.situation-analysis-open{width:72px;flex-basis:72px;padding:0 4px;font-size:7.5px}.market-symbol-control{width:78px;flex-basis:78px;padding-left:4px}.market-symbol-control span{display:none}.market-symbol-control select{width:68px;min-width:68px;padding-left:5px;padding-right:16px;font-size:8px}}
-      @media(max-width:430px){.situation-analysis-open{width:64px;flex-basis:64px;font-size:7px}.market-symbol-control{width:72px;flex-basis:72px}.market-symbol-control select{width:62px;min-width:62px;font-size:7.5px}}
+      @media(max-width:430px){.situation-analysis-open{width:44px;flex-basis:44px;padding:0 2px;font-size:6.3px}.market-symbol-control{width:54px;flex-basis:54px;padding:2px}.market-symbol-control select{width:48px;min-width:48px;padding-left:3px;padding-right:13px;font-size:6.8px}}
       #situation-analysis-dialog{width:min(1020px,calc(100vw - 18px));max-height:92vh;padding:0;border:1px solid #33465b;border-radius:14px;background:#0a121c;color:#d8e3ef;box-shadow:0 24px 80px #000b}
       #situation-analysis-dialog::backdrop{background:#02060bc8;backdrop-filter:blur(3px)}
       .sit-shell{display:grid;grid-template-rows:auto 1fr;max-height:92vh}.sit-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:15px 17px;border-bottom:1px solid #263649;background:#0e1824}
