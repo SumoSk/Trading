@@ -373,15 +373,15 @@
   function ensureButton(){
     let btn=byId('training-lab-open');
     if(btn)return btn;
-    const drawing=byId('drawing-tools');
-    if(!drawing)return null;
+    const quick=byId('toolbar-more-quick')||document.querySelector('.toolbar-more-popover');
+    if(!quick)return null;
     btn=document.createElement('button');
     btn.id='training-lab-open';
     btn.className='training-lab-open';
     btn.type='button';
     btn.textContent='เทรน';
     btn.title='เปิด ARIS Training Lab';
-    drawing.insertAdjacentElement('afterend',btn);
+    quick.prepend(btn);
     return btn;
   }
 
@@ -800,6 +800,7 @@
     btn.dataset.bound='1';
 
     btn.addEventListener('click',async()=>{
+      const more=byId('toolbar-more');if(more?.open)more.open=false;
       if(!dialog.open)dialog.showModal();
       await refreshSessions();await showStorage();updatePreview();await updateReplayPanel(latestSession);
     });
