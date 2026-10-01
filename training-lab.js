@@ -54,6 +54,10 @@
       .training-guide-open{min-height:30px;padding:0 11px;border:1px solid #6557a3;border-radius:7px;background:#211b3a;color:#ddd5ff;font-size:8px;font-weight:600}
       .training-lab-close{width:30px;height:30px;padding:0;border:1px solid #304157;border-radius:7px;background:#111d2a;color:#9cafc4;font-size:16px}
       .training-lab-body{overflow:auto;padding:14px 16px 18px;display:grid;gap:10px}
+      .challenge-launch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid #4b4177;border-radius:12px;background:linear-gradient(135deg,#17152c,#0e2024)}
+      .challenge-launch-copy small{display:block;color:#8876d8;font-size:6px;font-weight:700;letter-spacing:.7px}.challenge-launch-copy b{display:block;margin-top:4px;color:#e3ddff;font-size:11px}.challenge-launch-copy span{display:block;margin-top:3px;color:#7f94a9;font-size:7px;line-height:1.4}
+      .challenge-launch button{flex:0 0 auto;min-height:36px;padding:0 14px;border:1px solid #7662c3;border-radius:9px;background:#261f45;color:#eee9ff;font-size:8px;font-weight:700}
+      @media(max-width:560px){.challenge-launch{align-items:stretch;flex-direction:column}.challenge-launch button{width:100%}}
       #training-guide-dialog{width:min(720px,calc(100vw - 18px));max-height:88vh;padding:0;border:1px solid #3d4860;border-radius:13px;background:#0d1622;color:#d6e0ec;box-shadow:0 24px 80px #000b}
       #training-guide-dialog::backdrop{background:#02060bd6;backdrop-filter:blur(4px)}
       .training-guide-shell{display:grid;grid-template-rows:auto 1fr;max-height:88vh}
@@ -210,6 +214,10 @@
         </header>
 
         <div class="training-lab-body">
+          <section class="challenge-launch">
+            <div class="challenge-launch-copy"><small>BLIND CHART GAME</small><b>10-Candle Challenge</b><span>สุ่มกราฟจริงย้อนหลัง · เดา HIGH / LOW · แล้วเปิดอนาคตทีละ 10 แท่ง</span></div>
+            <button type="button" id="train-challenge-open">เข้าเล่น</button>
+          </section>
           <section class="train-card training-start-card">
             <div class="train-section-head">
               <div><h3>ตั้งค่าการเทรน</h3><span class="train-section-sub">เลือกเวอร์ชันและช่วงข้อมูล</span></div>
@@ -805,6 +813,12 @@
       await refreshSessions();await showStorage();updatePreview();await updateReplayPanel(latestSession);
     });
     byId('training-lab-close').addEventListener('click',()=>dialog.close());
+    byId('train-challenge-open')?.addEventListener('click',async()=>{
+      const game=globalThis.TenCandleChallengeV1;
+      if(!game){alert('10-Candle Challenge ยังโหลดไม่พร้อมค่ะ');return;}
+      dialog.close();
+      await game.open(latestSession?.id,{onClose:()=>{if(!dialog.open)dialog.showModal();}});
+    });
     dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
     const guide=ensureGuideDialog();
     byId('training-guide-open').addEventListener('click',()=>{if(!guide.open)guide.showModal();});
