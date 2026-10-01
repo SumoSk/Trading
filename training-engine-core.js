@@ -288,6 +288,7 @@ const ARIS_V12_PROFILE=Object.freeze({
 });
 const ARIS_V2_PROFILE=Object.freeze({name:'ARIS V2 · Market Observer',basis:'เครื่องยนต์ใหม่: Observe → Memory → State → Story → Hypothesis → Playbook → Entry → Re-plan → Learning',change:Object.freeze({observer:'เฝ้าพฤติกรรมตลาดต่อเนื่อง ไม่รอ setup อย่างเดียว',sideway:'แยก Fresh/Balance/Compression/Edge pressure/Fake break/Range failure',candle:'อ่าน candle sequence, shock, rejection, compression, failed expansion',fib:'ใช้ Fibonacci 23.6/38.2/50/61.8/78.6 และ extension เป็น confluence',zones:'เฝ้าแนวรับแนวต้านและ trend-change risk',planning:'ทุกบริบทมี Trigger + Invalidation + Next plan',ui:'ใช้ Block 1/2/3 เดิมผ่าน adapter'})});
 const ARIS_V3_PROFILE=Object.freeze({name:'ARIS V3 · Episode-Gated Structure',basis:'ต่อยอดบทเรียนจาก ARIS V2 โดยแยก Market Episode และบังคับ Structure → Location → Behavior → Micro เป็น independent gates',source:Object.freeze({version:'ARIS-2.0.0',kind:'recorded_entry_research',warning:'ผลย้อนหลังเป็น exploratory/in-sample ต้อง replay + validation + forward shadow'}),change:Object.freeze({episode:'หนึ่งเรื่องตลาดไม่ควรสร้างไม้ใหม่ทุกครั้งที่ Volume/Playbook เปลี่ยน',structure:'Structure เป็น boss gate และคะแนนอื่นชดเชยไม่ได้',volume:'Volume เป็น Event Detector ไม่ใช่ Trigger',playbooks:'เริ่มด้วย Breakout Continuation / Shock Resolution / Pullback-Reclaim / Confirmed Reversal',reentry:'ปกติหนึ่ง entry ต่อ structural leg; ต้องเกิดฐาน/leg ใหม่จึงออกเพิ่ม',micro:'Flow/Book ใช้ confirm หลังมี thesis แล้ว',causality:'ใช้เฉพาะ entry-time data เป็น predictor; follow-up/outcome เป็น labels เท่านั้น'})});
+const ARIS_V4_PROFILE=Object.freeze({name:'ARIS V4 · Sideway Specialist',basis:'เครื่องยนต์แยกสำหรับตลาด Sideway เท่านั้น ไม่แชร์ Entry Logic กับ V3',source:Object.freeze({version:'ARIS-4.0.0',kind:'sideway_only_blueprint',warning:'ต้อง replay + validation + forward test ก่อนสรุปความแม่น'}),change:Object.freeze({regime:'เปิดงานเฉพาะกรอบ Sideway ที่มีคุณภาพและไม่อยู่ใน compression/trend threat',location:'ไม่เล่นกลางกรอบ เล่นเฉพาะขอบแบบ ATR-adaptive',rejection:'ต้องเห็น rejection หรือ failed breakout และ reclaim กลับเข้ากรอบ',breakout:'No Breakout เป็น hard gate; ถ้าตลาดยอมรับราคานอกกรอบจะยกเลิกการสวนทันที',entry:'ต้องผ่าน Range + Edge + Rejection + No Breakout ครบ 4/4 ไม่มี EARLY',reentry:'ขอบเดิมยิงได้ครั้งเดียวจนกว่าราคาจะหมุนกลับกลางกรอบแล้ว re-arm',horizon:'ตัดสินผลที่ T+10 นาทีจากราคาจุดเข้า'})});
 const V65_PROFILE=Object.freeze({
  name:'V6.5 Inverse All',
  basis:'legacy V6.5 engine',
@@ -305,7 +306,7 @@ const V66_PROFILE=Object.freeze({
   trend_continuation:'candidate only'
  })
 });
-const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='6.5.0'?V65_PROFILE:SELECTED_ENGINE_VERSION==='6.6.0'?V66_PROFILE:SELECTED_ENGINE_VERSION==='7.0.0'?V70_PROFILE:SELECTED_ENGINE_VERSION==='7.0.1'?V701_PROFILE:SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:SELECTED_ENGINE_VERSION==='7.1.1'?V711_PROFILE:SELECTED_ENGINE_VERSION==='7.2.0'?V720_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-3.0.0'?ARIS_V3_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-2.0.0'?ARIS_V2_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_PROFILE:ARIS_V1_PROFILE;
+const VERSION_PROFILE=SELECTED_ENGINE_VERSION==='6.5.0'?V65_PROFILE:SELECTED_ENGINE_VERSION==='6.6.0'?V66_PROFILE:SELECTED_ENGINE_VERSION==='7.0.0'?V70_PROFILE:SELECTED_ENGINE_VERSION==='7.0.1'?V701_PROFILE:SELECTED_ENGINE_VERSION==='7.1.0'?V710_PROFILE:SELECTED_ENGINE_VERSION==='7.1.1'?V711_PROFILE:SELECTED_ENGINE_VERSION==='7.2.0'?V720_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-4.0.0'?ARIS_V4_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-3.0.0'?ARIS_V3_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-2.0.0'?ARIS_V2_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.2.0'?ARIS_V12_PROFILE:SELECTED_ENGINE_VERSION==='ARIS-1.1.0'?ARIS_V11_PROFILE:ARIS_V1_PROFILE;
 const V65_CONFIG=Object.freeze({
  horizonMs:600000,settlementToleranceMs:5000,rangeBars:12,atrBars:14,breakBuffer:.06,maxBreakEntry:.65,maxFailureEntry:.65,maxRangeEntry:.42,maxTrendEntry:.55,
  maxDrift:.42,maxAgeMs:50000,minEvidenceMs:550,minEvidenceTicks:2,minFlow:.04,flowWarmupSec:12,roomAtr:.24,maxRetreat:.34,pullbackMin:.24,pullbackMax:1.20,
@@ -336,7 +337,8 @@ const VERSION_SETTINGS_SEED=Object.freeze({
  'ARIS-1.1.0':Object.freeze({name:ARIS_V11_PROFILE.name,config:ARIS_V11_CONFIG,strategy:ARIS_V11_PROFILE}),
  'ARIS-1.2.0':Object.freeze({name:ARIS_V12_PROFILE.name,config:ARIS_V12_CONFIG,strategy:ARIS_V12_PROFILE}),
  'ARIS-2.0.0':Object.freeze({name:ARIS_V2_PROFILE.name,config:ARIS_V2_CONFIG,strategy:ARIS_V2_PROFILE}),
- 'ARIS-3.0.0':Object.freeze({name:ARIS_V3_PROFILE.name,config:ARIS_V3_CONFIG,strategy:ARIS_V3_PROFILE})
+ 'ARIS-3.0.0':Object.freeze({name:ARIS_V3_PROFILE.name,config:ARIS_V3_CONFIG,strategy:ARIS_V3_PROFILE}),
+ 'ARIS-4.0.0':Object.freeze({name:ARIS_V4_PROFILE.name,config:ARIS_V4_CONFIG,strategy:ARIS_V4_PROFILE})
 });
 // Permanent code-resident lineage. This is intentionally NOT stored in localStorage:
  // opening the app from another computer/device must still preserve why each engine existed.
