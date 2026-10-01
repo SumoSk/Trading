@@ -1278,7 +1278,7 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  align-items:center;
  justify-content:space-between;
  gap:8px;
- margin-bottom:5px;
+ margin-bottom:6px;
 }
 .v3-check-head span{
  font:700 7px/1 'Segoe UI',sans-serif;
@@ -1289,44 +1289,86 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  font:700 8px/1 'Segoe UI',sans-serif;
  color:#cbd8e7;
 }
-.v3-check-list{display:grid;gap:3px}
-.v3-check-row{
+.v3-check-grid{
  display:grid;
- grid-template-columns:12px minmax(72px,.78fr) minmax(0,1.65fr) auto;
- align-items:center;
+ grid-template-columns:repeat(2,minmax(0,1fr));
  gap:5px;
- min-height:20px;
- padding:2px 0;
- border-bottom:1px solid rgba(115,137,163,.08);
 }
-.v3-check-row:last-child{border-bottom:0}
-.v3-check-icon{
- width:12px;
- text-align:center;
- font:700 9px/1 'Segoe UI',sans-serif;
+.v3-check-card{
+ min-width:0;
+ padding:6px 7px;
+ border:1px solid rgba(102,124,151,.20);
+ border-radius:7px;
+ background:rgba(11,19,29,.58);
+ transition:border-color .15s,background .15s;
+}
+.v3-check-card-top{
+ display:grid;
+ grid-template-columns:15px minmax(0,1fr) auto;
+ align-items:center;
+ gap:4px;
+}
+.v3-check-box{
+ width:15px;
+ height:15px;
+ display:grid;
+ place-items:center;
+ border:1px solid #46596f;
+ border-radius:4px;
  color:#7f91a8;
+ font:700 9px/1 'Segoe UI',sans-serif;
 }
-.v3-check-name{
- font:600 8px/1.25 'IBM Plex Sans Thai','Segoe UI',sans-serif;
- color:#b6c5d6;
- white-space:nowrap;
-}
-.v3-check-reason{
+.v3-check-card strong{
  min-width:0;
  overflow:hidden;
  text-overflow:ellipsis;
  white-space:nowrap;
- font:500 7.5px/1.25 'IBM Plex Sans Thai','Segoe UI',sans-serif;
- color:#7f92a9;
+ font:600 8px/1.2 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#b9c8d8;
 }
-.v3-check-state{
- font:700 7px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+.v3-check-card .v3-check-state{
+ font:700 6.8px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#788ba2;
  white-space:nowrap;
 }
-.v3-check-row.pass .v3-check-icon,.v3-check-row.pass .v3-check-state{color:#68d9b6}
-.v3-check-row.developing .v3-check-icon,.v3-check-row.developing .v3-check-state{color:#e2bd74}
-.v3-check-row.block .v3-check-icon,.v3-check-row.block .v3-check-state{color:#ec8298}
-.v3-check-row.pending .v3-check-icon,.v3-check-row.pending .v3-check-state{color:#75869b}
+.v3-check-card .v3-check-reason{
+ display:block;
+ min-width:0;
+ margin-top:4px;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+ font:500 7px/1.3 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#71849b;
+}
+.v3-check-card.pass{
+ border-color:rgba(80,202,165,.38);
+ background:rgba(25,70,58,.30);
+}
+.v3-check-card.pass .v3-check-box{
+ border-color:#58cbaa;
+ background:#173d33;
+ color:#7ce5c4;
+}
+.v3-check-card.pass .v3-check-state{color:#73ddbd}
+.v3-check-card.developing{
+ border-color:rgba(213,171,94,.32);
+ background:rgba(74,54,22,.18);
+}
+.v3-check-card.developing .v3-check-box{
+ border-color:#b88d49;
+ color:#e0b86d;
+}
+.v3-check-card.developing .v3-check-state{color:#dcb36b}
+.v3-check-card.block{
+ border-color:rgba(211,91,119,.30);
+ background:rgba(79,29,43,.18);
+}
+.v3-check-card.block .v3-check-box{
+ border-color:#a94c62;
+ color:#e8879d;
+}
+.v3-check-card.block .v3-check-state{color:#e8879d}
 .v3-check-note{
  margin-top:5px;
  font:500 7px/1.35 'IBM Plex Sans Thai','Segoe UI',sans-serif;
@@ -1334,11 +1376,14 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
 }
 @media(max-width:560px){
  .v3-entry-checklist{margin-top:6px;padding-top:6px}
- .v3-check-row{grid-template-columns:11px 72px minmax(0,1fr) auto;gap:4px;min-height:19px}
- .v3-check-name{font-size:7.4px}
- .v3-check-reason{font-size:7px}
- .v3-check-state{font-size:6.8px}
- .v3-check-note{font-size:6.7px}
+ .v3-check-grid{gap:4px}
+ .v3-check-card{padding:5px 6px}
+ .v3-check-card-top{grid-template-columns:14px minmax(0,1fr) auto;gap:3px}
+ .v3-check-box{width:14px;height:14px;font-size:8.5px}
+ .v3-check-card strong{font-size:7.4px}
+ .v3-check-card .v3-check-state{font-size:6.3px}
+ .v3-check-card .v3-check-reason{font-size:6.7px}
+ .v3-check-note{font-size:6.6px}
 }
 </style>
 
@@ -1446,7 +1491,24 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
           <span>V3 CHECKLIST</span>
           <b id="v3-check-summary">0/4 · WAIT</b>
         </div>
-        <div class="v3-check-list" id="v3-check-list"></div>
+        <div class="v3-check-grid">
+          <div class="v3-check-card pending" id="v3-check-structure">
+            <div class="v3-check-card-top"><span class="v3-check-box">□</span><strong>โครงสร้างราคา</strong><b class="v3-check-state">รอประเมิน</b></div>
+            <small class="v3-check-reason">ยังไม่มีข้อมูลเงื่อนไข</small>
+          </div>
+          <div class="v3-check-card pending" id="v3-check-location">
+            <div class="v3-check-card-top"><span class="v3-check-box">□</span><strong>ตำแหน่งราคา</strong><b class="v3-check-state">รอประเมิน</b></div>
+            <small class="v3-check-reason">ยังไม่มีข้อมูลเงื่อนไข</small>
+          </div>
+          <div class="v3-check-card pending" id="v3-check-behavior">
+            <div class="v3-check-card-top"><span class="v3-check-box">□</span><strong>พฤติกรรมแท่ง</strong><b class="v3-check-state">รอประเมิน</b></div>
+            <small class="v3-check-reason">ยังไม่มีข้อมูลเงื่อนไข</small>
+          </div>
+          <div class="v3-check-card pending" id="v3-check-micro">
+            <div class="v3-check-card-top"><span class="v3-check-box">□</span><strong>แรงซื้อขายระยะสั้น</strong><b class="v3-check-state">รอประเมิน</b></div>
+            <small class="v3-check-reason">ยังไม่มีข้อมูลเงื่อนไข</small>
+          </div>
+        </div>
         <div class="v3-check-note" id="v3-check-note"></div>
       </section>
     </div>
@@ -5285,41 +5347,37 @@ function openReport(){
    syncSignalChart(rows);
   }
   function renderV3EntryChecklist(v){
-   const box=$('v3-entry-checklist'),list=$('v3-check-list'),summary=$('v3-check-summary'),note=$('v3-check-note');
-   if(!box||!list||!summary||!note)return;
-   if(CFG.version!=='ARIS-3.0.0'){
-    box.hidden=true;list.replaceChildren();return;
-   }
+   const box=$('v3-entry-checklist'),summary=$('v3-check-summary'),note=$('v3-check-note');
+   if(!box||!summary||!note)return;
+   if(CFG.version!=='ARIS-3.0.0'){box.hidden=true;return;}
    box.hidden=false;
    const st=v?.v3Story||v?.phase?.v3View?.story||null,g=st?.gates||{},passed=Number.isFinite(st?.gatePassed)?st.gatePassed:0,total=st?.gateTotal||4;
    const entryMode=v?.gate?.metrics?.entryMode||((st?.entryState==='ENTER'||st?.entryState==='READY')?'FULL':'WAIT');
    const stateText=entryMode==='EARLY'?'EARLY':entryMode==='FULL'?'FULL':v?.status==='confirming'?'CONFIRM':v3GateThai(st?.entryState||'WAIT');
    summary.textContent=passed+'/'+total+' · '+stateText;
    const defs=[
-    ['structure','โครงสร้างราคา'],
-    ['location','ตำแหน่งราคา'],
-    ['behavior','พฤติกรรมแท่ง'],
-    ['micro','แรงซื้อขายระยะสั้น']
+    ['structure','v3-check-structure'],
+    ['location','v3-check-location'],
+    ['behavior','v3-check-behavior'],
+    ['micro','v3-check-micro']
    ];
-   const frag=document.createDocumentFragment();
-   for(const [key,name] of defs){
+   for(const [key,id] of defs){
+    const card=$(id);if(!card)continue;
     const gate=g[key]||null,state=gate?.state||'PENDING';
-    const row=document.createElement('div');
-    row.className='v3-check-row '+(state==='PASS'?'pass':state==='DEVELOPING'?'developing':state==='BLOCK'?'block':'pending');
-    const icon=document.createElement('span');icon.className='v3-check-icon';icon.textContent=state==='PASS'?'✓':state==='DEVELOPING'?'◐':state==='BLOCK'?'×':'·';
-    const title=document.createElement('span');title.className='v3-check-name';title.textContent=name;
-    const reason=document.createElement('span');reason.className='v3-check-reason';
-    reason.textContent=cleanReportText(gate?.reason||gate?.summary||(st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
-    reason.title=reason.textContent;
-    const badge=document.createElement('b');badge.className='v3-check-state';badge.textContent=state==='PENDING'?'รอประเมิน':v3GateThai(state);
-    row.append(icon,title,reason,badge);frag.append(row);
+    card.className='v3-check-card '+(state==='PASS'?'pass':state==='DEVELOPING'?'developing':state==='BLOCK'?'block':'pending');
+    const mark=card.querySelector('.v3-check-box'),badge=card.querySelector('.v3-check-state'),reason=card.querySelector('.v3-check-reason');
+    if(mark)mark.textContent=state==='PASS'?'✓':state==='DEVELOPING'?'◐':state==='BLOCK'?'×':'□';
+    if(badge)badge.textContent=state==='PENDING'?'รอประเมิน':v3GateThai(state);
+    if(reason){
+     reason.textContent=cleanReportText(gate?.reason||gate?.summary||(st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
+     reason.title=reason.textContent;
+    }
    }
-   list.replaceChildren(frag);
    const m=v?.gate?.metrics||{};
    if(m.entryMode==='EARLY'||m.earlyReady)note.textContent='EARLY พร้อม: โครงสร้าง + ตำแหน่งผ่าน และหลักฐานสดถึงเกณฑ์';
    else if(m.fullReady||passed===4)note.textContent=v?.status==='confirming'?'4/4 ผ่านแล้ว · กำลังยืนยันข้อมูลสดสั้น ๆ ก่อนปล่อยไม้':'4/4 ผ่านครบ';
    else if(m.hardReady&&passed>=2)note.textContent='ด่านหลักผ่านแล้ว · กำลังรอพฤติกรรมแท่ง / แรงซื้อขายระยะสั้น';
-   else if(!st?.playbook)note.textContent='ยังไม่มี Playbook ที่อนุญาตให้เข้า · ระบบกำลังเฝ้าตลาด';
+   else if(!st?.playbook)note.textContent='ทั้ง 4 ช่องค้างไว้ให้ดูตลอด · ตอนนี้ยังไม่มี Playbook ที่เปิด Gate';
    else note.textContent='EARLY ไม่จำเป็นต้องรอ 4/4 แต่โครงสร้างและตำแหน่งต้องผ่านก่อน';
   }
 
