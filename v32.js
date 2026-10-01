@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-r3';
+const REVISION='stage-brain-b1-r4';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -27,6 +27,7 @@ const CFG=Object.freeze({
 
   // Range / compression
   rangeLookback:18,
+  rangeGuardBars:6,
   rangeMinWidthAtr:1.60,
   rangeMaxWidthAtr:8.50,
   rangeEdgeBand:.24,
@@ -180,7 +181,8 @@ function confirmedPivots(bars,a){
 
 function rangeReference(bars,a){
   const closed=bars.filter(q=>q.closed);
-  const base=closed.slice(-(CFG.rangeLookback+3),-3);
+  const guard=Math.max(3,CFG.rangeGuardBars||6);
+  const base=closed.slice(-(CFG.rangeLookback+guard),-guard);
   if(base.length<Math.max(10,CFG.rangeLookback-4))return null;
   const high=Math.max(...base.map(q=>q.high)),low=Math.min(...base.map(q=>q.low));
   const width=Math.max(high-low,1e-9),widthAtr=width/Math.max(a,1e-9),mid=(high+low)/2;
@@ -295,8 +297,8 @@ function featureBrain(input){
   const a=Math.max(atr(closed,CFG.atrBars),price*.00004,1e-9),c=closed.map(q=>q.close),e8=ema(c,8),e21=ema(c,21);
   const seq=sequenceContext(closed,a),vol=volumeContext(closed),range=rangeReference(closed,a),sw=confirmedPivots(closed,a);
   const eff6=pathEfficiency(c,6),eff12=pathEfficiency(c,12),eff24=pathEfficiency(c,24);
-  const slope5=regressionSlope(e21,5,a),slope12=regressionSlope(e21,12,a),sep=(e8.at(-1)-e21.at(-1))/a;
-  const mom3=signedProgress(c,3,a),mom8=signedProgress(c,8,a),mom16=signedProgress(c,16,a);
+  const slope5=regressionSlope(e21,5,a),slope12=regressionSlope(e21,12,a),slope24=regressionSlope(e21,24,a),sep=(e8.at(-1)-e21.at(-1))/a;
+  const mom3=signedProgress(c,3,a),mom8=signedProgress(c,8,a),mom16=signedProgress(c,16,a),mom24=signedProgress(c,24,a);
   const momAccel=mom3-safeDiv(mom8,8/3);
   const extension=(price-e21.at(-1))/a;
   const rangePosition=range?clip((price-range.low)/Math.max(range.width,1e-9)):.5;
@@ -312,9 +314,9 @@ function featureBrain(input){
 
   return {
     ready:true,price,atr:a,bars:closed,
-    ema8:e8.at(-1),ema21:e21.at(-1),emaSepAtr:sep,emaSlope5:slope5,emaSlope12:slope12,
+    ema8:e8.at(-1),ema21:e21.at(-1),emaSepAtr:sep,emaSlope5:slope5,emaSlope12:slope12,emaSlope24:slope24,
     eff6,eff12,eff24,priorEff,effDrop,slopeDrop,
-    momentum3:mom3,momentum8:mom8,momentum16:mom16,momentumAccel:momAccel,
+    momentum3:mom3,momentum8:mom8,momentum16:mom16,momentum24:mom24,momentumAccel:momAccel,
     extensionAtr:extension,current,seq,vol,range,rangePosition,sw,breakout,flow,book,htf
   };
 }
@@ -398,10 +400,17 @@ function transitionQuality(f,s,trendScore,rangeScore,exhaustScore){
   const priorProgress=d>0?f.seq.priorHighProgress:d<0?f.seq.priorLowProgress:0;
   const progressLoss=priorProgress>.03?clip(1-safeDiv(recentProgress,priorProgress)):0;
   const defense=d>0?f.seq.rejectionDown:d<0?f.seq.rejectionUp:Math.max(f.seq.rejectionUp,f.seq.rejectionDown);
-  const momentumDecay=clip((Math.abs(f.momentum16)-Math.abs(f.momentum3))/Math.max(Math.abs(f.momentum16),.25));
-  const slopeFlatten=clip(1-Math.abs(f.emaSlope5)/Math.max(Math.abs(f.emaSlope12),.08));
+  const recentMomRef=Math.max(Math.abs(f.momentum8),Math.abs(f.momentum16));
+  const longMomRef=Math.abs(f.momentum24);
+  const momentumDecay=clip((Math.max(recentMomRef,longMomRef)-Math.abs(f.momentum3))/Math.max(Math.max(recentMomRef,longMomRef),.25));
+  const slopeRef=Math.max(Math.abs(f.emaSlope12),Math.abs(f.emaSlope24));
+  const slopeFlatten=clip(1-Math.abs(f.emaSlope5)/Math.max(slopeRef,.08));
+  const longTrendMemory=clip(
+    Math.max(0,Math.abs(f.emaSlope24)-Math.abs(f.emaSlope5))/.55*.55+
+    Math.max(0,Math.abs(f.momentum24)-Math.abs(f.momentum3))/1.8*.45
+  );
   const between=clip((1-Math.abs(trendScore-rangeScore))*0.55+.15);
-  return clip(flatten*.14+effLoss*.16+mixed*.10+progressLoss*.18+defense*.10+momentumDecay*.18+slopeFlatten*.08+exhaustScore*.03+between*.03);
+  return clip(flatten*.10+effLoss*.12+mixed*.08+progressLoss*.14+defense*.10+momentumDecay*.17+slopeFlatten*.12+longTrendMemory*.12+exhaustScore*.02+between*.03);
 }
 
 function pullbackQuality(f,s,trendScore){
@@ -482,7 +491,7 @@ function stageBrain(f,s){
     BREAKOUT_ATTEMPT:breakoutAttempt*(1-breakoutAccepted*.55)*(1-failedBreakout*.80),
     BREAKOUT_ACCEPTED:breakoutAccepted*(1-failedBreakout*.95),
     FAILED_BREAKOUT:failedBreakout*(1-breakoutAccepted*.95),
-    PULLBACK:pullback*(1-reversal*.65)*(1-transition*.55),
+    PULLBACK:pullback*(1-reversal*.65)*(1-transition*.75),
     EXHAUSTION:exhaustion*(.65+trend*.35),
     REVERSAL_DEVELOPING:reversal,
     TRANSITION:transition*(1-breakoutAccepted*.35)
