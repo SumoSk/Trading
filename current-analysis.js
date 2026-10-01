@@ -222,14 +222,14 @@
   function ensureStyles(){
     if($('situation-analysis-style'))return;
     const s=document.createElement('style');s.id='situation-analysis-style';s.textContent=`
-      .situation-analysis-open{height:22px!important;min-height:22px!important;max-height:22px!important;width:auto;flex:0 0 auto;padding:0 4px;border:0!important;border-radius:0!important;background:transparent!important;color:#8fcfc3!important;font:600 7.2px 'Segoe UI',sans-serif;white-space:nowrap;box-shadow:none!important}
-      .situation-analysis-open:hover{border:0!important;background:transparent!important;color:#c8f1e9!important}
-      .market-symbol-control{height:22px;min-height:22px;max-height:22px;width:auto;display:flex;align-items:center;justify-content:flex-start;gap:2px;padding:0 2px;border:0;border-radius:0;background:transparent;color:#667b93;white-space:nowrap;flex:0 0 auto;box-sizing:border-box}
-      .market-symbol-control span{font:600 6.5px 'Segoe UI',sans-serif;letter-spacing:.2px;color:#667b93}
-      .market-symbol-control select{height:20px;min-height:20px;width:auto;min-width:48px;padding:0 13px 0 3px;border:0;border-radius:0;background:transparent;color:#d3deeb;font:650 7.5px 'Segoe UI',sans-serif;outline:none;cursor:pointer;box-shadow:none}
+      .situation-analysis-open{height:28px!important;min-height:28px!important;max-height:28px!important;width:auto;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0 5px;border:0!important;border-radius:0!important;background:transparent!important;color:#92d5c7!important;font:600 8px/1 'Segoe UI',sans-serif;white-space:nowrap;box-shadow:none!important;vertical-align:middle}
+      .situation-analysis-open:hover{border:0!important;background:transparent!important;color:#cef2ea!important}
+      .market-symbol-control{height:28px;min-height:28px;max-height:28px;width:auto;display:flex;align-items:center;justify-content:center;gap:3px;margin:0;padding:0 2px;border:0;border-radius:0;background:transparent;color:#6f8299;white-space:nowrap;flex:0 0 auto;box-sizing:border-box;line-height:1}
+      .market-symbol-control span{float:none;margin:0;font:600 7.5px/1 'Segoe UI',sans-serif;letter-spacing:.15px;color:#6f8299}
+      .market-symbol-control select{display:block;align-self:center;height:26px;min-height:26px;width:auto;min-width:52px;margin:0;padding:0 15px 0 4px;border:0;border-radius:0;background:transparent;color:#d7e1ed;font:650 8.4px/26px 'Segoe UI',sans-serif;outline:none;cursor:pointer;box-shadow:none;vertical-align:middle}
       .market-symbol-control select:focus{box-shadow:none}
-      @media(max-width:700px){.situation-analysis-open{padding:0 2px;font-size:6.5px}.market-symbol-control{padding:0}.market-symbol-control span{display:none}.market-symbol-control select{min-width:43px;padding-left:2px;padding-right:10px;font-size:7px}}
-      @media(max-width:430px){.situation-analysis-open{font-size:5.8px}.market-symbol-control select{min-width:38px;font-size:6.4px}}
+      @media(max-width:700px){.situation-analysis-open{height:27px!important;min-height:27px!important;max-height:27px!important;padding:0 3px;font-size:7.1px}.market-symbol-control{height:27px;min-height:27px;max-height:27px;padding:0}.market-symbol-control span{display:none}.market-symbol-control select{height:25px;min-height:25px;min-width:47px;padding-left:3px;padding-right:12px;font:650 7.6px/25px 'Segoe UI',sans-serif}}
+      @media(max-width:430px){.situation-analysis-open{font-size:6.5px;padding-inline:2px}.market-symbol-control select{min-width:42px;font-size:7px}}
       #situation-analysis-dialog{width:min(1020px,calc(100vw - 18px));max-height:92vh;padding:0;border:1px solid #33465b;border-radius:14px;background:#0a121c;color:#d8e3ef;box-shadow:0 24px 80px #000b}
       #situation-analysis-dialog::backdrop{background:#02060bc8;backdrop-filter:blur(3px)}
       .sit-shell{display:grid;grid-template-rows:auto 1fr;max-height:92vh}.sit-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:15px 17px;border-bottom:1px solid #263649;background:#0e1824}
