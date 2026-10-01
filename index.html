@@ -987,12 +987,12 @@ main{padding-top:10px}
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
-  <div class="brand"><span class="brand-icon">E<span>↗</span></span><span>EVENT<span class="brand-sub">ระบบวิเคราะห์ BTC</span></span></div>
+  <div class="brand"><span class="brand-icon">E<span>↗</span></span><span>EVENT<span class="brand-sub" id="brand-market-sub">ระบบวิเคราะห์ BTC</span></span></div>
     <div class="mode" id="mode">ข้อมูลจริง · กำลังโหลด</div>
 </header>
 <main>
 <section class="market-strip">
-  <div class="market-name"><span class="coin">₿</span><div><h1>BTC <span>/ USDT</span></h1><p>BINANCE FUTURES</p></div></div>
+  <div class="market-name"><span class="coin" id="market-icon">₿</span><div><h1><b id="market-base">BTC</b> <span>/ USDT</span></h1><p>BINANCE FUTURES</p></div></div>
   <div class="quote"><strong id="last-price">—</strong><span>USDT</span></div>
   <div class="market-stat"><span>สูงสุด</span><b id="high-price">—</b></div>
   <div class="market-stat"><span>ต่ำสุด</span><b id="low-price">—</b></div>
@@ -1056,9 +1056,9 @@ main{padding-top:10px}
       </details>
     </div>
   </div>
-  <div class="chart-meta"><span>BTCUSDT <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
+  <div class="chart-meta"><span><span id="chart-symbol">BTCUSDT</span> <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
-  <div class="chart-wrap"><div id="chart"></div><svg id="drawing-overlay" class="drawing-overlay" aria-label="พื้นที่ตีเส้นบนกราฟ"></svg><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
+  <div class="chart-wrap"><div id="chart"></div><svg id="drawing-overlay" class="drawing-overlay" aria-label="พื้นที่ตีเส้นบนกราฟ"></svg><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" id="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
@@ -3106,19 +3106,42 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 'use strict';
 (() => {
   const ACTIVE_VERSION_STORE='btc-active-engine-version-aris-v2';
-  const SYMBOL = 'BTCUSDT';
-  const PUBLIC_WS='wss://fstream.binance.com/public/stream?streams=btcusdt@depth10@100ms';
+  const ACTIVE_SYMBOL_STORE='aris-active-symbol-v1';
+  const MARKET_SYMBOLS=Object.freeze({
+    BTCUSDT:{label:'BTC',icon:'₿'},
+    XAUUSDT:{label:'XAU',icon:'Au'},
+    SKHYUSDT:{label:'SKHY',icon:'S'},
+    AMDUSDT:{label:'AMD',icon:'A'},
+    INTCUSDT:{label:'INTEL',icon:'I'},
+    NVDAUSDT:{label:'NVDA',icon:'N'},
+    OPENAIUSDT:{label:'OPENAI',icon:'O'}
+  });
+  let requestedSymbol='BTCUSDT';try{requestedSymbol=localStorage.getItem(ACTIVE_SYMBOL_STORE)||'BTCUSDT';}catch{}
+  const SYMBOL=Object.prototype.hasOwnProperty.call(MARKET_SYMBOLS,requestedSymbol)?requestedSymbol:'BTCUSDT';
+  const MARKET=MARKET_SYMBOLS[SYMBOL],SYMBOL_STREAM=SYMBOL.toLowerCase();
+  const marketStorageKey=base=>SYMBOL==='BTCUSDT'?base:base+':'+SYMBOL;
+  const PUBLIC_WS='wss://fstream.binance.com/public/stream?streams='+SYMBOL_STREAM+'@depth10@100ms';
   const REST_BASE='https://fapi.binance.com';
   const SPOT_REST='https://data-api.binance.vision/api/v3/klines';
   const REST = 'https://fapi.binance.com/fapi/v1/klines';
   const WS = 'wss://fstream.binance.com/market/stream?streams=' + [
-    'btcusdt@aggTrade',
-    'btcusdt@forceOrder',
-    'btcusdt@kline_1m',
-    'btcusdt@kline_5m',
-    'btcusdt@kline_15m'
+    SYMBOL_STREAM+'@aggTrade',
+    SYMBOL_STREAM+'@forceOrder',
+    SYMBOL_STREAM+'@kline_1m',
+    SYMBOL_STREAM+'@kline_5m',
+    SYMBOL_STREAM+'@kline_15m'
   ].join('/');
   const $ = (id) => document.getElementById(id);
+  function applyMarketIdentity(){
+    const base=$('market-base'),icon=$('market-icon'),chartSymbol=$('chart-symbol'),brand=$('brand-market-sub'),wm=$('chart-watermark');
+    if(base)base.textContent=MARKET.label;
+    if(icon)icon.textContent=MARKET.icon;
+    if(chartSymbol)chartSymbol.textContent=SYMBOL;
+    if(brand)brand.textContent='ระบบวิเคราะห์ '+MARKET.label;
+    if(wm&&wm.firstChild)wm.firstChild.nodeValue=MARKET.label;
+    document.title='ARIS · '+MARKET.label+'/USDT';
+  }
+  applyMarketIdentity();
   const clip = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const sign = (v, db = 0.12) => v > db ? 1 : v < -db ? -1 : 0;
   const money = (v) => Number(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -3229,8 +3252,9 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 
   function setComponent(id,v){const el=$(id);el.textContent=!Number.isFinite(v)?'—':v>.14?'↑ '+(v>.42?'แรง':'สนับสนุน'):v<-.14?'↓ '+(v<-.42?'แรง':'สนับสนุน'):'กลาง';el.className=!Number.isFinite(v)?'neutral':v>.14?'up':v<-.14?'down':'neutral';}
   const {Engine,CFG,DATASET_SCHEMA,VERSION_PROFILE,VERSION_SETTINGS_SEED,selectOutputDecision}=EventSignalV6;
-  const STORE='btc-event-v5-history',VERSION_STORE='btc-event-version-settings',EXPEDITE_STORE='btc-expedite-five-history-v1';
+  const STORE=marketStorageKey('btc-event-v5-history'),VERSION_STORE='btc-event-version-settings',EXPEDITE_STORE=marketStorageKey('btc-expedite-five-history-v1');
   const JOURNAL_DB='btc-trading-journal-v3',JOURNAL_DB_VERSION=1,JOURNAL_STORE='snapshots',JOURNAL_SCHEMA='trade-record-v3';
+  const JOURNAL_LATEST_ID=SYMBOL==='BTCUSDT'?'latest':'latest:'+SYMBOL,JOURNAL_BACKUP_ID=SYMBOL==='BTCUSDT'?'backup':'backup:'+SYMBOL;
   let storageOK=true,journalOK=false,persistenceReady=false,savedParseError=false,journalLastSavedAt=0,journalDbPromise=null;
   try{const x=JSON.parse(localStorage.getItem(EXPEDITE_STORE)||'[]');if(Array.isArray(x))state.expediteHistory=x.slice(-500);}catch{}
   function persistExpediteHistory(){try{localStorage.setItem(EXPEDITE_STORE,JSON.stringify(state.expediteHistory.slice(-500)));}catch{}}
@@ -3254,7 +3278,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function resetContextEngine(tf){if(tf!=='1m')analysisContextEngines.set(tf,new Engine({}));}
   let lastPersist=0,drawnZones=[],activeSignalLines=[],leftZoneLabels=[],leftSignalLabels=[],markerApi=null,lastView=null,showChartOutcomes=true,showOrderLines=true;
    try{const saved=localStorage.getItem('btc-show-order-lines');if(saved!==null)showOrderLines=saved!=='0';}catch{}
-  const DRAW_STORE='btc-chart-drawings-v1';
+  const DRAW_STORE=marketStorageKey('btc-chart-drawings-v1');
   let drawings=[];try{const d=JSON.parse(localStorage.getItem(DRAW_STORE)||'[]');if(Array.isArray(d))drawings=d.filter(x=>x&&['trend','horizontal'].includes(x.type)&&x.p1&&Number.isFinite(x.p1.time)&&Number.isFinite(x.p1.price));}catch{}
   let drawingMode=null,drawingScopeAll=false,drawingDraft=null,selectedDrawingId=null,drawingDrag=null,drawingRenderFrame=0;
   const saveDrawings=()=>{try{localStorage.setItem(DRAW_STORE,JSON.stringify(drawings.slice(-300)));}catch{}};
@@ -3435,7 +3459,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    if(type==='trend'&&p2)d.p2={time:p2.time,price:p2.price};else if(type==='horizontal')d.p2={time:p1.time,price:p1.price};
    drawings.push(d);selectedDrawingId=d.id;saveDrawings();$('drawing-delete').disabled=false;renderDrawingOverlay();
   }
-  const CANDLE_VERSION='0.2.0',CANDLE_STORE='btc-candle-behavior-v1';
+  const CANDLE_VERSION='0.2.0',CANDLE_STORE=marketStorageKey('btc-candle-behavior-v1');
   let candleSaved={};try{candleSaved=JSON.parse(localStorage.getItem(CANDLE_STORE)||'{}')||{};}catch{}
   const candleState={
    version:CANDLE_VERSION,
@@ -4392,13 +4416,13 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   async function journalWrite(payload,updatedAt){
    const db=await openJournalDb(),snapshot=cloneJournalPayload(payload);
    return new Promise((resolve,reject)=>{
-    const tx=db.transaction(JOURNAL_STORE,'readwrite'),store=tx.objectStore(JOURNAL_STORE),req=store.get('latest');
+    const tx=db.transaction(JOURNAL_STORE,'readwrite'),store=tx.objectStore(JOURNAL_STORE),req=store.get(JOURNAL_LATEST_ID);
     let skipped=false;
     req.onsuccess=()=>{
      const previous=req.result;
      if(previous?.updatedAt>updatedAt){skipped=true;return;}
-     if(previous?.payload)store.put({...previous,id:'backup'});
-     store.put({id:'latest',schema:JOURNAL_SCHEMA,updatedAt,payload:snapshot});
+     if(previous?.payload)store.put({...previous,id:JOURNAL_BACKUP_ID});
+     store.put({id:JOURNAL_LATEST_ID,schema:JOURNAL_SCHEMA,updatedAt,payload:snapshot});
     };
     tx.oncomplete=()=>resolve(!skipped);
     tx.onerror=()=>reject(tx.error||new Error('เขียน Journal ไม่สำเร็จ'));
@@ -4465,8 +4489,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   }
   async function restoreJournalBeforeBoot(){
    try{
-    let rec=await journalRead('latest');
-    if(!rec?.payload)rec=await journalRead('backup');
+    let rec=await journalRead(JOURNAL_LATEST_ID);
+    if(!rec?.payload)rec=await journalRead(JOURNAL_BACKUP_ID);
     if(rec?.payload){
      engine=new Engine(mergeJournalState(rec.payload,saved));
      journalLastSavedAt=Number(rec.updatedAt)||0;
@@ -6063,7 +6087,7 @@ function openReport(){
   }
 
   /* ---------- Read-only market recorder ---------- */
-  const MARKET_RECORDER_STORE='btc-market-recorder-v1';
+  const MARKET_RECORDER_STORE=marketStorageKey('btc-market-recorder-v1');
   const marketRecorder={active:false,id:null,startedAt:0,lastCaptureAt:0,lastSignature:'',snapshots:[],startSignalIds:new Set(),latest:null,previewUrl:null};
   function recorderGateState(v){return v==='PASS'?'ผ่าน':v==='DEVELOPING'?'กำลังก่อตัว':v==='BLOCK'?'ไม่ผ่าน':v||'—';}
   function recorderCompactSnapshot(s){
