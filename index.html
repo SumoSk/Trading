@@ -793,6 +793,123 @@ body.toolbar-floating .chart-toolbar{
  .chart-toolbar .drawing-tools>summary{width:64px!important;font-size:8px!important}
 }
 
+/* ARIS compact floating toolbar · frameless */
+.chart-toolbar-slot{min-height:30px!important}
+.chart-toolbar,
+body.toolbar-floating .chart-toolbar{
+ height:26px!important;
+ min-height:26px!important;
+ width:min(660px,calc(100vw - 10px))!important;
+ padding:2px 7px!important;
+ gap:6px!important;
+ border:0!important;
+ border-radius:8px!important;
+ background:rgba(10,18,28,.88)!important;
+ box-shadow:0 5px 16px rgba(0,0,0,.28)!important;
+ backdrop-filter:blur(12px) saturate(115%)!important;
+}
+body.toolbar-floating .chart-toolbar{top:5px!important}
+.chart-toolbar .analysis-tf-control,
+.chart-toolbar .toolbar-main-button,
+.chart-toolbar .drawing-tools>summary,
+.chart-toolbar .toolbar-more>summary{
+ height:22px!important;
+ min-height:22px!important;
+ max-height:22px!important;
+ border:0!important;
+ border-radius:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ padding:0 3px!important;
+ color:#9fb0c5!important;
+}
+.chart-toolbar .analysis-tf-control{
+ flex:0 0 auto!important;
+ width:auto!important;
+ min-width:0!important;
+ gap:2px!important;
+ padding:0 2px!important;
+}
+.chart-toolbar .analysis-tf-control>span{
+ display:inline!important;
+ font-size:6.5px!important;
+ color:#647891!important;
+}
+.chart-toolbar .analysis-tf-control select{
+ width:auto!important;
+ min-width:34px!important;
+ height:20px!important;
+ min-height:20px!important;
+ padding:0 13px 0 3px!important;
+ border:0!important;
+ border-radius:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ color:#d3deeb!important;
+ font-size:8px!important;
+}
+.chart-toolbar .toolbar-main-button{
+ flex:0 0 auto!important;
+ width:auto!important;
+ padding:0 4px!important;
+ font-size:7.2px!important;
+}
+.chart-toolbar .indicator-toggle[aria-pressed=true]{
+ border:0!important;
+ background:transparent!important;
+ color:#70d9b9!important;
+}
+.chart-toolbar .drawing-tools{
+ flex:0 0 auto!important;
+}
+.chart-toolbar .drawing-tools>summary{
+ width:auto!important;
+ padding:0 4px!important;
+ font-size:7.2px!important;
+}
+.chart-toolbar .drawing-tools[open]>summary,
+.chart-toolbar .drawing-tools.active>summary{
+ border:0!important;
+ background:transparent!important;
+ color:#c8bcff!important;
+}
+.chart-toolbar .toolbar-more{
+ flex:0 0 auto!important;
+ margin-left:auto!important;
+}
+.chart-toolbar .toolbar-more>summary{
+ width:24px!important;
+ padding:0!important;
+ font-size:11px!important;
+}
+.chart-toolbar .toolbar-more[open]>summary{
+ border:0!important;
+ background:transparent!important;
+ color:#d4e0ef!important;
+}
+@media(max-width:700px){
+ .chart-toolbar,
+ body.toolbar-floating .chart-toolbar{
+  height:26px!important;
+  min-height:26px!important;
+  width:calc(100vw - 8px)!important;
+  padding:2px 4px!important;
+  gap:3px!important;
+ }
+ .chart-toolbar .analysis-tf-control>span{display:none!important}
+ .chart-toolbar .analysis-tf-control select{font-size:7.2px!important;min-width:30px!important;padding-right:10px!important}
+ .chart-toolbar .toolbar-main-button{font-size:6.6px!important;padding:0 2px!important}
+ .chart-toolbar .drawing-tools>summary{font-size:6.6px!important;padding:0 2px!important}
+ .chart-toolbar .toolbar-more>summary{width:20px!important}
+}
+@media(max-width:430px){
+ .chart-toolbar,
+ body.toolbar-floating .chart-toolbar{gap:2px!important;padding-inline:3px!important}
+ .chart-toolbar .analysis-tf-control select{font-size:6.6px!important;min-width:27px!important}
+ .chart-toolbar .toolbar-main-button{font-size:6px!important}
+ .chart-toolbar .drawing-tools>summary{font-size:6px!important}
+}
+
 .main-signal-head,.probability-head,.candle-kicker,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
 .panel-heading{justify-content:flex-end}
