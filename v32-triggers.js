@@ -10,7 +10,7 @@ const Direction=root.ArisV32Direction;
 if(!Base||!Direction)throw new Error('ARIS 3.2 Block 1 and Block 2 must load before v32-triggers.js');
 
 const VERSION=Base.version;
-const REVISION='stage-triggers-b3-r1';
+const REVISION='stage-triggers-b3-r2';
 const clip=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const finite=Number.isFinite;
 const sign=(v,dead=0)=>v>dead?1:v<-dead?-1:0;
@@ -74,6 +74,7 @@ function mkTrigger({id,family,direction,quality,stage,stageConfidence,state,reas
 function rangeTrigger(snap){
   const f=snap.features,sc=stageConf(snap,'RANGE'),tc=stageConf(snap,'TRANSITION');
   if(!f.range)return null;
+  if(sc<.18&&tc<CFG.transitionStageMin)return null;
   const p=f.rangePosition,lower=p<=CFG.rangeEdgeWatch,upper=p>=1-CFG.rangeEdgeWatch;
   if(!lower&&!upper)return null;
   const d=lower?1:-1;
@@ -188,6 +189,7 @@ function trendTrigger(snap){
   const f=snap.features,s=snap.structure,d=s.swingDir||s.trendDir||dirNum(snap.direction?.direction);
   if(!d)return null;
   const sc=stageConf(snap,'TREND_ADVANCE');
+  if(sc<CFG.trendStageMin)return null;
   const structure=clip(.45+(s.strength||0)*.55);
   const follow=d>0?f.seq.followUp:f.seq.followDown;
   const momentum=clip(d*(f.momentum8*.65+f.momentum3*.35)/1.25);
@@ -231,6 +233,7 @@ function pullbackTrigger(snap){
   const f=snap.features,s=snap.structure,d=s.swingDir||s.trendDir||snap.stage.priorTrendDir;
   if(!d)return null;
   const sc=stageConf(snap,'PULLBACK');
+  if(sc<CFG.pullbackStageMin)return null;
   const dist8=Math.abs(f.price-f.ema8)/f.atr,dist21=Math.abs(f.price-f.ema21)/f.atr;
   const value=clip(1-Math.min(dist8,dist21)/CFG.pullbackValueMaxAtr);
   const close=d>0?f.current.closeLoc:1-f.current.closeLoc;
@@ -339,6 +342,10 @@ function triggerBrain(inputOrSnapshot={}){
   const ready=candidates.filter(x=>x.ready).sort((a,b)=>b.quality-a.quality);
   const watches=candidates.filter(x=>!x.ready&&!x.hardBlocks.length&&(x.watch||x.watchOnly)).sort((a,b)=>b.quality-a.quality);
   let primary=ready[0]||watches[0]||candidates.sort((a,b)=>b.quality-a.quality)[0]||null;
+
+  // Event-specific failures/acceptance outrank generic regime triggers when ready.
+  const failedEvent=candidates.find(x=>x.id==='FAILED_BREAKOUT_REVERSAL'&&x.ready);
+  if(failedEvent)primary=failedEvent;
 
   // Conflict policy: an accepted breakout outranks an opposite range-reversion idea.
   const breakout=candidates.find(x=>x.id==='BREAKOUT_FOLLOW'&&x.meta?.accepted);
