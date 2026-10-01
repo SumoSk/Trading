@@ -222,14 +222,14 @@
   function ensureStyles(){
     if($('situation-analysis-style'))return;
     const s=document.createElement('style');s.id='situation-analysis-style';s.textContent=`
-      .situation-analysis-open{height:36px!important;min-height:36px!important;max-height:36px!important;width:96px;flex:0 0 96px;padding:0 8px;border:1px solid #355b58!important;border-radius:10px!important;background:#122522!important;color:#a9e0d5!important;font:600 8.5px 'Segoe UI',sans-serif;white-space:nowrap}
-      .situation-analysis-open:hover{border-color:#4d867f!important;background:#19332f!important;color:#d5fff6!important}
-      .market-symbol-control{height:36px;min-height:36px;max-height:36px;width:112px;display:flex;align-items:center;justify-content:space-between;gap:4px;padding:3px 4px 3px 8px;border:1px solid #3a4e69;border-radius:10px;background:#101a28;color:#7f92aa;white-space:nowrap;flex:0 0 112px;box-sizing:border-box}
-      .market-symbol-control span{font:600 7px 'Segoe UI',sans-serif;letter-spacing:.35px;color:#72869f}
-      .market-symbol-control select{height:28px;min-height:28px;width:76px;padding:0 20px 0 7px;border:0;border-radius:7px;background:#172334;color:#dce6f2;font:650 9px 'Segoe UI',sans-serif;outline:none;cursor:pointer}
-      .market-symbol-control select:focus{box-shadow:0 0 0 1px #4d867f}
-      @media(max-width:700px){.situation-analysis-open{width:72px;flex-basis:72px;padding:0 4px;font-size:7.5px}.market-symbol-control{width:78px;flex-basis:78px;padding-left:4px}.market-symbol-control span{display:none}.market-symbol-control select{width:68px;min-width:68px;padding-left:5px;padding-right:16px;font-size:8px}}
-      @media(max-width:430px){.situation-analysis-open{width:44px;flex-basis:44px;padding:0 2px;font-size:6.3px}.market-symbol-control{width:54px;flex-basis:54px;padding:2px}.market-symbol-control select{width:48px;min-width:48px;padding-left:3px;padding-right:13px;font-size:6.8px}}
+      .situation-analysis-open{height:22px!important;min-height:22px!important;max-height:22px!important;width:auto;flex:0 0 auto;padding:0 4px;border:0!important;border-radius:0!important;background:transparent!important;color:#8fcfc3!important;font:600 7.2px 'Segoe UI',sans-serif;white-space:nowrap;box-shadow:none!important}
+      .situation-analysis-open:hover{border:0!important;background:transparent!important;color:#c8f1e9!important}
+      .market-symbol-control{height:22px;min-height:22px;max-height:22px;width:auto;display:flex;align-items:center;justify-content:flex-start;gap:2px;padding:0 2px;border:0;border-radius:0;background:transparent;color:#667b93;white-space:nowrap;flex:0 0 auto;box-sizing:border-box}
+      .market-symbol-control span{font:600 6.5px 'Segoe UI',sans-serif;letter-spacing:.2px;color:#667b93}
+      .market-symbol-control select{height:20px;min-height:20px;width:auto;min-width:48px;padding:0 13px 0 3px;border:0;border-radius:0;background:transparent;color:#d3deeb;font:650 7.5px 'Segoe UI',sans-serif;outline:none;cursor:pointer;box-shadow:none}
+      .market-symbol-control select:focus{box-shadow:none}
+      @media(max-width:700px){.situation-analysis-open{padding:0 2px;font-size:6.5px}.market-symbol-control{padding:0}.market-symbol-control span{display:none}.market-symbol-control select{min-width:43px;padding-left:2px;padding-right:10px;font-size:7px}}
+      @media(max-width:430px){.situation-analysis-open{font-size:5.8px}.market-symbol-control select{min-width:38px;font-size:6.4px}}
       #situation-analysis-dialog{width:min(1020px,calc(100vw - 18px));max-height:92vh;padding:0;border:1px solid #33465b;border-radius:14px;background:#0a121c;color:#d8e3ef;box-shadow:0 24px 80px #000b}
       #situation-analysis-dialog::backdrop{background:#02060bc8;backdrop-filter:blur(3px)}
       .sit-shell{display:grid;grid-template-rows:auto 1fr;max-height:92vh}.sit-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:15px 17px;border-bottom:1px solid #263649;background:#0e1824}
