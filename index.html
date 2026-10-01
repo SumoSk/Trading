@@ -808,8 +808,8 @@ body.toolbar-floating .chart-toolbar{
  overflow:visible!important;
  border:0!important;
  border-radius:10px!important;
- background:rgba(10,18,28,.92)!important;
- box-shadow:0 7px 20px rgba(0,0,0,.30)!important;
+ background:rgba(25,45,39,.90)!important;
+ box-shadow:0 7px 20px rgba(0,0,0,.24),inset 0 1px 0 rgba(171,225,201,.05)!important;
  backdrop-filter:blur(12px) saturate(115%)!important;
 }
 body.toolbar-floating .chart-toolbar{top:6px!important}
@@ -818,6 +818,25 @@ body.toolbar-floating .chart-toolbar{top:6px!important}
  align-self:center!important;
  box-sizing:border-box!important;
 }
+.chart-toolbar>*:not(:last-child){
+ position:relative!important;
+}
+.chart-toolbar>*:not(:last-child)::after{
+ content:''!important;
+ position:absolute!important;
+ right:-4px!important;
+ top:7px!important;
+ width:1px!important;
+ height:16px!important;
+ background:rgba(157,208,188,.22)!important;
+ pointer-events:none!important;
+}
+.chart-toolbar .analysis-tf-control>span{color:#8cae9f!important}
+.chart-toolbar .analysis-tf-control select{color:#dcebe5!important}
+.chart-toolbar .toolbar-main-button{color:#b7d0c6!important}
+.chart-toolbar .drawing-tools>summary{color:#bfd4cc!important}
+.chart-toolbar .toolbar-more>summary{color:#b1c7be!important}
+.chart-toolbar .indicator-toggle[aria-pressed=true]{color:#83dfc1!important}
 .chart-toolbar .analysis-tf-control,
 .chart-toolbar .toolbar-main-button,
 .chart-toolbar .drawing-tools,
@@ -928,6 +947,7 @@ body.toolbar-floating .chart-toolbar{top:6px!important}
 
 /* phone layout: fixed visual rhythm so controls do not drift */
 @media(max-width:700px){
+ .chart-toolbar>*:not(:last-child)::after{right:-2px!important;top:8px!important;height:15px!important;background:rgba(157,208,188,.18)!important}
  .chart-toolbar-slot{min-height:44px!important}
  .chart-toolbar,
  body.toolbar-floating .chart-toolbar{
@@ -1001,6 +1021,8 @@ body.toolbar-floating .chart-toolbar{top:6px!important}
  .chart-toolbar .drawing-tools,.chart-toolbar .drawing-tools>summary{flex-basis:32px!important;width:32px!important;font-size:6.6px!important}
  .chart-toolbar .toolbar-more,.chart-toolbar .toolbar-more>summary{flex-basis:20px!important;width:20px!important}
 }
+
+.chart-toolbar .toolbar-more::after{display:none!important}
 
 .main-signal-head,.probability-head,.candle-kicker,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
