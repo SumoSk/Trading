@@ -479,6 +479,24 @@ body[data-feed=live] .mode{color:#9bf0cb;border-color:#315e50;background:#152d26
 .candle-reading p,.candle-change p{margin:0;font-size:8.5px;line-height:1.5;color:#b8c7d9}
 .candle-reading p{color:#c7d5e5}
 .candle-change p{color:#9fb1c6}
+.candle-fib-summary{margin-top:5px;padding:8px 9px;border:1px solid #2a3d53;border-radius:8px;background:linear-gradient(145deg,#0b151f,#0d1824)}
+.candle-fib-summary.high{border-color:#2c6554;background:linear-gradient(145deg,#0c1d19,#0c1821)}
+.candle-fib-summary.low{border-color:#6a3a49;background:linear-gradient(145deg,#211319,#0d1821)}
+.candle-fib-summary.warn{border-color:#665935;background:linear-gradient(145deg,#1d1a11,#0d1821)}
+.candle-fib-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.candle-fib-head>span{font-size:7.5px;color:#8398b0}
+.candle-fib-head>b{font-size:8px;color:#c9d7e7;text-align:right}
+.candle-fib-summary.high .candle-fib-head>b{color:#69ddb7}
+.candle-fib-summary.low .candle-fib-head>b{color:#f08ba0}
+.candle-fib-summary.warn .candle-fib-head>b{color:#dcc27a}
+.candle-fib-summary>p{margin:5px 0 7px;font-size:8.5px;line-height:1.5;color:#c5d3e3}
+.candle-fib-levels{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.candle-fib-levels>div{min-width:0;padding:6px 7px;border:1px solid #23364a;border-radius:7px;background:#09131d}
+.candle-fib-levels span{display:block;font-size:6.8px;color:#71859c;margin-bottom:2px}
+.candle-fib-levels b{display:block;font-size:7.8px;line-height:1.45;color:#afc0d2;font-weight:600}
+.candle-fib-summary>small{display:block;margin-top:6px;font-size:6.8px;line-height:1.45;color:#72869d}
+@media(max-width:430px){.candle-fib-levels{grid-template-columns:1fr}}
+
 .signal-card-candle.high .candle-reading{border-color:#285d4f}
 .signal-card-candle.low .candle-reading{border-color:#663747}
 .candle-lock{display:none!important;margin-top:5px;padding:6px 7px;border-top:1px solid #24344a}
@@ -1560,14 +1578,17 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
       <div class="candle-pattern-list" id="candle-pattern-list"><span class="candle-pattern empty">รอแท่ง Futures 1 นาที</span></div>
     </div>
 
-    <div class="candle-reading">
-      <span>ความหมาย</span>
-      <p id="candle-meaning">กำลังรอข้อมูลแท่งเทียน</p>
-    </div>
-
-    <div class="candle-change">
-      <span>จะเปลี่ยนเมื่อ</span>
-      <p id="candle-change-text">รอให้มีแพตเทิร์นที่ชัดก่อน</p>
+    <div class="candle-fib-summary neutral" id="candle-fib-summary">
+      <div class="candle-fib-head">
+        <span>สรุป Fibonacci</span>
+        <b id="candle-fib-state">รอข้อมูล</b>
+      </div>
+      <p id="candle-fib-now">กำลังรอขาสวิงที่ยืนยันจากเครื่องยนต์</p>
+      <div class="candle-fib-levels">
+        <div><span>โซนถัดไป</span><b id="candle-fib-next">—</b></div>
+        <div><span>ถ้าไปต่อ / กลับตัว</span><b id="candle-fib-plan">—</b></div>
+      </div>
+      <small id="candle-fib-note">Fib เป็นโซนเฝ้า ต้องดูแท่งเทียน โครงสร้าง และแรงซื้อขายประกอบ</small>
     </div>
 
     <div class="candle-lock" id="candle-lock">
@@ -4512,8 +4533,6 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     if(summaryBox){summaryBox.className='candle-status-summary wait';summaryTitle.textContent='ยังไม่ชัด';summaryText.textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';}
     $('candle-summary').textContent=view?.reason||'รอข้อมูล Futures สด';
     renderPatterns([]);
-    $('candle-meaning').textContent=view?.reason||'กำลังรอข้อมูลแท่งเทียน';
-    $('candle-change-text').textContent='รอแท่งปิดเพิ่ม';
    }else{
     const cls=view.direction==='HIGH'?'high':view.direction==='LOW'?'low':'wait';
     card.classList.add(cls);stateEl.className='candle-state '+cls;stateEl.textContent=view.direction;
@@ -4528,8 +4547,6 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     }
     $('candle-summary').textContent=(top?'พบ '+top+' · ':'')+view.label;
     renderPatterns(view.patterns);
-    $('candle-meaning').textContent=view.plainMeaning||view.label;
-    $('candle-change-text').textContent=view.changeTrigger||'รอแท่งถัดไปยืนยันหรือทำลายรูปแบบปัจจุบัน';
    }
    const pending=candlePending(tf),latest=[...candleState.signals].reverse().find(s=>candleSignalTf(s)===tf)||null,lock=$('candle-lock');
    if(pending){
@@ -4551,6 +4568,86 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    $('candle-stats').textContent=st.done.length
     ?st.done.length+' ไม้ · '+st.wins+' ชนะ / '+st.losses+' แพ้ · '+(st.rate*100).toFixed(1)+'%'
     :'ยังไม่มีผล';
+  }
+
+  function renderCandleFibSummary(v){
+   const box=$('candle-fib-summary'),stateEl=$('candle-fib-state'),nowEl=$('candle-fib-now'),nextEl=$('candle-fib-next'),planEl=$('candle-fib-plan'),noteEl=$('candle-fib-note');
+   if(!box||!stateEl||!nowEl||!nextEl||!planEl)return;
+   box.className='candle-fib-summary neutral';
+   const story=v?.v3Story||v?.phase?.v3View?.story||v?.v2Story||v?.phase?.v2View?.story||null;
+   const fib=story?.fib||null;
+   if(!fib?.valid){
+    stateEl.textContent='ยังไม่มี Swing ยืนยัน';
+    nowEl.textContent=fib?.reason||'เครื่องยนต์ยังไม่มีขาสวิง Fibonacci ที่ใหม่และชัดพอ';
+    nextEl.textContent='รอ Swing ใหม่';
+    planEl.textContent='ยังไม่ใช้ Fib ชี้ทิศ';
+    if(noteEl)noteEl.textContent='ไม่สร้างระดับขึ้นเองเมื่อเครื่องยนต์ยังยืนยันขาสวิงไม่ได้';
+    return;
+   }
+   const legSide=fib.d>0?'ขาขึ้น':'ขาลง',continueSide=fib.d>0?'HIGH':'LOW',reverseSide=fib.d>0?'LOW':'HIGH';
+   const pct1=x=>Number.isFinite(Number(x))?(Number(x)*100).toFixed(1).replace('.0','')+'%':'—';
+   const level=(ratio,rows=fib.levels)=>Array.isArray(rows)?rows.find(x=>Math.abs(Number(x?.ratio)-ratio)<.002):null;
+   const extLevel=ratio=>Array.isArray(fib.extensions)?fib.extensions.find(x=>Math.abs(Number(x?.ratio)-ratio)<.002):null;
+   const r236=level(.236),r382=level(.382),r50=level(.5),r618=level(.618),r786=level(.786),e127=extLevel(1.272),e161=extLevel(1.618);
+   const retr=Number(fib.retracement),ext=Number(fib.extension);
+   const nearest=fib.nearest&&Number.isFinite(Number(fib.nearest.price))?fib.nearest:null;
+   const conf=fib.confluence?' · มีแนวรับ/ต้านซ้อน':'';
+   let tone='neutral',stateText='',nowText='',nextText='',planText='',note='Fib เป็นโซนเฝ้า ไม่ใช่คำสั่งเข้า ต้องรอแท่งเทียน + Rejection/Reclaim + Structure + Flow ยืนยัน';
+
+   if(Number.isFinite(ext)&&ext>=1){
+    if(ext>=1.618){
+     tone='warn';stateText='เกิน 161.8% · Exhaustion Watch';
+     nowText=legSide+'ล่าสุดยืดถึง '+pct1(ext)+' · ขาเดิมยืดมากตามสูตร'+conf;
+     nextText='เฝ้า Rejection / Structure break หลัง 161.8%'+(e161?' · 161.8% = '+money(e161.price):'');
+     planText='ถ้ายังยืนเหนือ 161.8% และแรงเร่งต่อ → '+continueSide+' ยังไปต่อได้ · ถ้า Reject + โครงสร้างเสีย → เฝ้า '+reverseSide;
+    }else if(ext>=1.272){
+     tone='warn';stateText='127.2–161.8% · เริ่ม Exhaustion';
+     nowText=legSide+'เลย Swing เดิม '+pct1(ext)+' · เครื่องยนต์เริ่มเพิ่ม exhaustion watch'+conf;
+     nextText=(e161?'161.8% = '+money(e161.price):'โซน 161.8%')+' · จุดเฝ้าปลายขาเข้มขึ้น';
+     planText='แรงยังต่อ + ทำ High/Low ใหม่ได้ → '+continueSide+' · ถ้าแรงชะลอและเกิด Rejection → ระวัง '+reverseSide;
+    }else{
+     tone=fib.d>0?'high':'low';stateText='100–127.2% · ต่อขา';
+     nowText=legSide+'พ้น Swing เดิมแล้วที่ '+pct1(ext)+' · ยังอยู่ช่วงต่อขาก่อน exhaustion'+conf;
+     nextText=(e127?'127.2% = '+money(e127.price):'โซน 127.2%')+' · จากจุดนี้เริ่มเพิ่ม exhaustion watch';
+     planText='Follow-through ยังต่อ → หนุน '+continueSide+' · ถ้า Reject ก่อน 127.2% → รอดูย่อกลับเข้า Fib';
+    }
+   }else if(Number.isFinite(retr)){
+    const retrPct=Math.max(0,retr);
+    if(retrPct>.786){
+     tone='warn';stateText='ลึกเกิน 78.6% · ขาเดิมเสี่ยงเสียทรง';
+     nowText=legSide+'ล่าสุดถูกย่อลึก '+pct1(retrPct)+' · เกินโซน deep ของสูตร'+conf;
+     nextText=(r786?'78.6% = '+money(r786.price):'โซน 78.6%')+' · ต้อง Reclaim กลับขึ้น/ลงเหนือโซนนี้ให้ได้';
+     planText='Reclaim 78.6% + โครงสร้างกลับมา → ยังมีสิทธิ์ '+continueSide+' · หลุดต่อและโครงสร้างเสีย → เพิ่มน้ำหนัก '+reverseSide;
+    }else if(retrPct>.618){
+     tone='warn';stateText='61.8–78.6% · Deep Pullback';
+     nowText=legSide+'ล่าสุดกำลังย่อลึก '+pct1(retrPct)+' · ยังไม่ถือว่ากลับตัว แต่ต้องการการยืนยันมากขึ้น'+conf;
+     nextText=(r786?'78.6% = '+money(r786.price):'โซน 78.6%')+' · เส้นสำคัญก่อนขาเดิมเริ่มเสียทรง';
+     planText='เกิด Rejection/Reclaim และโครงสร้างยังอยู่ → มีโอกาสกลับไป '+continueSide+' · หลุด 78.6% → ระวัง '+reverseSide;
+    }else if(retrPct>=.236){
+     tone=fib.d>0?'high':'low';stateText='23.6–61.8% · Healthy Pullback';
+     nowText=legSide+'ล่าสุดย่อ '+pct1(retrPct)+' · '+(fib.retraceZone||'อยู่ในช่วง healthy')+conf;
+     const target=retrPct<.382?r382:retrPct<.5?r50:r618;
+     nextText=target?pct1(target.ratio)+' = '+money(target.price)+(target.ratio===.618?' · ขอบล่าง Healthy':' · โซนย่อถัดไป'):(nearest?pct1(nearest.ratio)+' = '+money(nearest.price):'เฝ้าระดับ Fib ถัดไป');
+     planText='Rejection/Reclaim + โครงสร้างไม่เสีย → หนุนไปต่อ '+continueSide+' · ถ้าหลุด 61.8% → เข้า Deep Pullback';
+    }else{
+     tone=fib.d>0?'high':'low';stateText='ย่อตื้นกว่า 23.6% · ขาเดิมยังแข็ง';
+     nowText=legSide+'ล่าสุดย่อเพียง '+pct1(retrPct)+' · ยังเป็นการพักตื้น'+conf;
+     nextText=(r236?'23.6% = '+money(r236.price):'23.6%')+' · จุดเริ่ม Healthy Pullback';
+     planText='รักษา Swing และกลับเร่งได้ → หนุน '+continueSide+' · ถ้าย่อลึกขึ้นให้ดู 38.2 / 50 / 61.8% ตามลำดับ';
+    }
+   }else{
+    stateText='Fib พร้อม · รอตำแหน่งราคา';
+    nowText=legSide+'ล่าสุดได้รับการยืนยัน แต่ตำแหน่ง retracement/extension ยังอ่านไม่ได้';
+    nextText=nearest?pct1(nearest.ratio)+' = '+money(nearest.price):'—';
+    planText='รอราคาขยับเข้าโซน Fib ที่คำนวณได้';
+   }
+
+   box.className='candle-fib-summary '+tone;
+   stateEl.textContent=stateText;
+   nowEl.textContent=nowText;
+   nextEl.textContent=nextText;
+   planEl.textContent=planText;
+   if(noteEl)noteEl.textContent=note;
   }
 
   function setupFeedHealth(){
@@ -5921,6 +6018,7 @@ function openReport(){
     v.signal.dataset.entry.microstructure={...micro,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};
    }
    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
+   renderCandleFibSummary(v);
    renderEvent(v);
    renderDrawingOverlay();
    const profileNow=performance.now();
@@ -6861,7 +6959,7 @@ function openReport(){
   refreshAnalysisLabels();
   renderDirection({available:false,reason:'กำลังโหลดข้อมูลสด'});
   $('main-version-inline').textContent=versionDisplay(CFG.version);
-  state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);
+  state.candleView={available:false,direction:'WAIT',reason:'กำลังโหลดข้อมูล Futures'};renderCandleBehavior(state.candleView);renderCandleFibSummary(null);
   renderSetupProfile(null,null,{});renderCompactSetupProfile();updateSetupHealth();
   $('export-history').addEventListener('click',exportHistory);$('export-training-csv').addEventListener('click',exportTrainingCsv);$('report-history').addEventListener('click',openReport);$('purge-old-versions').addEventListener('click',purgeOldVersions);$('market-recorder-toggle')?.addEventListener('click',marketRecorderToggle);$('market-recorder-download')?.addEventListener('click',marketRecorderDownload);$('version-filter').addEventListener('change',e=>{historyVersionFilter=e.target.value;drawHistory();});$('report-export-json').addEventListener('click',exportHistory);$('report-export-csv').addEventListener('click',exportTrainingCsv);$('history-body').addEventListener('click',e=>{const b=e.target.closest('[data-review-id]');if(b)openTradeReview(b.dataset.reviewId);});document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.closeDialog)?.close()));for(const d of [$('engine-guide-dialog'),$('trade-review-dialog'),$('report-dialog'),$('market-recorder-dialog')])d?.addEventListener('click',e=>{if(e.target===d)d.close();});marketRecorderStatus();startPersistentApp();
   setInterval(()=>{if(state.booted&&!document.hidden&&!state.orderHistoryRecoveryBusy&&engine.expire(Date.now()))persist(true);if(engine.signals.some(s=>s.result==='pending'&&s.dataset))persist();drawHistory();renderCandleBehavior(state.candleView);marketRecorderStatus();},1000);
