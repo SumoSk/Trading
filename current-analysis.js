@@ -224,6 +224,11 @@
     const s=document.createElement('style');s.id='situation-analysis-style';s.textContent=`
       .situation-analysis-open{height:30px;padding:0 10px;border:1px solid #355b58;border-radius:7px;background:#122522;color:#a9e0d5;font:600 9px 'Segoe UI',sans-serif;white-space:nowrap;flex:0 0 auto}
       .situation-analysis-open:hover{border-color:#4d867f;background:#19332f;color:#d5fff6}
+      .market-symbol-control{height:30px;display:flex;align-items:center;gap:5px;padding:0 6px 0 8px;border:1px solid #33465b;border-radius:7px;background:#101a26;color:#7f92aa;white-space:nowrap;flex:0 0 auto}
+      .market-symbol-control span{font:600 7px 'Segoe UI',sans-serif;letter-spacing:.45px}
+      .market-symbol-control select{height:24px;min-width:78px;padding:0 24px 0 6px;border:0;border-radius:5px;background:#162332;color:#d3dfed;font:600 9px 'Segoe UI',sans-serif;outline:none;cursor:pointer}
+      .market-symbol-control select:focus{box-shadow:0 0 0 1px #4d867f}
+      @media(max-width:560px){.market-symbol-control{height:28px;padding-left:6px}.market-symbol-control span{display:none}.market-symbol-control select{height:22px;min-width:72px;font-size:8px}}
       #situation-analysis-dialog{width:min(1020px,calc(100vw - 18px));max-height:92vh;padding:0;border:1px solid #33465b;border-radius:14px;background:#0a121c;color:#d8e3ef;box-shadow:0 24px 80px #000b}
       #situation-analysis-dialog::backdrop{background:#02060bc8;backdrop-filter:blur(3px)}
       .sit-shell{display:grid;grid-template-rows:auto 1fr;max-height:92vh}.sit-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:15px 17px;border-bottom:1px solid #263649;background:#0e1824}
@@ -249,12 +254,33 @@
     d.innerHTML='<div class="sit-shell"><header class="sit-head"><div><span class="sit-kicker">LIVE SITUATION</span><h2>วิเคราะห์ตอนนี้</h2><div class="sit-head-meta" id="sit-head-meta">รอข้อมูล</div></div><div class="sit-head-actions"><button class="sit-refresh" id="sit-refresh" type="button">วิเคราะห์ใหม่</button><button class="sit-close" id="sit-close" type="button">×</button></div></header><div class="sit-body" id="sit-body"></div></div>';
     document.body.append(d);$('sit-close').addEventListener('click',()=>d.close());$('sit-refresh').addEventListener('click',renderNow);d.addEventListener('click',e=>{if(e.target===d)d.close();});return d;
   }
+  function ensureMarketSelector(anchor){
+    let wrap=$('market-symbol-control');if(wrap)return wrap;
+    if(!anchor)return null;
+    const STORE='aris-active-symbol-v1',markets=[
+      ['BTCUSDT','BTC'],['XAUUSDT','XAU'],['SKHYUSDT','SKHY'],['AMDUSDT','AMD'],['INTCUSDT','INTEL'],['NVDAUSDT','NVDA'],['OPENAIUSDT','OPENAI']
+    ];
+    wrap=document.createElement('label');wrap.id='market-symbol-control';wrap.className='market-symbol-control';wrap.title='เปลี่ยนกราฟและตลาดที่ระบบวิเคราะห์';
+    const cap=document.createElement('span');cap.textContent='กราฟ';
+    const select=document.createElement('select');select.id='market-symbol-select';select.setAttribute('aria-label','เลือกตลาด USDT Futures');
+    let active='BTCUSDT';try{active=localStorage.getItem(STORE)||'BTCUSDT';}catch{}
+    for(const [value,label] of markets){const o=document.createElement('option');o.value=value;o.textContent=label;o.selected=value===active;select.append(o);}
+    select.addEventListener('change',()=>{
+      const next=select.value;
+      if(!markets.some(([v])=>v===next))return;
+      select.disabled=true;
+      try{localStorage.setItem(STORE,next);}catch{}
+      location.reload();
+    });
+    wrap.append(cap,select);anchor.insertAdjacentElement('afterend',wrap);return wrap;
+  }
   function ensureButton(){
-    let b=$('situation-analysis-open');if(b)return b;
+    let b=$('situation-analysis-open');
+    if(b){ensureMarketSelector(b);return b;}
     b=document.createElement('button');b.id='situation-analysis-open';b.className='situation-analysis-open';b.type='button';b.textContent='วิเคราะห์ตอนนี้';b.title='วิเคราะห์สถานการณ์กราฟปัจจุบัน 10 แท่งข้างหน้า';
     const train=$('training-lab-open'),drawing=$('drawing-tools');
     if(train)train.insertAdjacentElement('afterend',b);else if(drawing)drawing.insertAdjacentElement('afterend',b);else return null;
-    b.addEventListener('click',()=>{const d=ensureDialog();renderNow();if(!d.open)d.showModal();});return b;
+    b.addEventListener('click',()=>{const d=ensureDialog();renderNow();if(!d.open)d.showModal();});ensureMarketSelector(b);return b;
   }
   function renderError(reason,snap){
     $('sit-head-meta').textContent=snap?(snap.symbol+' · '+snap.tf+' · 10 แท่ง'):'รอข้อมูล';
