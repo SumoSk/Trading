@@ -222,13 +222,14 @@
   function ensureStyles(){
     if($('situation-analysis-style'))return;
     const s=document.createElement('style');s.id='situation-analysis-style';s.textContent=`
-      .situation-analysis-open{height:30px;padding:0 10px;border:1px solid #355b58;border-radius:7px;background:#122522;color:#a9e0d5;font:600 9px 'Segoe UI',sans-serif;white-space:nowrap;flex:0 0 auto}
-      .situation-analysis-open:hover{border-color:#4d867f;background:#19332f;color:#d5fff6}
-      .market-symbol-control{height:30px;display:flex;align-items:center;gap:5px;padding:0 6px 0 8px;border:1px solid #33465b;border-radius:7px;background:#101a26;color:#7f92aa;white-space:nowrap;flex:0 0 auto}
-      .market-symbol-control span{font:600 7px 'Segoe UI',sans-serif;letter-spacing:.45px}
-      .market-symbol-control select{height:24px;min-width:78px;padding:0 24px 0 6px;border:0;border-radius:5px;background:#162332;color:#d3dfed;font:600 9px 'Segoe UI',sans-serif;outline:none;cursor:pointer}
+      .situation-analysis-open{height:36px!important;min-height:36px!important;max-height:36px!important;width:96px;flex:0 0 96px;padding:0 8px;border:1px solid #355b58!important;border-radius:10px!important;background:#122522!important;color:#a9e0d5!important;font:600 8.5px 'Segoe UI',sans-serif;white-space:nowrap}
+      .situation-analysis-open:hover{border-color:#4d867f!important;background:#19332f!important;color:#d5fff6!important}
+      .market-symbol-control{height:36px;min-height:36px;max-height:36px;width:112px;display:flex;align-items:center;justify-content:space-between;gap:4px;padding:3px 4px 3px 8px;border:1px solid #3a4e69;border-radius:10px;background:#101a28;color:#7f92aa;white-space:nowrap;flex:0 0 112px;box-sizing:border-box}
+      .market-symbol-control span{font:600 7px 'Segoe UI',sans-serif;letter-spacing:.35px;color:#72869f}
+      .market-symbol-control select{height:28px;min-height:28px;width:76px;padding:0 20px 0 7px;border:0;border-radius:7px;background:#172334;color:#dce6f2;font:650 9px 'Segoe UI',sans-serif;outline:none;cursor:pointer}
       .market-symbol-control select:focus{box-shadow:0 0 0 1px #4d867f}
-      @media(max-width:560px){.market-symbol-control{height:28px;padding-left:6px}.market-symbol-control span{display:none}.market-symbol-control select{height:22px;min-width:72px;font-size:8px}}
+      @media(max-width:700px){.situation-analysis-open{width:72px;flex-basis:72px;padding:0 4px;font-size:7.5px}.market-symbol-control{width:78px;flex-basis:78px;padding-left:4px}.market-symbol-control span{display:none}.market-symbol-control select{width:68px;min-width:68px;padding-left:5px;padding-right:16px;font-size:8px}}
+      @media(max-width:430px){.situation-analysis-open{width:64px;flex-basis:64px;font-size:7px}.market-symbol-control{width:72px;flex-basis:72px}.market-symbol-control select{width:62px;min-width:62px;font-size:7.5px}}
       #situation-analysis-dialog{width:min(1020px,calc(100vw - 18px));max-height:92vh;padding:0;border:1px solid #33465b;border-radius:14px;background:#0a121c;color:#d8e3ef;box-shadow:0 24px 80px #000b}
       #situation-analysis-dialog::backdrop{background:#02060bc8;backdrop-filter:blur(3px)}
       .sit-shell{display:grid;grid-template-rows:auto 1fr;max-height:92vh}.sit-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:15px 17px;border-bottom:1px solid #263649;background:#0e1824}
@@ -275,12 +276,18 @@
     wrap.append(cap,select);anchor.insertAdjacentElement('afterend',wrap);return wrap;
   }
   function ensureButton(){
+    const toolbar=$('chart-toolbar'),indicator=$('indicator-toggle'),drawing=$('drawing-tools');
+    if(!toolbar)return null;
     let b=$('situation-analysis-open');
-    if(b){ensureMarketSelector(b);return b;}
-    b=document.createElement('button');b.id='situation-analysis-open';b.className='situation-analysis-open';b.type='button';b.textContent='วิเคราะห์ตอนนี้';b.title='วิเคราะห์สถานการณ์กราฟปัจจุบัน 10 แท่งข้างหน้า';
-    const train=$('training-lab-open'),drawing=$('drawing-tools');
-    if(train)train.insertAdjacentElement('afterend',b);else if(drawing)drawing.insertAdjacentElement('afterend',b);else return null;
-    b.addEventListener('click',()=>{const d=ensureDialog();renderNow();if(!d.open)d.showModal();});ensureMarketSelector(b);return b;
+    if(!b){
+      b=document.createElement('button');b.id='situation-analysis-open';b.className='situation-analysis-open';b.type='button';b.textContent='วิเคราะห์ตอนนี้';b.title='วิเคราะห์สถานการณ์กราฟปัจจุบัน 10 แท่งข้างหน้า';
+      b.addEventListener('click',()=>{const d=ensureDialog();renderNow();if(!d.open)d.showModal();});
+    }
+    const anchor=indicator||toolbar.querySelector('.analysis-tf-control:last-of-type');
+    if(anchor)anchor.insertAdjacentElement('afterend',b);else if(drawing)toolbar.insertBefore(b,drawing);else toolbar.append(b);
+    const selector=ensureMarketSelector(b);
+    if(selector&&selector.parentElement!==toolbar)b.insertAdjacentElement('afterend',selector);
+    return b;
   }
   function renderError(reason,snap){
     $('sit-head-meta').textContent=snap?(snap.symbol+' · '+snap.tf+' · 10 แท่ง'):'รอข้อมูล';
