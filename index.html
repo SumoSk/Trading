@@ -4990,13 +4990,13 @@ function openReport(){
    $('zone-legend').textContent=`${tf} รับ ${supports[0]?money(supports[0].price):'—'} · ต้าน ${resistances[0]?money(resistances[0].price):'—'}`;
    leftZoneLabels=[
     ...zs.map(z=>({kind:'zone',price:z.price,color:'#f2c94c',text:z.kind==='resistance'?tf+' ต้าน':tf+' รับ'})),
-    ...(e?[[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:title})):[])
+    ...(e?[[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']].filter(([p])=>Number.isFinite(p)).map(([p,title])=>({kind:'event',price:p,color:'#a899ff',text:title})):[])
    ];
-   const zkey=tf+'|'+zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'')+(CFG.version==='ARIS-2.0.0'&&e?'|'+[e.level,e.entryLow,e.entryHigh].join(':'):'');
+   const zkey=tf+'|'+zs.map(z=>z.kind+':'+z.price.toFixed(2)).join('|')+(e?.id||'')+(CFG.version==='ARIS-2.0.0'&&e?'|'+[e.entryLow,e.entryHigh].join(':'):'');
    if(state.chartReady&&zkey!==state.zoneKey){
     state.zoneKey=zkey;for(const line of drawnZones)state.candleSeries.removePriceLine(line);drawnZones=[];
     for(const z of zs)drawnZones.push(state.candleSeries.createPriceLine({price:z.price,color:'#f2c94c',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
-    if(e)for(const [p,title]of [[e.level,'เหตุการณ์'],[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
+    if(e)for(const [p,title]of [[e.entryLow,'เขตเข้า'],[e.entryHigh,'เขตเข้า']])if(Number.isFinite(p))drawnZones.push(state.candleSeries.createPriceLine({price:p,color:'#a899ff',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''}));
    }
    renderLeftLineLabels();renderRightOrderLabels();
   }
