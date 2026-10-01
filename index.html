@@ -1296,21 +1296,21 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
 }
 .v3-check-card{
  min-width:0;
- min-height:76px;
- padding:7px 8px;
- border:1px solid rgba(102,124,151,.22);
- border-radius:8px;
- background:rgba(11,19,29,.62);
+ padding:6px 7px;
+ border:1px solid rgba(102,124,151,.20);
+ border-radius:7px;
+ background:rgba(11,19,29,.58);
+ transition:border-color .15s,background .15s;
 }
 .v3-check-card-top{
  display:grid;
- grid-template-columns:16px minmax(0,1fr);
+ grid-template-columns:15px minmax(0,1fr) auto;
  align-items:center;
- gap:5px;
+ gap:4px;
 }
 .v3-check-box{
- width:16px;
- height:16px;
+ width:15px;
+ height:15px;
  display:grid;
  place-items:center;
  border:1px solid #46596f;
@@ -1323,63 +1323,67 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  overflow:hidden;
  text-overflow:ellipsis;
  white-space:nowrap;
- font:650 8.2px/1.2 'IBM Plex Sans Thai','Segoe UI',sans-serif;
- color:#c3d0df;
+ font:600 8px/1.2 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#b9c8d8;
 }
-.v3-check-card .v3-check-state{display:none!important}
+.v3-check-card .v3-check-state{
+ font:700 6.8px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#788ba2;
+ white-space:nowrap;
+}
 .v3-check-card .v3-check-reason{
- display:-webkit-box;
- -webkit-box-orient:vertical;
- -webkit-line-clamp:3;
- overflow:hidden;
- white-space:normal;
+ display:block;
  min-width:0;
- margin-top:6px;
- font:500 7.4px/1.45 'IBM Plex Sans Thai','Segoe UI',sans-serif;
- color:#8194aa;
+ margin-top:4px;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+ font:500 7px/1.3 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#71849b;
 }
 .v3-check-card.pass{
- border-color:rgba(80,202,165,.42);
- background:rgba(25,70,58,.32);
+ border-color:rgba(80,202,165,.38);
+ background:rgba(25,70,58,.30);
 }
 .v3-check-card.pass .v3-check-box{
  border-color:#58cbaa;
  background:#173d33;
  color:#7ce5c4;
 }
-.v3-check-card.pass .v3-check-reason{color:#a5cfc3}
+.v3-check-card.pass .v3-check-state{color:#73ddbd}
 .v3-check-card.developing{
- border-color:rgba(213,171,94,.34);
- background:rgba(74,54,22,.20);
+ border-color:rgba(213,171,94,.32);
+ background:rgba(74,54,22,.18);
 }
 .v3-check-card.developing .v3-check-box{
  border-color:#b88d49;
  color:#e0b86d;
 }
-.v3-check-card.developing .v3-check-reason{color:#c9ad79}
+.v3-check-card.developing .v3-check-state{color:#dcb36b}
 .v3-check-card.block{
- border-color:rgba(211,91,119,.34);
- background:rgba(79,29,43,.20);
+ border-color:rgba(211,91,119,.30);
+ background:rgba(79,29,43,.18);
 }
 .v3-check-card.block .v3-check-box{
  border-color:#a94c62;
  color:#e8879d;
 }
-.v3-check-card.block .v3-check-reason{color:#c9919f}
+.v3-check-card.block .v3-check-state{color:#e8879d}
 .v3-check-note{
- margin-top:6px;
- font:500 7px/1.4 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ margin-top:5px;
+ font:500 7px/1.35 'IBM Plex Sans Thai','Segoe UI',sans-serif;
  color:#6f829a;
 }
 @media(max-width:560px){
  .v3-entry-checklist{margin-top:6px;padding-top:6px}
- .v3-check-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
- .v3-check-card{min-height:74px;padding:6px}
- .v3-check-card-top{grid-template-columns:15px minmax(0,1fr);gap:4px}
- .v3-check-box{width:15px;height:15px;font-size:8.5px}
- .v3-check-card strong{font-size:7.6px}
- .v3-check-card .v3-check-reason{margin-top:5px;font-size:7px;line-height:1.45;-webkit-line-clamp:3}
- .v3-check-note{font-size:6.7px}
+ .v3-check-grid{gap:4px}
+ .v3-check-card{padding:5px 6px}
+ .v3-check-card-top{grid-template-columns:14px minmax(0,1fr) auto;gap:3px}
+ .v3-check-box{width:14px;height:14px;font-size:8.5px}
+ .v3-check-card strong{font-size:7.4px}
+ .v3-check-card .v3-check-state{font-size:6.3px}
+ .v3-check-card .v3-check-reason{font-size:6.7px}
+ .v3-check-note{font-size:6.6px}
 }
 </style>
 
