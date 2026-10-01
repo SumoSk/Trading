@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const SCHEMA='ten-candle-challenge-v2',STORE='aris-ten-candle-challenge-v1',CONTEXT_BARS=100,FUTURE_BARS=10,ENGINE_WARMUP=360,MINUTE=60000;
+  const SCHEMA='ten-candle-challenge-v3',STORE='aris-ten-candle-challenge-v1',HISTORY_STORE='aris-ten-candle-challenge-history-v1',CONTEXT_BARS=100,FUTURE_BARS=10,ENGINE_WARMUP=360,MINUTE=60000;
   const REASONS=['ตามเทรนด์','แนวรับ','แนวต้าน','Breakout','Reject','Fib','ปลายขา','Sideway'];
   let dialog=null,chart=null,series=null,resizeObserver=null,revealTimer=null,onClose=null,session=null,bars=[],round=null,selectedReasons=new Set(),used=new Set(),engineVersion='ARIS-3.0.0',analysisBusy=false;
   let stats=loadStats();
@@ -13,6 +13,14 @@
 
   function loadStats(){try{const x=JSON.parse(localStorage.getItem(STORE)||'{}');return {played:Number(x.played)||0,correct:Number(x.correct)||0,wrong:Number(x.wrong)||0,skipped:Number(x.skipped)||0,streak:Number(x.streak)||0,bestStreak:Number(x.bestStreak)||0,reasons:x.reasons&&typeof x.reasons==='object'?x.reasons:{}};}catch{return {played:0,correct:0,wrong:0,skipped:0,streak:0,bestStreak:0,reasons:{}};}}
   function saveStats(){try{localStorage.setItem(STORE,JSON.stringify(stats));}catch{}}
+  function loadHistory(){try{const x=JSON.parse(localStorage.getItem(HISTORY_STORE)||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
+  function saveHistoryRecord(record){
+    try{
+      const rows=loadHistory();rows.push(record);
+      if(rows.length>1000)rows.splice(0,rows.length-1000);
+      localStorage.setItem(HISTORY_STORE,JSON.stringify(rows));
+    }catch{}
+  }
   function ensureStyles(){
     if(byId('ten-candle-challenge-style'))return;
     const style=document.createElement('style');style.id='ten-candle-challenge-style';
@@ -76,8 +84,15 @@
     byId('tc-answers').addEventListener('click',e=>{const b=e.target.closest('[data-tc-answer]');if(b)choose(b.dataset.tcAnswer);});
     byId('tc-reveal-start').addEventListener('click',startReveal);byId('tc-reveal-all').addEventListener('click',revealAll);byId('tc-next').addEventListener('click',newRound);
     byId('tc-analyze').addEventListener('click',analyzeCurrent);
-    byId('tc-follow-engine').addEventListener('click',()=>{const d=round?.engineAnalysis?.direction;if(!round?.answer&&(d==='HIGH'||d==='LOW'))choose(d);});
-    byId('tc-engine-select').addEventListener('change',()=>{engineVersion=byId('tc-engine-select').value||'ARIS-3.0.0';if(round){round.engineAnalysis=null;renderAnalysisEmpty();}});
+    byId('tc-follow-engine').addEventListener('click',()=>{const d=round?.engineAnalysis?.decision;if(!round?.answer&&(d==='HIGH'||d==='LOW'))choose(d);});
+    byId('tc-engine-select').addEventListener('change',()=>{
+      engineVersion=byId('tc-engine-select').value||'ARIS-3.0.0';
+      if(round&&!round.answer){
+        round.engineVersionAtRound=engineVersion;round.engineAnalysis=null;renderAnalysisEmpty();
+        const targetRound=round;
+        targetRound.enginePrime=engineAnalysisAt(round.index,engineVersion).then(a=>{if(round===targetRound&&!targetRound.engineAnalysis)targetRound.engineAnalysis=a;return a;}).catch(err=>{console.error('Challenge engine re-prime failed',err);return null;});
+      }
+    });
     return dialog;
   }
   function setStage(stage){
@@ -116,7 +131,14 @@
   }
   function analysisStory(view){return view?.v3Story||view?.phase?.v3View?.story||view?.v2Story||view?.phase?.v2View?.story||view?.v4Story||view?.phase?.v4View?.story||null;}
   function normalizeDirection(v){return v==='HIGH'||v==='LOW'?v:null;}
-  function analysisDirection(view,story){return normalizeDirection(view?.signal?.direction)||normalizeDirection(story?.direction)||normalizeDirection(view?.gate?.direction)||normalizeDirection(view?.watch?.direction)||null;}
+  function analysisBias(view,story){return normalizeDirection(story?.direction)||normalizeDirection(view?.gate?.direction)||normalizeDirection(view?.watch?.direction)||normalizeDirection(view?.phase?.v3View?.direction)||normalizeDirection(view?.phase?.v2View?.direction)||null;}
+  function analysisDecision(view){
+    const signalDir=normalizeDirection(view?.signal?.direction);
+    if(signalDir)return signalDir;
+    const gateState=String(view?.gate?.state||'').toUpperCase();
+    if(gateState==='ENTER')return normalizeDirection(view?.gate?.direction);
+    return null;
+  }
   async function engineAnalysisAt(index,version){
     const registry=globalThis.TrainingEngineRegistryV1;if(!registry)throw new Error('Training Engine Registry ไม่พร้อม');
     const loaded=await registry.load(version),Core=loaded.Core;if(!Core?.Engine)throw new Error('โหลดเครื่องยนต์ไม่สำเร็จ');
@@ -126,8 +148,8 @@
       const bar=bars[i],eb=toEngineBar(bar),logicalClose=Number(bar.time)+MINUTE;recent.push(eb);if(recent.length>220)recent.splice(0,recent.length-220);updateAggregate(agg5,bar);updateAggregate(agg15,bar);bridgeContinuity(engine,i>start?Number(bars[i-1].close):Number(bar.open),logicalClose);
       for(const off of [0,400,800])latest=engine.step(engineInput(recent,agg5,agg15,bar,eb,logicalClose+off,'CHALLENGE:'+index+':'+i+':'+off))||latest;
     }
-    const story=analysisStory(latest),direction=analysisDirection(latest,story);
-    return {version,view:latest,story,direction,status:latest?.status||'—',reason:latest?.reason||story?.summary||'ยังไม่มีคำอธิบาย'};
+    const story=analysisStory(latest),decision=analysisDecision(latest),bias=analysisBias(latest,story);
+    return {version,view:latest,story,decision,bias,direction:decision,status:latest?.status||'—',reason:latest?.reason||story?.summary||'ยังไม่มีคำอธิบาย'};
   }
   function gateLabel(k){return ({structure:'โครงสร้างราคา',location:'ตำแหน่งราคา',behavior:'พฤติกรรมแท่ง',micro:'แรงซื้อขายระยะสั้น'})[k]||k;}
   function gateHtml(story){
@@ -143,30 +165,64 @@
   function renderEngineAnalysis(a){
     if(!a)return renderAnalysisEmpty();
     const section=byId('tc-analysis');if(section)section.hidden=false;
-    const c=byId('tc-analysis-content'),st=a.story,v=a.view||{},dir=a.direction||'WATCH',gateCount=st?((st.gatePassed??0)+'/'+(st.gateTotal??4)):'—';
+    const c=byId('tc-analysis-content'),st=a.story,v=a.view||{},dir=a.decision||'WATCH',bias=a.bias||null,gateCount=st?((st.gatePassed??0)+'/'+(st.gateTotal??4)):'—';
     const fib=st?.fib,htf=st?.htf;
     const fibText=fib?.valid?((fib.extension>1?'ต่อขา '+(fib.extension*100).toFixed(1)+'% · '+(fib.extensionZone||''):'ย่อ '+Math.max(0,fib.retracement*100).toFixed(1)+'% · '+(fib.retraceZone||''))+(fib.confluence?' · มี Confluence':'')):'ยังไม่มี Fib swing ที่ยืนยัน';
     const htfText='5m '+(htf?.m5?.available?(htf.m5.dir>0?'ขึ้น':htf.m5.dir<0?'ลง':'กลาง'):'—')+' · 15m '+(htf?.m15?.available?(htf.m15.dir>0?'ขึ้น':htf.m15.dir<0?'ลง':'กลาง'):'—');
-    c.innerHTML='<div class="tc-analysis-hero"><div class="tc-engine-call"><span>'+esc(a.version)+' · '+esc(a.status)+'</span><strong>'+esc(dir)+'</strong><small>'+(st?('Gate '+esc(gateCount)+' · '+esc(st.entryState||'OBSERVE')):esc(v?.gate?.state||v?.status||'OBSERVE'))+'</small></div><div class="tc-engine-story"><b>'+esc(st?.stateLabel||v?.phase?.phase||'ภาพตลาด')+(st?.playbookLabel?' · '+esc(st.playbookLabel):'')+'</b><p>'+esc(st?.summary||a.reason)+'</p></div></div>'+
+    c.innerHTML='<div class="tc-analysis-hero"><div class="tc-engine-call"><span>'+esc(a.version)+' · '+esc(a.status)+'</span><strong>'+esc(dir)+'</strong><small>'+(bias?('Bias '+esc(bias)+' · '):'')+(st?('Gate '+esc(gateCount)+' · '+esc(st.entryState||'OBSERVE')):esc(v?.gate?.state||v?.status||'OBSERVE'))+'</small></div><div class="tc-engine-story"><b>'+esc(st?.stateLabel||v?.phase?.phase||'ภาพตลาด')+(st?.playbookLabel?' · '+esc(st.playbookLabel):'')+'</b><p>'+esc(st?.summary||a.reason)+'</p></div></div>'+
       gateHtml(st)+
       '<div class="tc-analysis-grid"><div class="tc-analysis-box"><h4>หลักฐานที่หนุน</h4>'+listHtml(st?.supports,'ยังไม่มีหลักฐานหนุนที่เครื่องยนต์จัดเป็นข้อเด่น')+'</div><div class="tc-analysis-box"><h4>สิ่งที่ยังขวาง / ต้องระวัง</h4>'+listHtml(st?.warnings||st?.blocked,'ยังไม่มีคำเตือนเด่น')+'</div><div class="tc-analysis-box"><h4>Fib / ภาพใหญ่</h4><p>'+esc(fibText)+'<br>'+esc(htfText)+'</p></div><div class="tc-analysis-box"><h4>แผนต่อจากนี้</h4><p>'+esc(st?.trigger||v?.gate?.blocker||'รอดูพฤติกรรมต่อ')+(st?.invalidation?'<br>เสียแผน: '+esc(st.invalidation):'')+(st?.nextPlan?'<br>ถัดไป: '+esc(st.nextPlan):'')+'</p></div></div><div id="tc-postmortem"></div>';
-    const follow=byId('tc-follow-engine');if(follow){follow.disabled=!!round?.answer||!(a.direction==='HIGH'||a.direction==='LOW');follow.textContent=a.direction?'เลือกตาม ARIS · '+a.direction:'ARIS ยัง WATCH';}
+    const follow=byId('tc-follow-engine');if(follow){follow.disabled=!!round?.answer||!(a.decision==='HIGH'||a.decision==='LOW');follow.textContent=a.decision?'เลือกตาม ARIS · '+a.decision:(a.bias?'ARIS WATCH · Bias '+a.bias:'ARIS ยัง WATCH');}
   }
   async function analyzeCurrent(){
     if(!round||analysisBusy)return;analysisBusy=true;const section=byId('tc-analysis');if(section)section.hidden=false;const c=byId('tc-analysis-content');if(c)c.innerHTML='<div class="tc-analysis-empty">ARIS กำลัง Replay ข้อมูลถึงจุดนี้และอ่านสถานการณ์…</div>';const btn=byId('tc-analyze');if(btn){btn.disabled=true;btn.textContent='กำลังวิเคราะห์…';}
-    try{const a=await engineAnalysisAt(round.index,engineVersion);round.engineAnalysis=a;renderEngineAnalysis(a);if(round.finished)renderPostmortem();}
+    try{
+      let a=round.engineAnalysis;
+      if(!a||round.engineVersionAtRound!==engineVersion){
+        round.engineVersionAtRound=engineVersion;
+        a=await engineAnalysisAt(round.index,engineVersion);
+        round.engineAnalysis=a;
+      }else if(round.enginePrime){
+        a=await round.enginePrime||a;round.engineAnalysis=a||round.engineAnalysis;
+      }
+      renderEngineAnalysis(round.engineAnalysis);if(round.finished)renderPostmortem();
+    }
     catch(err){console.error('Challenge engine analysis failed',err);const c=byId('tc-analysis-content');if(c)c.innerHTML='<div class="tc-analysis-empty">วิเคราะห์ไม่สำเร็จ · '+esc(err?.message||err)+'</div>';}
     finally{analysisBusy=false;if(btn){btn.disabled=false;btn.textContent='วิเคราะห์จุดนี้';}if(byId('tc-analysis')&&!byId('tc-analysis').hidden)byId('tc-analysis').scrollIntoView({behavior:'smooth',block:'nearest'});}
   }
-  function renderPostmortem(){
-    const host=byId('tc-postmortem');if(!host||!round?.finished)return;
-    const entry=Number(round.entry.close),future=round.future||[],finish=Number(future.at(-1)?.close),high=Math.max(...future.map(x=>Number(x.high))),low=Math.min(...future.map(x=>Number(x.low)));
-    const up=high-entry,down=entry-low,greens=future.filter(x=>Number(x.close)>Number(x.open)).length,reds=future.filter(x=>Number(x.close)<Number(x.open)).length,actual=outcome(entry,finish);
-    const a=round.engineAnalysis,engineHit=a?.direction?(a.direction===actual?'ตรงกับผล T+10':'ไม่ตรงกับผล T+10'):'ไม่ได้เลือกฝั่งก่อนเฉลย';
-    const c1=future[0]?.close,c3=future[2]?.close,c5=future[4]?.close;
-    host.innerHTML='<div class="tc-postmortem"><h4>เฉลยแบบละเอียด · ข้อมูลหลังตอบเท่านั้น</h4><div class="tc-path-grid"><div class="tc-path-stat"><span>ผล T+10</span><b>'+esc(actual)+'</b></div><div class="tc-path-stat"><span>ขึ้นสูงสุดจากจุดเข้า</span><b>+'+money(up)+'</b></div><div class="tc-path-stat"><span>ลงต่ำสุดจากจุดเข้า</span><b>-'+money(down)+'</b></div><div class="tc-path-stat"><span>แท่งเขียว / แดง</span><b>'+greens+' / '+reds+'</b></div></div><div class="tc-analysis-grid"><div class="tc-analysis-box"><h4>เส้นทางราคา</h4><p>T+1 '+money(c1)+' · T+3 '+money(c3)+' · T+5 '+money(c5)+' · T+10 '+money(finish)+'</p></div><div class="tc-analysis-box"><h4>ARIS เทียบกับเฉลย</h4><p>'+(a?('ก่อนเห็นอนาคต ARIS '+esc(a.direction||'WATCH')+' · '+esc(engineHit)):'กำลังสร้างมุมมอง ARIS จากข้อมูลก่อนเฉลย…')+'</p></div></div><div class="tc-post-note">ส่วนบนคือสิ่งที่เครื่องยนต์รู้ก่อนเห็นอนาคต ส่วนนี้ใช้ 10 แท่งที่เปิดแล้วเพื่ออธิบายผลเท่านั้น ไม่ย้อนข้อมูลอนาคตกลับไปช่วยคำตอบค่ะ</div></div>';
+  function renderPostmortem(target=round){
+    const host=byId('tc-postmortem');if(!host||!target?.finished)return;
+    const entry=Number(target.entry.close),future=target.future||[],finish=Number(future.at(-1)?.close);
+    const high=Math.max(...future.map(x=>Number(x.high))),low=Math.min(...future.map(x=>Number(x.low)));
+    const up=high-entry,down=entry-low,greens=future.filter(x=>Number(x.close)>Number(x.open)).length,reds=future.filter(x=>Number(x.close)<Number(x.open)).length;
+    const actual=outcome(entry,finish),delta=finish-entry,a=target.engineAnalysis;
+    const decision=a?.decision||null,bias=a?.bias||null;
+    const engineBefore=decision?('แนะนำ '+decision):(bias?('WATCH · Bias '+bias):'WATCH · ยังไม่เลือกฝั่ง');
+    const userHit=actual==='EQUAL'?null:target.answer===actual;
+    const engineHit=decision?(actual==='EQUAL'?null:decision===actual):null;
+    const c1=Number(future[0]?.close),c3=Number(future[2]?.close),c5=Number(future[4]?.close);
+    const compare=finish===entry?'=':finish>entry?'>':'<';
+    const verdictReason='แท่งที่ 10 ปิด '+money(finish)+' '+compare+' ราคาอ้างอิง '+money(entry)+' จึงเฉลย '+actual;
+    host.innerHTML='<div class="tc-postmortem"><h4>เฉลยจริง · ตัดสินจากราคาปิดแท่งที่ 10 เท่านั้น</h4>'+
+      '<div class="tc-path-grid"><div class="tc-path-stat"><span>ซูโม่ตอบ</span><b>'+esc(target.answer)+(userHit===true?' ✅':userHit===false?' ❌':'')+'</b></div><div class="tc-path-stat"><span>ARIS ก่อนตอบ</span><b>'+esc(engineBefore)+(engineHit===true?' ✅':engineHit===false?' ❌':'')+'</b></div><div class="tc-path-stat"><span>เฉลย T+10</span><b>'+esc(actual)+'</b></div><div class="tc-path-stat"><span>ราคาเปลี่ยน</span><b>'+(delta>=0?'+':'')+money(delta)+'</b></div></div>'+
+      '<div class="tc-analysis-grid"><div class="tc-analysis-box"><h4>เหตุผลของเฉลย</h4><p>'+esc(verdictReason)+'</p></div><div class="tc-analysis-box"><h4>สถานะ ARIS ก่อนตอบ</h4><p>'+esc(a?((a.version||'ARIS')+' · '+engineBefore+' · '+(a.status||'—')):'ไม่มี snapshot เครื่องยนต์')+'</p></div></div>'+
+      '<div class="tc-path-grid"><div class="tc-path-stat"><span>สูงสุดระหว่าง 10 แท่ง</span><b>'+money(high)+' <small>(+'+money(up)+')</small></b></div><div class="tc-path-stat"><span>ต่ำสุดระหว่าง 10 แท่ง</span><b>'+money(low)+' <small>(-'+money(down)+')</small></b></div><div class="tc-path-stat"><span>เขียว / แดง</span><b>'+greens+' / '+reds+'</b></div><div class="tc-path-stat"><span>T+1 / T+3 / T+5 / T+10</span><b>'+money(c1)+' / '+money(c3)+' / '+money(c5)+' / '+money(finish)+'</b></div></div>'+
+      '<div class="tc-post-note">เฉลยไม่ได้ใช้ความเห็นของ ARIS: ใช้ราคาอ้างอิงกับ Close ของแท่งที่ 10 เท่านั้น ส่วน ARIS คือ snapshot ก่อนตอบเพื่อเอาไปเทียบและเรียนรู้ภายหลังค่ะ</div></div>';
   }
-  async function ensurePostAnalysis(){if(!round?.engineAnalysis)await analyzeCurrent();else renderPostmortem();}
+  async function ensurePostAnalysis(target=round){
+    if(!target)return;
+    if(!target.engineAnalysis&&target.enginePrime){const a=await target.enginePrime;if(a)target.engineAnalysis=a;}
+    if(!target.engineAnalysis){
+      try{target.engineAnalysis=await engineAnalysisAt(target.index,target.engineVersionAtRound||engineVersion);}catch(err){console.error('Challenge result snapshot failed',err);}
+    }
+    saveRoundHistory(target);
+    if(round!==target)return;
+    if(target.engineAnalysis){
+      const section=byId('tc-analysis');if(section)section.hidden=false;
+      renderEngineAnalysis(target.engineAnalysis);
+    }
+    renderPostmortem(target);
+  }
   async function resolveSession(preferredId){
     const api=globalThis.HistoricalDataV1;if(!api)throw new Error('HistoricalDataV1 ไม่พร้อม');
     if(preferredId){const preferred=await api.getSession(preferredId);if(preferred?.datasetId&&Number(preferred.loadedBars)>=CONTEXT_BARS+FUTURE_BARS+5)return preferred;}
@@ -200,11 +256,14 @@
   function resetRoundUi(){
     selectedReasons.clear();document.querySelectorAll('#tc-reasons .tc-reason').forEach(b=>b.classList.remove('active'));document.querySelectorAll('#tc-answers button').forEach(b=>b.disabled=false);
     byId('tc-answers').hidden=false;byId('tc-locked').hidden=true;byId('tc-reveal-actions').hidden=true;byId('tc-progress').hidden=true;byId('tc-result').hidden=true;byId('tc-result').className='tc-result';byId('tc-next').hidden=true;byId('tc-progress-bar').style.width='0%';byId('tc-progress-text').textContent='0 / 10';byId('tc-reveal-count').textContent='เปิดแล้ว 0 / 10';byId('tc-reveal-start').disabled=false;setStage(1);renderAnalysisEmpty();
+    if(byId('tc-analyze')){byId('tc-analyze').disabled=false;byId('tc-analyze').textContent='วิเคราะห์จุดนี้';}
   }
   function newRound(){
     clearReveal();const idx=pickIndex();if(idx===null){showEmpty('หาโจทย์ที่ต่อเนื่องไม่พอ','ชุดข้อมูลนี้มีช่วงขาดของแท่งมากเกินไป ลองโหลด Session ใหม่ค่ะ');return;}
-    round={index:idx,entry:bars[idx],future:bars.slice(idx+1,idx+1+FUTURE_BARS),answer:null,revealed:0,finished:false,engineAnalysis:null};resetRoundUi();byId('tc-entry-price').textContent=money(round.entry.close);byId('tc-round-label').textContent='ซ่อนอนาคต 10 แท่ง · ข้อใหม่';
+    round={index:idx,entry:bars[idx],future:bars.slice(idx+1,idx+1+FUTURE_BARS),answer:null,revealed:0,finished:false,engineAnalysis:null,engineVersionAtRound:engineVersion,enginePrime:null};resetRoundUi();byId('tc-entry-price').textContent=money(round.entry.close);byId('tc-round-label').textContent='ซ่อนอนาคต 10 แท่ง · ข้อใหม่';
     if(!chart||!series)initChart();series.setData(bars.slice(idx-CONTEXT_BARS+1,idx+1).map(chartBar));chart.timeScale().fitContent();
+    const targetRound=round;
+    targetRound.enginePrime=engineAnalysisAt(idx,targetRound.engineVersionAtRound).then(a=>{if(round===targetRound&&!targetRound.engineAnalysis)targetRound.engineAnalysis=a;return a;}).catch(err=>{console.error('Challenge pre-answer engine snapshot failed',err);return null;});
   }
   function choose(answer){
     if(!round||round.answer)return;if(answer==='SKIP'){stats.skipped++;saveStats();renderStats();newRound();return;}
@@ -218,14 +277,30 @@
   function startReveal(){if(revealTimer||!round?.answer)return;byId('tc-reveal-start').disabled=true;revealTimer=setInterval(()=>{revealOne();if(round?.finished){clearReveal();byId('tc-reveal-start').disabled=false;}},520);}
   function revealAll(){if(!round?.answer)return;clearReveal();while(round&&!round.finished&&round.revealed<FUTURE_BARS)revealOne();byId('tc-reveal-start').disabled=false;}
   function updateReasonStats(correct){for(const r of round.reasons||[]){const row=stats.reasons[r]||{played:0,correct:0};row.played++;if(correct)row.correct++;stats.reasons[r]=row;}}
+  function saveRoundHistory(target=round){
+    if(!target?.finished||target.historySaved)return;
+    const future=target.future||[],entry=Number(target.entry.close),finish=Number(future.at(-1)?.close);
+    if(!Number.isFinite(entry)||!Number.isFinite(finish)||future.length<FUTURE_BARS)return;
+    const actual=outcome(entry,finish),a=target.engineAnalysis,st=a?.story||null;
+    const high=Math.max(...future.map(x=>Number(x.high))),low=Math.min(...future.map(x=>Number(x.low)));
+    const record={
+      schema:'ten-candle-challenge-round-v1',savedAt:Date.now(),sessionId:session?.id||null,datasetId:session?.datasetId||null,
+      cutoffTime:Number(target.entry.time),referencePrice:entry,user:{answer:target.answer,reasons:[...(target.reasons||[])],lockedAt:target.lockedAt||null},
+      engine:{version:a?.version||target.engineVersionAtRound||null,decision:a?.decision||null,bias:a?.bias||null,status:a?.status||null,reason:a?.reason||null,state:st?.state||null,stateLabel:st?.stateLabel||null,playbook:st?.playbook||null,playbookLabel:st?.playbookLabel||null,entryState:st?.entryState||null,gatePassed:st?.gatePassed??null,gateTotal:st?.gateTotal??null},
+      outcome:{actual,t10Close:finish,delta:finish-entry,high,low,maxUp:high-entry,maxDown:entry-low,t1:Number(future[0]?.close),t3:Number(future[2]?.close),t5:Number(future[4]?.close),t10:finish,greenBars:future.filter(x=>Number(x.close)>Number(x.open)).length,redBars:future.filter(x=>Number(x.close)<Number(x.open)).length},
+      correct:actual==='EQUAL'?null:target.answer===actual
+    };
+    target.historySaved=true;saveHistoryRecord(record);
+  }
+
   function finishRound(){
     if(!round||round.finished)return;clearReveal();round.finished=true;
     const finish=round.future[FUTURE_BARS-1],actual=outcome(Number(round.entry.close),Number(finish.close)),scored=actual!=='EQUAL',correct=scored&&round.answer===actual;
     if(scored){stats.played++;if(correct){stats.correct++;stats.streak++;stats.bestStreak=Math.max(stats.bestStreak,stats.streak);}else{stats.wrong++;stats.streak=0;}updateReasonStats(correct);}saveStats();renderStats();
     const delta=Number(finish.close)-Number(round.entry.close),result=byId('tc-result');result.hidden=false;result.className=actual==='EQUAL'?'tc-result equal':'tc-result'+(correct?'':' wrong');
     const when=new Date(Number(round.entry.time)).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    const title=actual==='EQUAL'?'เสมอ · ไม่นับคะแนน':correct?'ถูก ✅ '+actual:'ผิด ❌ คำตอบ '+round.answer+' · ผลจริง '+actual;
-    result.innerHTML='<strong>'+esc(title)+'</strong><span>เข้า '+money(round.entry.close)+' → แท่งที่ 10 ปิด '+money(finish.close)+' · ต่าง '+(delta>=0?'+':'')+money(delta)+'<br>กราฟจริงย้อนหลัง: '+esc(when)+(round.reasons?.length?'<br>เหตุผลที่เลือก: '+esc(round.reasons.join(' / ')):'')+'</span>';setStage(3);byId('tc-next').hidden=false;byId('tc-reveal-actions').hidden=true;byId('tc-round-label').textContent='เฉลยแล้ว · '+actual;ensurePostAnalysis().catch(err=>console.error('Challenge post analysis failed',err));
+    const title=actual==='EQUAL'?'เฉลย: เสมอ · ไม่นับคะแนน':correct?'ซูโม่ถูก ✅ · เฉลย '+actual:'ซูโม่ผิด ❌ · เฉลย '+actual;
+    result.innerHTML='<strong>'+esc(title)+'</strong><span>ซูโม่ตอบ '+esc(round.answer)+' · ราคาอ้างอิง '+money(round.entry.close)+' → Close แท่งที่ 10 '+money(finish.close)+' · ต่าง '+(delta>=0?'+':'')+money(delta)+'<br>เกณฑ์ตัดสิน: T+10 '+(Number(finish.close)>Number(round.entry.close)?'>':Number(finish.close)<Number(round.entry.close)?'<':'=')+' ราคาอ้างอิง = '+esc(actual)+(round.reasons?.length?'<br>เหตุผลที่ซูโม่เลือก: '+esc(round.reasons.join(' / ')):'')+'</span>';setStage(3);byId('tc-next').hidden=false;byId('tc-reveal-actions').hidden=true;byId('tc-round-label').textContent='เฉลยแล้ว · '+actual;ensurePostAnalysis(round).catch(err=>console.error('Challenge post analysis failed',err));
   }
   async function open(preferredSessionId,opts={}){
     ensureStyles();ensureDialog();onClose=typeof opts.onClose==='function'?opts.onClose:null;if(!dialog.open)dialog.showModal();renderStats();setupEngineSelect();
