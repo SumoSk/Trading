@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-r2';
+const REVISION='stage-brain-b1-r3';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -240,9 +240,11 @@ function sequenceContext(bars,a){
 
 function breakoutContext(bars,a,range,vol,seq,flow){
   if(!range)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_reference_range'};
-  const baseContext=range.baseEff<=.52||range.crosses>=1||(range.lowerTouches>=2&&range.upperTouches>=2)||seq.compressionRangeRatio<=.82;
+  const boundedBase=range.baseEff<=.52&&(range.crosses>=1||(range.lowerTouches>=2&&range.upperTouches>=2));
+  const compressionBase=seq.compressionRangeRatio<=.82&&seq.compressionBodyRatio<=.88;
+  const baseContext=boundedBase||compressionBase;
   if(!baseContext)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_breakout_base'};
-  const closed=bars.filter(q=>q.closed),last=closed.at(-1),prev=closed.at(-2),recent=closed.slice(-4);
+  const closed=bars.filter(q=>q.closed),last=closed.at(-1),prev=closed.at(-2),recent=closed.slice(-7);
   const upOutside=(last.close-range.high)/Math.max(a,1e-9),downOutside=(range.low-last.close)/Math.max(a,1e-9);
   const attemptDir=upOutside>=CFG.breakoutBufferAtr?1:downOutside>=CFG.breakoutBufferAtr?-1:0;
   const lastM=candleMetric(last,a);
@@ -396,8 +398,10 @@ function transitionQuality(f,s,trendScore,rangeScore,exhaustScore){
   const priorProgress=d>0?f.seq.priorHighProgress:d<0?f.seq.priorLowProgress:0;
   const progressLoss=priorProgress>.03?clip(1-safeDiv(recentProgress,priorProgress)):0;
   const defense=d>0?f.seq.rejectionDown:d<0?f.seq.rejectionUp:Math.max(f.seq.rejectionUp,f.seq.rejectionDown);
+  const momentumDecay=clip((Math.abs(f.momentum16)-Math.abs(f.momentum3))/Math.max(Math.abs(f.momentum16),.25));
+  const slopeFlatten=clip(1-Math.abs(f.emaSlope5)/Math.max(Math.abs(f.emaSlope12),.08));
   const between=clip((1-Math.abs(trendScore-rangeScore))*0.55+.15);
-  return clip(flatten*.18+effLoss*.20+mixed*.14+progressLoss*.20+defense*.14+exhaustScore*.08+between*.06);
+  return clip(flatten*.14+effLoss*.16+mixed*.10+progressLoss*.18+defense*.10+momentumDecay*.18+slopeFlatten*.08+exhaustScore*.03+between*.03);
 }
 
 function pullbackQuality(f,s,trendScore){
@@ -472,13 +476,13 @@ function stageBrain(f,s){
 
   // Competition adjustments: accepted/failed breakout are distinct hypotheses.
   let raw={
-    TREND_ADVANCE:trend*(1-exhaustion*.45)*(1-breakoutAccepted*.30),
+    TREND_ADVANCE:trend*(1-exhaustion*.45)*(1-breakoutAccepted*.30)*(1-transition*.50),
     RANGE:range*(1-breakoutAccepted*.75)*(1-breakoutAttempt*.30),
     COMPRESSION:compression*(1-breakoutAttempt*.60),
     BREAKOUT_ATTEMPT:breakoutAttempt*(1-breakoutAccepted*.55)*(1-failedBreakout*.80),
     BREAKOUT_ACCEPTED:breakoutAccepted*(1-failedBreakout*.95),
     FAILED_BREAKOUT:failedBreakout*(1-breakoutAccepted*.95),
-    PULLBACK:pullback*(1-reversal*.65),
+    PULLBACK:pullback*(1-reversal*.65)*(1-transition*.55),
     EXHAUSTION:exhaustion*(.65+trend*.35),
     REVERSAL_DEVELOPING:reversal,
     TRANSITION:transition*(1-breakoutAccepted*.35)
