@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-r4';
+const REVISION='stage-brain-b1-r5';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -458,7 +458,7 @@ function failedBreakoutQuality(f){
   const rejection=b.failedDir>0?f.seq.rejectionUp:f.seq.rejectionDown;
   const pressure=clip(b.failedDir*f.seq.pressure/.30);
   const flow=clip(b.failedDir*f.flow/.10);
-  return clip(b.recaptureStrength*.46+rejection*.18+pressure*.18+flow*.18);
+  return clip(.38+b.recaptureStrength*.28+rejection*.12+pressure*.11+flow*.11);
 }
 
 function softmaxScores(raw){
@@ -530,7 +530,7 @@ function stageBrain(f,s){
     confidence,
     raw,
     rangeForming,
-    priorTrendDir:trendDir,
+    priorTrendDir,
     reasons:unique(reasons),
     diagnostics:{
       trend,range,compression,breakoutAttempt,breakoutAccepted,failedBreakout,pullback,exhaustion,reversal,transition,
