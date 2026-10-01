@@ -5,6 +5,7 @@
   const MINUTE=60_000;
   const TRAINING_VERSION_STORE='btc-training-engine-version-v1';
   const TRAINING_ENGINE_BUILD='training-registry-20261001-r2';
+  const STANDALONE=document.documentElement?.dataset?.trainingPage==='1';
   let activeController=null;
   let selectedPreset=30;
   let selectedTrainingVersion='ARIS-2.0.0';
@@ -195,21 +196,63 @@
         .train-card{padding:12px}
         .replay-kpis{grid-template-columns:repeat(2,1fr)}
       }
+
+      html[data-training-page="1"] body{margin:0;min-height:100%;background:#070d14;color:#d7e3f2;font-family:IBM Plex Sans Thai,Segoe UI,Tahoma,sans-serif}
+      html[data-training-page="1"] #training-page-root{min-height:100vh}
+      html[data-training-page="1"] #training-lab-dialog{display:block;position:static;width:100%;max-width:none;max-height:none;min-height:100vh;margin:0;padding:0;border:0;border-radius:0;background:#080f17;box-shadow:none;color:#d7e3f2}
+      html[data-training-page="1"] .training-lab-shell{display:block;max-height:none;min-height:100vh;background:linear-gradient(180deg,#0a111a 0,#080f17 220px,#080f17 100%)}
+      html[data-training-page="1"] .training-lab-head{position:sticky;top:0;z-index:50;padding:15px max(18px,calc((100vw - 1120px)/2));background:#0b131ee8;backdrop-filter:blur(14px);border-bottom:1px solid #1d2b3b}
+      html[data-training-page="1"] .training-lab-head h2{font-size:20px}
+      html[data-training-page="1"] .training-lab-body{width:min(1120px,100%);box-sizing:border-box;margin:0 auto;padding:18px 18px 48px;overflow:visible;gap:14px}
+      html[data-training-page="1"] .training-lab-close{width:auto;min-width:96px;height:36px;padding:0 12px;font-size:10px;font-weight:650;color:#d7e3f2}
+      html[data-training-page="1"] .challenge-launch{padding:16px 17px;border-radius:15px}
+      html[data-training-page="1"] .challenge-launch-copy small{font-size:8px}
+      html[data-training-page="1"] .challenge-launch-copy b{font-size:14px}
+      html[data-training-page="1"] .challenge-launch-copy span{font-size:9px}
+      html[data-training-page="1"] .challenge-launch button{min-height:42px;padding:0 17px;font-size:10px}
+      html[data-training-page="1"] .train-card{padding:17px}
+      html[data-training-page="1"] .train-card h3{font-size:14px}
+      html[data-training-page="1"] .train-section-sub{font-size:9px}
+      html[data-training-page="1"] .train-version-select{font-size:12px}
+      html[data-training-page="1"] .train-presets button{min-height:36px;font-size:10px}
+      html[data-training-page="1"] .train-range-summary{font-size:9px}
+      html[data-training-page="1"] .train-range-summary b{font-size:12px}
+      html[data-training-page="1"] .train-field span{font-size:9px}
+      html[data-training-page="1"] .train-field input{height:40px;font-size:11px}
+      html[data-training-page="1"] .train-primary{min-height:42px;font-size:10px}
+      html[data-training-page="1"] .train-secondary{min-height:40px;font-size:9px}
+      html[data-training-page="1"] .session-row strong{font-size:10px}
+      html[data-training-page="1"] .session-row small{font-size:8px}
+      html[data-training-page="1"] .session-row button{min-height:34px;font-size:9px}
+      html[data-training-page="1"] .replay-session{font-size:9px}
+      html[data-training-page="1"] .replay-controls select{height:40px;font-size:10px}
+      html[data-training-page="1"] .replay-kpi span{font-size:8px}
+      html[data-training-page="1"] .replay-kpi b{font-size:14px}
+      html[data-training-page="1"] .analytics-kpi span{font-size:8px}
+      html[data-training-page="1"] .analytics-kpi b{font-size:13px}
+      @media(max-width:760px){
+        html[data-training-page="1"] #training-lab-dialog{width:100%;border-radius:0}
+        html[data-training-page="1"] .training-lab-head{padding:12px}
+        html[data-training-page="1"] .training-lab-body{padding:10px 10px 36px}
+        html[data-training-page="1"] .training-head-actions{gap:6px}
+        html[data-training-page="1"] .training-lab-close{min-width:88px}
+      }
     `;
     document.head.append(style);
   }
 
   function ensureDialog(){
     if(byId('training-lab-dialog'))return byId('training-lab-dialog');
-    const dialog=document.createElement('dialog');
+    const dialog=document.createElement(STANDALONE?'main':'dialog');
     dialog.id='training-lab-dialog';
+    if(STANDALONE)dialog.classList.add('training-page-root');
     dialog.innerHTML=`
       <div class="training-lab-shell">
         <header class="training-lab-head">
           <div><span class="training-kicker">HISTORICAL TRAINING</span><h2>Training Lab</h2></div>
           <div class="training-head-actions">
             <button type="button" class="training-guide-open" id="training-guide-open">คู่มือ</button>
-            <button type="button" class="training-lab-close" id="training-lab-close">×</button>
+            <button type="button" class="training-lab-close" id="training-lab-close">${STANDALONE?'← กลับกราฟ':'×'}</button>
           </div>
         </header>
 
@@ -347,7 +390,7 @@
           </section>
         </div>
       </div>`;
-    document.body.append(dialog);
+    (STANDALONE?(byId('training-page-root')||document.body):document.body).append(dialog);
     ensureGuideDialog();
     return dialog;
   }
@@ -803,23 +846,28 @@
   }
 
   function bind(){
-    const dialog=ensureDialog(),btn=ensureButton();
-    if(!btn||btn.dataset.bound)return;
-    btn.dataset.bound='1';
+    if(!STANDALONE){
+      const btn=ensureButton();
+      if(!btn||btn.dataset.bound)return;
+      btn.dataset.bound='1';
+      btn.addEventListener('click',()=>{
+        const more=byId('toolbar-more');if(more?.open)more.open=false;
+        window.location.href='training.html';
+      });
+      return;
+    }
 
-    btn.addEventListener('click',async()=>{
-      const more=byId('toolbar-more');if(more?.open)more.open=false;
-      if(!dialog.open)dialog.showModal();
-      await refreshSessions();await showStorage();updatePreview();await updateReplayPanel(latestSession);
-    });
-    byId('training-lab-close').addEventListener('click',()=>dialog.close());
+    const page=ensureDialog();
+    if(page.dataset.bound)return;
+    page.dataset.bound='1';
+
+    byId('training-lab-close').addEventListener('click',()=>{window.location.href='index.html';});
     byId('train-challenge-open')?.addEventListener('click',async()=>{
       const game=globalThis.TenCandleChallengeV1;
       if(!game){alert('10-Candle Challenge ยังโหลดไม่พร้อมค่ะ');return;}
-      dialog.close();
-      await game.open(latestSession?.id,{onClose:()=>{if(!dialog.open)dialog.showModal();}});
+      await game.open(latestSession?.id);
     });
-    dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
+
     const guide=ensureGuideDialog();
     byId('training-guide-open').addEventListener('click',()=>{if(!guide.open)guide.showModal();});
     byId('training-guide-close').addEventListener('click',()=>guide.close());
@@ -862,6 +910,9 @@
     restoreTrainingVersion();
     setPreset(30);
     showStorage();
+    refreshSessions();
+    updatePreview();
+    updateReplayPanel(latestSession);
   }
 
   function init(){
@@ -869,7 +920,7 @@
       console.warn('Training Lab: historical/replay/analytics/engine registry missing');
       return;
     }
-    ensureStyles();ensureDialog();ensureButton();bind();
+    ensureStyles();bind();
   }
 
   globalThis.TrainingLabV1={schema:'training-lab-v1',phase:4,engineBlobSha:TRAINING_ENGINE_BUILD,init,refreshSessions,updateReplayPanel,updateAnalyticsPanel,selectedVersion:()=>selectedTrainingVersion,setTrainingVersion};
