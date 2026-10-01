@@ -1267,6 +1267,81 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
 }
 </style>
 
+<style id="v3-entry-checklist-ui">
+.v3-entry-checklist{
+ margin-top:8px;
+ padding-top:7px;
+ border-top:1px solid rgba(123,145,171,.16);
+}
+.v3-check-head{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:8px;
+ margin-bottom:5px;
+}
+.v3-check-head span{
+ font:700 7px/1 'Segoe UI',sans-serif;
+ letter-spacing:.7px;
+ color:#6f829a;
+}
+.v3-check-head b{
+ font:700 8px/1 'Segoe UI',sans-serif;
+ color:#cbd8e7;
+}
+.v3-check-list{display:grid;gap:3px}
+.v3-check-row{
+ display:grid;
+ grid-template-columns:12px minmax(72px,.78fr) minmax(0,1.65fr) auto;
+ align-items:center;
+ gap:5px;
+ min-height:20px;
+ padding:2px 0;
+ border-bottom:1px solid rgba(115,137,163,.08);
+}
+.v3-check-row:last-child{border-bottom:0}
+.v3-check-icon{
+ width:12px;
+ text-align:center;
+ font:700 9px/1 'Segoe UI',sans-serif;
+ color:#7f91a8;
+}
+.v3-check-name{
+ font:600 8px/1.25 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#b6c5d6;
+ white-space:nowrap;
+}
+.v3-check-reason{
+ min-width:0;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+ font:500 7.5px/1.25 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#7f92a9;
+}
+.v3-check-state{
+ font:700 7px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ white-space:nowrap;
+}
+.v3-check-row.pass .v3-check-icon,.v3-check-row.pass .v3-check-state{color:#68d9b6}
+.v3-check-row.developing .v3-check-icon,.v3-check-row.developing .v3-check-state{color:#e2bd74}
+.v3-check-row.block .v3-check-icon,.v3-check-row.block .v3-check-state{color:#ec8298}
+.v3-check-row.pending .v3-check-icon,.v3-check-row.pending .v3-check-state{color:#75869b}
+.v3-check-note{
+ margin-top:5px;
+ font:500 7px/1.35 'IBM Plex Sans Thai','Segoe UI',sans-serif;
+ color:#6f829a;
+}
+@media(max-width:560px){
+ .v3-entry-checklist{margin-top:6px;padding-top:6px}
+ .v3-check-row{grid-template-columns:11px 72px minmax(0,1fr) auto;gap:4px;min-height:19px}
+ .v3-check-name{font-size:7.4px}
+ .v3-check-reason{font-size:7px}
+ .v3-check-state{font-size:6.8px}
+ .v3-check-note{font-size:6.7px}
+}
+</style>
+
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
@@ -1366,6 +1441,14 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
         <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
         <p id="event-detail"></p>
       </div>
+      <section class="v3-entry-checklist" id="v3-entry-checklist" hidden aria-live="polite">
+        <div class="v3-check-head">
+          <span>V3 CHECKLIST</span>
+          <b id="v3-check-summary">0/4 · WAIT</b>
+        </div>
+        <div class="v3-check-list" id="v3-check-list"></div>
+        <div class="v3-check-note" id="v3-check-note"></div>
+      </section>
     </div>
 
     <div class="main-signal-divider"></div>
@@ -5201,6 +5284,45 @@ function openReport(){
    const last=rows.at(-1);if(last){$('last-entry').hidden=false;$('last-entry-direction').textContent=directionThai(last.direction);$('last-entry-price').textContent=money(last.entryPrice);$('last-entry-time').textContent=clockMs(last.entryTime);$('last-entry-meta').textContent=`${typeName[last.type]}${last.dataset?.entry?.expediteFive?.requested?' · เร่ง':''}${last.setupStatus==='invalidated'?' · เงื่อนไขเสียแล้ว':''} · ครบ ${clockMs(last.expiresAt)} · ล็อกราคาแล้ว`;}
    syncSignalChart(rows);
   }
+  function renderV3EntryChecklist(v){
+   const box=$('v3-entry-checklist'),list=$('v3-check-list'),summary=$('v3-check-summary'),note=$('v3-check-note');
+   if(!box||!list||!summary||!note)return;
+   if(CFG.version!=='ARIS-3.0.0'){
+    box.hidden=true;list.replaceChildren();return;
+   }
+   box.hidden=false;
+   const st=v?.v3Story||v?.phase?.v3View?.story||null,g=st?.gates||{},passed=Number.isFinite(st?.gatePassed)?st.gatePassed:0,total=st?.gateTotal||4;
+   const entryMode=v?.gate?.metrics?.entryMode||((st?.entryState==='ENTER'||st?.entryState==='READY')?'FULL':'WAIT');
+   const stateText=entryMode==='EARLY'?'EARLY':entryMode==='FULL'?'FULL':v?.status==='confirming'?'CONFIRM':v3GateThai(st?.entryState||'WAIT');
+   summary.textContent=passed+'/'+total+' · '+stateText;
+   const defs=[
+    ['structure','โครงสร้างราคา'],
+    ['location','ตำแหน่งราคา'],
+    ['behavior','พฤติกรรมแท่ง'],
+    ['micro','แรงซื้อขายระยะสั้น']
+   ];
+   const frag=document.createDocumentFragment();
+   for(const [key,name] of defs){
+    const gate=g[key]||null,state=gate?.state||'PENDING';
+    const row=document.createElement('div');
+    row.className='v3-check-row '+(state==='PASS'?'pass':state==='DEVELOPING'?'developing':state==='BLOCK'?'block':'pending');
+    const icon=document.createElement('span');icon.className='v3-check-icon';icon.textContent=state==='PASS'?'✓':state==='DEVELOPING'?'◐':state==='BLOCK'?'×':'·';
+    const title=document.createElement('span');title.className='v3-check-name';title.textContent=name;
+    const reason=document.createElement('span');reason.className='v3-check-reason';
+    reason.textContent=cleanReportText(gate?.reason||gate?.summary||(st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
+    reason.title=reason.textContent;
+    const badge=document.createElement('b');badge.className='v3-check-state';badge.textContent=state==='PENDING'?'รอประเมิน':v3GateThai(state);
+    row.append(icon,title,reason,badge);frag.append(row);
+   }
+   list.replaceChildren(frag);
+   const m=v?.gate?.metrics||{};
+   if(m.entryMode==='EARLY'||m.earlyReady)note.textContent='EARLY พร้อม: โครงสร้าง + ตำแหน่งผ่าน และหลักฐานสดถึงเกณฑ์';
+   else if(m.fullReady||passed===4)note.textContent=v?.status==='confirming'?'4/4 ผ่านแล้ว · กำลังยืนยันข้อมูลสดสั้น ๆ ก่อนปล่อยไม้':'4/4 ผ่านครบ';
+   else if(m.hardReady&&passed>=2)note.textContent='ด่านหลักผ่านแล้ว · กำลังรอพฤติกรรมแท่ง / แรงซื้อขายระยะสั้น';
+   else if(!st?.playbook)note.textContent='ยังไม่มี Playbook ที่อนุญาตให้เข้า · ระบบกำลังเฝ้าตลาด';
+   else note.textContent='EARLY ไม่จำเป็นต้องรอ 4/4 แต่โครงสร้างและตำแหน่งต้องผ่านก่อน';
+  }
+
   function renderEntryGateDetails(v,preview,d){
    const box=$('entry-gate-detail'),head=$('entry-gate-status'),ul=$('entry-gate-reasons');if(!box||!head||!ul)return;
    const gate=v.gate||null,watch=v.watch||null,cv=state.continuousView;
@@ -5256,6 +5378,7 @@ function openReport(){
     v.status==='expired'&&String(v.reason||'').includes('พ้นเขตเข้า')?'ช้าแล้ว · ไม่ไล่ราคา':(labels[v.status]||'ติดตาม');
    $('signal-title').textContent=statusText;
    $('signal-description').textContent=(contextMode?'บริบท '+tf+' · ':'')+tfHumanText(v.reason);
+   renderV3EntryChecklist(v);
    renderEntryGateDetails(v,preview,d);
    if($('signal-updated'))$('signal-updated').textContent=clockMs((state.quote?.ts||0)*1000);
    const banner=$('strong-banner');banner.hidden=!(freshSignal||(CFG.version==='ARIS-2.0.0'&&v.issuedSignal));
