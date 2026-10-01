@@ -1360,6 +1360,17 @@ body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important
  color:#e0b86d;
 }
 .v3-check-card.developing .v3-check-state{color:#dcb36b}
+.v3-check-card.watching{
+ border-color:rgba(91,166,230,.34);
+ background:rgba(25,52,78,.24);
+}
+.v3-check-card.watching .v3-check-box{
+ border-color:#5f9ed6;
+ background:rgba(42,91,132,.20);
+ color:#83bdf0;
+}
+.v3-check-card.watching .v3-check-state{color:#83bdf0}
+.v3-check-card.watching .v3-check-reason{color:#91aeca}
 .v3-check-card.block{
  border-color:rgba(211,91,119,.30);
  background:rgba(79,29,43,.18);
@@ -5397,13 +5408,30 @@ function openReport(){
    for(const [key,id,label] of defs){
     const card=$(id);if(!card)continue;
     const title=card.querySelector('.v3-check-card-top strong');if(title)title.textContent=label;
-    const gate=g[key]||null,state=gate?.state||'PENDING';
-    card.className='v3-check-card '+(state==='PASS'?'pass':state==='DEVELOPING'?'developing':state==='BLOCK'?'block':'pending');
+    const gate=g[key]||null;
+    let state=gate?.state||'PENDING';
+    const prePlaybookWatch=!!(isV3&&st&&!st.playbook&&!gate);
+    if(prePlaybookWatch&&['structure','location','behavior'].includes(key))state='WATCHING';
+    card.className='v3-check-card '+(state==='PASS'?'pass':state==='DEVELOPING'?'developing':state==='WATCHING'?'watching':state==='BLOCK'?'block':'pending');
     const mark=card.querySelector('.v3-check-box'),badge=card.querySelector('.v3-check-state'),reason=card.querySelector('.v3-check-reason');
-    if(mark)mark.textContent=state==='PASS'?'✓':state==='DEVELOPING'?'◐':state==='BLOCK'?'×':'□';
-    if(badge)badge.textContent=state==='PENDING'?'รอประเมิน':v3GateThai(state);
+    if(mark)mark.textContent=state==='PASS'?'✓':state==='DEVELOPING'?'◐':state==='WATCHING'?'●':state==='BLOCK'?'×':'□';
+    if(badge)badge.textContent=state==='PENDING'?'รอประเมิน':state==='WATCHING'?'กำลังดู':v3GateThai(state);
     if(reason){
-     reason.textContent=cleanReportText(gate?.reason||gate?.summary||(isV4?'ยังไม่มีข้อมูลเงื่อนไข Sideway':st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
+     let fallback='';
+     if(prePlaybookWatch&&key==='structure'){
+      const q=st.structure||{},tags=[q.highTag,q.lowTag].filter(x=>x&&x!=='—').join('/');
+      fallback=q.summary||('กำลังอ่านโครงสร้าง'+(tags?' · '+tags:'')+(q.integrity?' · '+q.integrity:''));
+     }else if(prePlaybookWatch&&key==='location'){
+      const fib=st.fib,pos=v?.f?.rangePosition;
+      fallback=fib?.valid?('กำลังดูตำแหน่งราคา · Fib '+(fib.extension>1?(fib.extension*100).toFixed(1)+'% ต่อขา':Math.max(0,fib.retracement*100).toFixed(1)+'% retrace')):
+       Number.isFinite(pos)?('ราคาอยู่ประมาณ '+Math.round(pos*100)+'% ของกรอบ · รอ Playbook ระบุตำแหน่งเข้า'):'กำลังอ่านตำแหน่งราคาและแนวสำคัญ';
+     }else if(prePlaybookWatch&&key==='behavior'){
+      const tags=[...(st.behavior?.tags||[])];
+      fallback=tags.length?('กำลังอ่านแท่ง · '+tags.slice(0,3).join(', ')):'กำลังรอพฤติกรรมแท่งที่ทำให้แผนชัดขึ้น';
+     }else if(prePlaybookWatch&&key==='micro'){
+      fallback='รอให้มี Playbook ก่อนเปิด Flow / Book เป็น Gate ยืนยัน';
+     }
+     reason.textContent=cleanReportText(gate?.reason||gate?.summary||fallback||(isV4?'ยังไม่มีข้อมูลเงื่อนไข Sideway':st?.playbook?'รอข้อมูลของเงื่อนไขนี้':'ยังไม่มีแผนจุดเข้าที่เปิด Gate'));
      reason.title=reason.textContent;
     }
    }
@@ -5418,7 +5446,11 @@ function openReport(){
    if(m.entryMode==='EARLY'||m.earlyReady)note.textContent='EARLY พร้อม: โครงสร้าง + ตำแหน่งผ่าน และหลักฐานสดถึงเกณฑ์';
    else if(m.fullReady||passed===4)note.textContent=v?.status==='confirming'?'4/4 ผ่านแล้ว · กำลังยืนยันข้อมูลสดสั้น ๆ ก่อนปล่อยไม้':'4/4 ผ่านครบ';
    else if(m.hardReady&&passed>=2)note.textContent='ด่านหลักผ่านแล้ว · กำลังรอพฤติกรรมแท่ง / แรงซื้อขายระยะสั้น';
-   else if(!st?.playbook)note.textContent='ทั้ง 4 ช่องค้างไว้ให้ดูตลอด · ตอนนี้ยังไม่มี Playbook ที่เปิด Gate';
+   else if(!st?.playbook){
+    const th=st?.thesis||{},watching=th.why||st?.stateDescription||st?.summary||'กำลังอ่านตลาด';
+    const waiting=st?.trigger||th.trigger||st?.nextPlan||th.nextPlan||'รอรูปแบบจุดเข้าให้ชัดขึ้น';
+    note.textContent='กำลังจับตา: '+cleanReportText(watching)+' · รอ: '+cleanReportText(waiting);
+   }
    else note.textContent='EARLY ไม่จำเป็นต้องรอ 4/4 แต่โครงสร้างและตำแหน่งต้องผ่านก่อน';
   }
 
