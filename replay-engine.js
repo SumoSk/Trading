@@ -64,7 +64,8 @@
       watchState:clone(engine.watchState),lastWatchRecorded:clone(engine.lastWatchRecorded),
       regimeMode:engine.regimeMode,regimeCandidate:engine.regimeCandidate,regimeCandidateCount:engine.regimeCandidateCount,regimeBarTime:engine.regimeBarTime,
       v2Candidate:clone(engine.v2Candidate),v2Switch:clone(engine.v2Switch),v2LastSignal:clone(engine.v2LastSignal),v2Memory:clone(engine.v2Memory),
-      v3Episode:clone(engine.v3Episode),v3Candidate:clone(engine.v3Candidate),v3LastSignal:clone(engine.v3LastSignal)
+      v3Episode:clone(engine.v3Episode),v3Candidate:clone(engine.v3Candidate),v3LastSignal:clone(engine.v3LastSignal),
+      v4Candidate:clone(engine.v4Candidate),v4LastSignal:clone(engine.v4LastSignal),v4Armed:clone(engine.v4Armed)
     };
   }
 
@@ -87,12 +88,16 @@
     if(r.v3Episode)engine.v3Episode=r.v3Episode;
     if(r.v3Candidate)engine.v3Candidate=r.v3Candidate;
     if(r.v3LastSignal)engine.v3LastSignal=r.v3LastSignal;
+    if(r.v4Candidate)engine.v4Candidate=r.v4Candidate;
+    if(r.v4LastSignal)engine.v4LastSignal=r.v4LastSignal;
+    if(r.v4Armed)engine.v4Armed=r.v4Armed;
   }
 
   function resetAtTestBoundary(engine){
     engine.signals=[];engine.audit=[];engine.watchSamples=[];
     engine.active=null;engine.v2Candidate=null;engine.v2Switch=null;engine.v2LastSignal=null;
     engine.v3Episode=null;engine.v3Candidate=null;engine.v3LastSignal=null;
+    engine.v4Candidate=null;engine.v4LastSignal=null;engine.v4Armed={HIGH:true,LOW:true};
     engine.watchState=null;engine.lastWatchRecorded={HIGH:0,LOW:0};engine.lastId=null;
     engine.consumed=new Map();engine.session=0;
   }
@@ -176,9 +181,10 @@
       entryTime:signal.entryTime,entryPrice:signal.entryPrice,result:signal.result,
       exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
       entry:{
-        state:e.v3State||e.v3MarketState||e.v2State||null,stateLabel:e.v3StateLabel||null,playbook:e.v3Playbook||e.v2Playbook||null,playbookLabel:e.v3PlaybookLabel||null,family:e.v3EpisodeFamily||e.v2Family||null,
-        evidence:e.v2EntryEvidence??null,gatePassCount:e.v3GatePassCount??null,stateConfidence:e.v2StateConfidence??null,
-        gateStates:e.v3GateStates??null,thesis:e.v3Thesis?.code??null,
+        state:e.v4State||e.v3State||e.v3MarketState||e.v2State||null,stateLabel:e.v3StateLabel||null,playbook:e.v4Setup||e.v3Playbook||e.v2Playbook||null,playbookLabel:e.v3PlaybookLabel||null,family:e.v3EpisodeFamily||e.v2Family||null,
+        evidence:e.v2EntryEvidence??null,gatePassCount:e.v4GateStates?Object.values(e.v4GateStates).filter(v=>v==='PASS').length:(e.v3GatePassCount??null),stateConfidence:e.v2StateConfidence??null,
+        gateStates:e.v4GateStates??e.v3GateStates??null,thesis:e.v3Thesis?.code??null,
+        rangeQuality:e.v4RangeQuality??null,breakoutRisk:e.v4BreakoutRisk??null,
         atr:e.atr??null,trend:e.trend??null,momentum:e.momentum??null,flow:e.flow??null,
         rangePosition:e.rangePosition??null,relativeVolume:e.relativeVolume??null,
         roomSupport:e.zones?.nearestSupport?.distanceAtr??null,roomResistance:e.zones?.nearestResistance?.distanceAtr??null,
