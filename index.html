@@ -665,6 +665,134 @@ body.toolbar-floating .chart-toolbar{
  .drawing-tools>summary{padding:0 7px!important}
 }
 
+
+/* ARIS toolbar equal-frame pass · 2026-10-01 */
+.chart-toolbar{
+ min-height:48px!important;
+ height:48px!important;
+ padding:6px!important;
+ gap:6px!important;
+}
+.chart-toolbar .analysis-tf-control,
+.chart-toolbar .toolbar-main-button,
+.chart-toolbar .drawing-tools>summary,
+.chart-toolbar .toolbar-more>summary{
+ height:36px!important;
+ min-height:36px!important;
+ max-height:36px!important;
+ border:1px solid #2d4057!important;
+ border-radius:10px!important;
+ background:#101a28!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.018)!important;
+ color:#c2d0e2!important;
+}
+.chart-toolbar .analysis-tf-control{
+ flex:0 0 96px!important;
+ width:96px!important;
+ padding:3px 4px 3px 8px!important;
+ justify-content:space-between!important;
+}
+.chart-toolbar .analysis-tf-control>span{
+ display:block!important;
+ font-size:7px!important;
+ color:#72869f!important;
+}
+.chart-toolbar .analysis-tf-control select{
+ width:48px!important;
+ min-width:48px!important;
+ height:28px!important;
+ min-height:28px!important;
+ padding:0 17px 0 6px!important;
+ border:0!important;
+ border-radius:7px!important;
+ background:#172334!important;
+ color:#dce6f2!important;
+}
+.chart-toolbar .toolbar-main-button{
+ flex:0 0 96px!important;
+ width:96px!important;
+ padding:0 8px!important;
+ display:inline-flex!important;
+ align-items:center!important;
+ justify-content:center!important;
+ font:600 8.5px 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
+ white-space:nowrap!important;
+}
+.chart-toolbar .indicator-toggle[aria-pressed=true]{
+ border-color:#4f6e67!important;
+ background:#122620!important;
+ color:#83dfc1!important;
+}
+.chart-toolbar .drawing-tools{flex:0 0 72px!important}
+.chart-toolbar .drawing-tools>summary{
+ width:72px!important;
+ padding:0!important;
+ display:grid!important;
+ place-items:center!important;
+}
+.chart-toolbar .toolbar-more{flex:0 0 40px!important;margin-left:auto!important}
+.chart-toolbar .toolbar-more>summary{
+ width:40px!important;
+ padding:0!important;
+ display:grid!important;
+ place-items:center!important;
+}
+.toolbar-more-popover{
+ width:230px!important;
+ min-width:230px!important;
+ gap:8px!important;
+ padding:9px!important;
+}
+.toolbar-more-section{display:grid;gap:6px}
+.toolbar-more-section+.toolbar-more-section{padding-top:8px;border-top:1px solid #1f2d3f}
+.toolbar-more-popover button,
+.toolbar-more-popover .toolbar-menu-toggle{
+ min-height:34px!important;
+ height:34px!important;
+ border:1px solid #2a3c52!important;
+ border-radius:8px!important;
+ background:#111b29!important;
+ color:#afbed0!important;
+ padding:0 9px!important;
+ font-size:9px!important;
+}
+.toolbar-menu-toggle{
+ display:flex!important;
+ align-items:center!important;
+ justify-content:space-between!important;
+ gap:10px!important;
+ text-align:left!important;
+}
+.toolbar-menu-toggle b{
+ flex:none;
+ font:700 8px 'Segoe UI',sans-serif;
+ color:#62d9b6;
+}
+.toolbar-menu-toggle[aria-pressed=false] b{color:#78899e}
+.toolbar-menu-toggle[aria-pressed=false]{color:#7f90a4!important;background:#0e1722!important}
+@media(max-width:700px){
+ .chart-toolbar{height:46px!important;min-height:46px!important;padding:5px!important;gap:4px!important}
+ .chart-toolbar .analysis-tf-control,
+ .chart-toolbar .toolbar-main-button,
+ .chart-toolbar .drawing-tools>summary,
+ .chart-toolbar .toolbar-more>summary{height:36px!important;min-height:36px!important}
+ .chart-toolbar .analysis-tf-control{flex-basis:72px!important;width:72px!important;padding-left:5px!important}
+ .chart-toolbar .analysis-tf-control>span{display:none!important}
+ .chart-toolbar .analysis-tf-control select{width:62px!important;min-width:62px!important}
+ .chart-toolbar .toolbar-main-button{flex-basis:82px!important;width:82px!important;padding:0 5px!important;font-size:8px!important}
+ .chart-toolbar .drawing-tools{flex-basis:58px!important}
+ .chart-toolbar .drawing-tools>summary{width:58px!important}
+ .chart-toolbar .toolbar-more{flex-basis:36px!important}
+ .chart-toolbar .toolbar-more>summary{width:36px!important}
+}
+@media(max-width:430px){
+ .chart-toolbar .analysis-tf-control{flex-basis:62px!important;width:62px!important}
+ .chart-toolbar .analysis-tf-control select{width:52px!important;min-width:52px!important;font-size:9px!important}
+ .chart-toolbar .toolbar-main-button{flex-basis:76px!important;width:76px!important;font-size:7.5px!important}
+ .chart-toolbar .drawing-tools{flex-basis:52px!important}
+ .chart-toolbar .drawing-tools>summary{width:52px!important;font-size:8px!important}
+}
+
 .main-signal-head,.probability-head,.candle-kicker,.setup-profile-kicker,.setup-profile-hero>span,.setup-profile-foot,#dataset-status,.engine-version-picker>span,.chart-meta>span:first-child{display:none!important}
 #setup-data-health.live,.setup-compact-health.live{display:none!important}
 .panel-heading{justify-content:flex-end}
@@ -894,8 +1022,7 @@ main{padding-top:10px}
         
         <small id="analysis-tf-active">ใช้อยู่ 1m</small>
       </div>
-      <button id="order-lines-toggle" class="chart-visibility-toggle order-lines-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดเส้นออเดอร์ที่กำลังทำงานบนกราฟ"><span>ออเดอร์</span><b id="order-lines-state">เปิด</b></button>
-      <button id="chart-history-toggle" class="chart-visibility-toggle chart-history-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ"><span>แพ้/ชนะ</span><b id="chart-history-state">เปิด</b></button>
+      <button id="indicator-toggle" class="toolbar-main-button indicator-toggle" type="button" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
       <details class="drawing-tools" id="drawing-tools">
         <summary aria-label="เครื่องมือตีเส้น" title="เครื่องมือตีเส้น">✏ เส้น</summary>
         <div class="drawing-tools-popover">
@@ -915,11 +1042,16 @@ main{padding-top:10px}
       <details class="toolbar-more" id="toolbar-more">
         <summary aria-label="เครื่องมือเพิ่มเติม" title="เครื่องมือเพิ่มเติม">•••</summary>
         <div class="toolbar-more-popover">
-          <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
-          <button id="indicator-toggle" class="quiet indicator-toggle" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
-          <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option><option value="ARIS-2.0.0">ARIS V2 r6 · Market Observer</option><option value="ARIS-3.0.0">ARIS V3 · Episode-Gated Structure</option></select></label>
-          <button id="engine-guide" class="quiet">คู่มือ</button>
-          <button id="latest" class="quiet">กลับล่าสุด</button>
+          <div class="toolbar-more-section" id="toolbar-more-quick">
+            <button id="order-lines-toggle" class="toolbar-menu-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดเส้นออเดอร์ที่กำลังทำงานบนกราฟ"><span>ออเดอร์บนกราฟ</span><b id="order-lines-state">เปิด</b></button>
+            <button id="chart-history-toggle" class="toolbar-menu-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดประวัติแพ้ชนะบนกราฟ"><span>แพ้/ชนะบนกราฟ</span><b id="chart-history-state">เปิด</b></button>
+          </div>
+          <div class="toolbar-more-section">
+            <button id="ema-toggle" class="quiet" aria-pressed="true">EMA <span class="tiny-dot"></span></button>
+            <label class="engine-version-picker" title="เปลี่ยนสูตรที่ใช้งานจริง"><span>เวอร์ชัน</span><select id="engine-version-select" aria-label="เลือกเวอร์ชันระบบ"><option value="6.6.0">V6.6.0 · Statistical Entry</option><option value="7.2.0">V7.2.0 · Early Watch + Timing</option><option value="ARIS-1.2.0">ARIS V1.2 · Breakout + Recovery</option><option value="ARIS-2.0.0">ARIS V2 r6 · Market Observer</option><option value="ARIS-3.0.0">ARIS V3 · Episode-Gated Structure</option></select></label>
+            <button id="engine-guide" class="quiet">คู่มือ</button>
+            <button id="latest" class="quiet">กลับล่าสุด</button>
+          </div>
         </div>
       </details>
     </div>
