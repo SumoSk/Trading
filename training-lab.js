@@ -4,11 +4,12 @@
   const DAY=86_400_000;
   const MINUTE=60_000;
   const TRAINING_VERSION_STORE='btc-training-engine-version-v1';
+  const TRAINING_DEFAULT_MIGRATION='aris-training-default-v31-20261002';
   const TRAINING_ENGINE_BUILD='training-registry-20261001-r2';
   const STANDALONE=document.documentElement?.dataset?.trainingPage==='1';
   let activeController=null;
   let selectedPreset=30;
-  let selectedTrainingVersion='ARIS-2.0.0';
+  let selectedTrainingVersion='ARIS-3.1.0';
   let latestSession=null;
 
   const byId=id=>document.getElementById(id);
@@ -549,9 +550,17 @@
   }
 
   function restoreTrainingVersion(){
-    let saved=null;try{saved=localStorage.getItem(TRAINING_VERSION_STORE);}catch{}
+    let saved=null;
+    try{
+      saved=localStorage.getItem(TRAINING_VERSION_STORE);
+      if(!localStorage.getItem(TRAINING_DEFAULT_MIGRATION)&&(!saved||saved==='ARIS-2.0.0'||saved==='ARIS-3.0.0')){
+        saved='ARIS-3.1.0';
+        localStorage.setItem(TRAINING_VERSION_STORE,saved);
+        localStorage.setItem(TRAINING_DEFAULT_MIGRATION,'1');
+      }
+    }catch{}
     const supported=globalThis.TrainingEngineRegistryV1?.versions||[];
-    setTrainingVersion(supported.includes(saved)?saved:(globalThis.TrainingEngineRegistryV1?.defaultVersion||'ARIS-2.0.0'),{silent:true});
+    setTrainingVersion(supported.includes(saved)?saved:(globalThis.TrainingEngineRegistryV1?.defaultVersion||'ARIS-3.1.0'),{silent:true});
   }
 
   async function startDownload(){

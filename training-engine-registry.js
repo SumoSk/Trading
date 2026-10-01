@@ -79,7 +79,7 @@
     schema:BUILD,
     supported:SUPPORTED,
     versions:SUPPORTED.map(x=>x.version),
-    defaultVersion:'ARIS-2.0.0',
+    defaultVersion:'ARIS-3.1.0',
     load,label,release,releaseAll
   };
 })();

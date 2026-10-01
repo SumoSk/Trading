@@ -2,7 +2,7 @@
   'use strict';
   const SCHEMA='ten-candle-challenge-v3',STORE='aris-ten-candle-challenge-v1',HISTORY_STORE='aris-ten-candle-challenge-history-v1',CONTEXT_BARS=100,FUTURE_BARS=10,ENGINE_WARMUP=360,MINUTE=60000;
   const REASONS=['ตามเทรนด์','แนวรับ','แนวต้าน','Breakout','Reject','Fib','ปลายขา','Sideway'];
-  let dialog=null,chart=null,series=null,resizeObserver=null,revealTimer=null,onClose=null,session=null,bars=[],round=null,selectedReasons=new Set(),used=new Set(),engineVersion='ARIS-3.0.0',analysisBusy=false;
+  let dialog=null,chart=null,series=null,resizeObserver=null,revealTimer=null,onClose=null,session=null,bars=[],round=null,selectedReasons=new Set(),used=new Set(),engineVersion='ARIS-3.1.0',analysisBusy=false;
   let stats=loadStats();
   const byId=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -86,7 +86,7 @@
     byId('tc-analyze').addEventListener('click',analyzeCurrent);
     byId('tc-follow-engine').addEventListener('click',()=>{const d=round?.engineAnalysis?.decision;if(!round?.answer&&(d==='HIGH'||d==='LOW'))choose(d);});
     byId('tc-engine-select').addEventListener('change',()=>{
-      engineVersion=byId('tc-engine-select').value||'ARIS-3.0.0';
+      engineVersion=byId('tc-engine-select').value||'ARIS-3.1.0';
       if(round&&!round.answer){
         round.engineVersionAtRound=engineVersion;round.engineAnalysis=null;renderAnalysisEmpty();
         const targetRound=round;
@@ -120,9 +120,19 @@
   }
   function resolveLiveEngineVersion(){
     const supported=new Set((globalThis.TrainingEngineRegistryV1?.supported||[]).map(x=>x.version));
-    let v='ARIS-3.0.0';try{const saved=localStorage.getItem('btc-active-engine-version-aris-v2');if(saved)v=saved;}catch{}
+    let v='ARIS-3.1.0';
+    try{
+      let saved=localStorage.getItem('btc-active-engine-version-aris-v2');
+      const migration='aris-default-engine-v31-20261002';
+      if(!localStorage.getItem(migration)&&(!saved||saved==='ARIS-3.0.0')){
+        saved='ARIS-3.1.0';
+        localStorage.setItem('btc-active-engine-version-aris-v2',saved);
+        localStorage.setItem(migration,'1');
+      }
+      if(saved)v=saved;
+    }catch{}
     const map={'6.5.0':'6.6.0','7.0.0':'7.2.0','7.0.1':'7.2.0','7.1.0':'7.2.0','7.1.1':'7.2.0','ARIS-1.0.0':'ARIS-1.2.0','ARIS-1.1.0':'ARIS-1.2.0'};v=map[v]||v;
-    return supported.has(v)?v:(supported.has('ARIS-3.0.0')?'ARIS-3.0.0':[...supported][0]||'ARIS-3.0.0');
+    return supported.has(v)?v:(supported.has('ARIS-3.1.0')?'ARIS-3.1.0':[...supported][0]||'ARIS-3.1.0');
   }
   function setupEngineSelect(){
     const sel=byId('tc-engine-select'),registry=globalThis.TrainingEngineRegistryV1;if(!sel||!registry)return;
