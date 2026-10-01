@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-r5';
+const REVISION='stage-brain-b1-r6';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -515,10 +515,12 @@ function stageBrain(f,s){
   if(dominant==='REVERSAL_DEVELOPING')reasons.push('protected structure เริ่มถูกเจาะ','แรงฝั่งใหม่เริ่มมี rejection/flow/pressure รองรับ');
   if(dominant==='TRANSITION')reasons.push('คุณสมบัติของเทรนด์เดิมกำลังเสื่อม','ตลาดยังไม่ได้สร้าง regime ใหม่ที่ชัด');
 
-  const trendDir=s.dir||s.trendDir||sign(f.momentum8,.08);
-  const rangeForming=dominant==='TRANSITION'&&trend>range&&(
+  const currentTrendDir=s.dir||s.trendDir||sign(f.momentum8,.08);
+  const priorTrendDir=sign(f.emaSlope24*.55+f.momentum24*.45,.08)||currentTrendDir;
+  const rangeForming=(dominant==='TRANSITION'||confidence.TRANSITION>=.20)&&priorTrendDir!==0&&(
     f.effDrop>=CFG.transitionEffDrop||
     f.slopeDrop>=CFG.transitionSlopeDrop||
+    (Math.abs(f.momentum24)>.25&&Math.abs(f.momentum3)<Math.abs(f.momentum24)*.45)||
     exhaustion>=.38
   );
 
