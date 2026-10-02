@@ -1778,6 +1778,246 @@ body{
 
 </style>
 
+
+<style id="cyber-toolbar-final-20261002">
+/* ARIS cyber toolbar skin — visual only.
+   Preserve current controls, order, behavior and compact dimensions. */
+#chart-toolbar{
+ --cy-cyan:105,220,255;
+ --cy-violet:169,140,255;
+ --cy-green:99,240,189;
+ --cy-ink:9,16,27;
+ position:relative!important;
+ isolation:isolate;
+ overflow:visible!important;
+ border-color:rgba(var(--cy-cyan),.26)!important;
+ background:
+   linear-gradient(180deg,rgba(14,24,38,.96),rgba(8,15,26,.97))!important;
+ box-shadow:
+   0 12px 30px rgba(0,0,0,.38),
+   0 0 0 1px rgba(var(--cy-violet),.035),
+   0 0 20px rgba(var(--cy-cyan),.045),
+   inset 0 1px 0 rgba(255,255,255,.035),
+   inset 0 -1px 0 rgba(var(--cy-violet),.045)!important;
+}
+
+/* Continuous cyber border: one lightweight animated layer for the whole bar. */
+#chart-toolbar::before{
+ content:'';
+ position:absolute;
+ inset:-1px;
+ z-index:0;
+ pointer-events:none;
+ border-radius:14px;
+ padding:1px;
+ background:
+   conic-gradient(
+     from 0deg,
+     transparent 0deg 62deg,
+     rgba(var(--cy-cyan),.12) 72deg,
+     rgba(var(--cy-cyan),.98) 83deg,
+     rgba(var(--cy-violet),.92) 94deg,
+     rgba(var(--cy-violet),.10) 106deg,
+     transparent 118deg 360deg
+   );
+ -webkit-mask:
+   linear-gradient(#000 0 0) content-box,
+   linear-gradient(#000 0 0);
+ -webkit-mask-composite:xor;
+ mask-composite:exclude;
+ filter:drop-shadow(0 0 4px rgba(var(--cy-cyan),.42));
+ animation:arisCyberBorderRun 5.8s linear infinite;
+}
+
+/* Small scanner streak across the top edge. */
+#chart-toolbar::after{
+ content:'';
+ position:absolute;
+ z-index:2;
+ pointer-events:none;
+ top:-1px;
+ left:0;
+ width:54px;
+ height:1px;
+ border-radius:999px;
+ background:linear-gradient(90deg,transparent,rgba(var(--cy-cyan),.95),rgba(var(--cy-violet),.92),transparent);
+ box-shadow:0 0 7px rgba(var(--cy-cyan),.6),0 0 10px rgba(var(--cy-violet),.34);
+ animation:arisCyberTopSweep 4.6s ease-in-out infinite;
+}
+
+#chart-toolbar>*{
+ position:relative!important;
+ z-index:1;
+}
+
+/* Keep the exact current sizing; only reskin the frames. */
+body.toolbar-floating #chart-toolbar{
+ background:
+   linear-gradient(180deg,rgba(14,24,38,.965),rgba(8,15,26,.975))!important;
+ border-color:rgba(var(--cy-cyan),.27)!important;
+ box-shadow:
+   0 13px 34px rgba(0,0,0,.44),
+   0 0 18px rgba(var(--cy-cyan),.055),
+   0 0 24px rgba(var(--cy-violet),.03),
+   inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+
+/* Replace the old green separators with cool neutral-cyber separators. */
+body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
+ background:linear-gradient(180deg,transparent,rgba(var(--cy-cyan),.22),rgba(var(--cy-violet),.18),transparent)!important;
+ box-shadow:0 0 5px rgba(var(--cy-cyan),.10)!important;
+}
+
+/* Individual frames: subtle, not a Christmas tree. */
+#chart-toolbar .analysis-tf-control,
+#chart-toolbar .toolbar-main-button,
+#chart-toolbar .drawing-tools>summary,
+#chart-toolbar .toolbar-more>summary{
+ border-color:rgba(93,126,166,.40)!important;
+ background:
+   linear-gradient(180deg,rgba(18,29,46,.94),rgba(11,20,33,.94))!important;
+ color:#c8d7e9!important;
+ box-shadow:
+   inset 0 1px 0 rgba(255,255,255,.025),
+   inset 0 0 12px rgba(var(--cy-cyan),.012),
+   0 0 0 1px rgba(var(--cy-violet),.012)!important;
+ transition:
+   border-color .18s ease,
+   color .18s ease,
+   background .18s ease,
+   box-shadow .18s ease,
+   transform .18s ease!important;
+}
+
+#chart-toolbar .analysis-tf-control:hover,
+#chart-toolbar .toolbar-main-button:hover,
+#chart-toolbar .drawing-tools>summary:hover,
+#chart-toolbar .toolbar-more>summary:hover{
+ border-color:rgba(var(--cy-cyan),.48)!important;
+ color:#ecf9ff!important;
+ background:
+   linear-gradient(180deg,rgba(20,35,54,.98),rgba(12,23,38,.98))!important;
+ box-shadow:
+   inset 0 1px 0 rgba(255,255,255,.04),
+   0 0 10px rgba(var(--cy-cyan),.08)!important;
+}
+
+/* TF controls keep their present dimensions; selected value gets a violet/cyan focus. */
+#chart-toolbar .analysis-tf-control>span{
+ color:#8094ae!important;
+}
+#chart-toolbar .analysis-tf-control select{
+ background:linear-gradient(180deg,#17253a,#111c2d)!important;
+ color:#e0eaf6!important;
+ box-shadow:inset 0 0 0 1px rgba(var(--cy-cyan),.025)!important;
+}
+#chart-toolbar .analysis-tf-control:focus-within{
+ border-color:rgba(var(--cy-violet),.60)!important;
+ box-shadow:
+   inset 0 0 13px rgba(var(--cy-violet),.035),
+   0 0 10px rgba(var(--cy-violet),.10)!important;
+}
+
+/* Indicator active: cyan/green only when it is actually on. */
+#chart-toolbar .indicator-toggle[aria-pressed=true]{
+ border-color:rgba(var(--cy-green),.48)!important;
+ background:linear-gradient(180deg,rgba(19,50,45,.94),rgba(12,34,32,.94))!important;
+ color:#a4f6d8!important;
+ text-shadow:0 0 8px rgba(var(--cy-green),.30);
+ box-shadow:
+   inset 0 0 12px rgba(var(--cy-green),.035),
+   0 0 10px rgba(var(--cy-green),.08)!important;
+}
+
+/* Drawing active = violet. More-menu active = cyan. */
+#chart-toolbar .drawing-tools[open]>summary,
+#chart-toolbar .drawing-tools.active>summary{
+ border-color:rgba(var(--cy-violet),.62)!important;
+ background:linear-gradient(180deg,rgba(42,32,70,.96),rgba(25,22,49,.96))!important;
+ color:#e6ddff!important;
+ text-shadow:0 0 8px rgba(var(--cy-violet),.30);
+ box-shadow:0 0 11px rgba(var(--cy-violet),.11),inset 0 0 12px rgba(var(--cy-violet),.035)!important;
+}
+#chart-toolbar .toolbar-more[open]>summary{
+ border-color:rgba(var(--cy-cyan),.55)!important;
+ background:linear-gradient(180deg,rgba(20,42,58,.96),rgba(13,28,43,.96))!important;
+ color:#e8f9ff!important;
+ box-shadow:0 0 10px rgba(var(--cy-cyan),.10),inset 0 0 12px rgba(var(--cy-cyan),.03)!important;
+}
+
+/* Popovers match the toolbar skin. */
+#chart-toolbar .toolbar-more-popover,
+#chart-toolbar .drawing-tools-popover{
+ border-color:rgba(var(--cy-cyan),.24)!important;
+ background:
+   linear-gradient(180deg,rgba(13,23,37,.985),rgba(8,15,26,.99))!important;
+ box-shadow:
+   0 20px 54px rgba(0,0,0,.62),
+   0 0 18px rgba(var(--cy-violet),.035),
+   inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+/* Live dot gets a controlled pulse; no layout changes. */
+body[data-feed=live] #chart-toolbar .tiny-dot{
+ background:rgb(var(--cy-green))!important;
+ box-shadow:0 0 7px rgba(var(--cy-green),.86),0 0 13px rgba(var(--cy-green),.28)!important;
+}
+
+/* Phone: same layout rules already used by the app; lighter effects only. */
+@media(max-width:700px){
+ #chart-toolbar{
+   box-shadow:
+     0 9px 24px rgba(0,0,0,.38),
+     0 0 12px rgba(var(--cy-cyan),.035),
+     inset 0 1px 0 rgba(255,255,255,.03)!important;
+ }
+ #chart-toolbar::before{
+   filter:drop-shadow(0 0 2px rgba(var(--cy-cyan),.34));
+   animation-duration:7.2s;
+ }
+ #chart-toolbar::after{
+   width:42px;
+   animation-duration:5.6s;
+ }
+ body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
+   background:linear-gradient(180deg,transparent,rgba(var(--cy-cyan),.17),rgba(var(--cy-violet),.12),transparent)!important;
+ }
+}
+@media(max-width:430px){
+ #chart-toolbar::after{width:34px}
+}
+
+/* Accessibility / battery: stop motion but retain the cyber frame. */
+@media(prefers-reduced-motion:reduce){
+ #chart-toolbar::before,
+ #chart-toolbar::after{
+   animation:none!important;
+ }
+ #chart-toolbar::before{
+   background:linear-gradient(90deg,rgba(var(--cy-cyan),.55),rgba(var(--cy-violet),.52))!important;
+ }
+}
+
+@keyframes arisCyberBorderRun{
+ to{transform:rotate(360deg)}
+}
+@keyframes arisCyberTopSweep{
+ 0%{transform:translateX(-70px);opacity:0}
+ 12%{opacity:.95}
+ 50%{opacity:.72}
+ 88%{opacity:.95}
+ 100%{transform:translateX(calc(860px - 22px));opacity:0}
+}
+@media(max-width:700px){
+ @keyframes arisCyberTopSweep{
+   0%{transform:translateX(-55px);opacity:0}
+   12%{opacity:.9}
+   88%{opacity:.82}
+   100%{transform:translateX(calc(100vw - 40px));opacity:0}
+ }
+}
+</style>
+
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
