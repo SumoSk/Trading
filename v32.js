@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-audit-r2';
+const REVISION='stage-brain-b1-audit-r3';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -122,10 +122,9 @@ function dataQuality(input,rawRows,bars){
   if(Object.prototype.hasOwnProperty.call(input||{},'price')&&!finite(+input.price))return {ready:false,hardBlock:true,reason:'invalid_live_price'};
   const raw=(rawRows||[]).filter(Boolean);
   if(raw.length&&bars.length<raw.length*.90)return {ready:false,hardBlock:true,reason:'invalid_ohlc_sequence',rawBars:raw.length,validBars:bars.length};
-  if(bars.length>=2){
-    for(let i=1;i<bars.length;i++){
-      if(bars[i].time&&bars[i-1].time&&bars[i].time<bars[i-1].time)return {ready:false,hardBlock:true,reason:'non_monotonic_bars'};
-    }
+  const orderedRaw=raw.filter(validBar).map(q=>+(q.time??q.openTime??q.ts??0));
+  for(let i=1;i<orderedRaw.length;i++){
+    if(orderedRaw[i]&&orderedRaw[i-1]&&orderedRaw[i]<orderedRaw[i-1])return {ready:false,hardBlock:true,reason:'non_monotonic_bars'};
   }
   return {ready:true,hardBlock:false,reason:'ok'};
 }
@@ -344,7 +343,7 @@ function fibContext(sw,price,a,zones){
     overRetraced:retracement>.786,
     extended:extension>=1.0,
     confluence:nearZone,
-    zone:retracement<.236?'shallow':retracement<=.382?'23.6-38.2':retracement<=.50?'38.2-50':retracement<=.618?'50-61.8':retracement<=.786?'61.8-78.6':retracement<=1?'deep':'beyond_leg'
+    zone:retracement<.236?'shallow':retracement<=.382?'23.6-38.2':retracement<=.50?'38.2-50':retracement<=.618?'50-61.8':retracement<=.786?'61.8-78.6':retracement<=1?'78.6-100 over-retraced':'beyond_leg'
   };
 }
 
@@ -378,19 +377,19 @@ function breakoutContext(bars,a,range,vol,seq,flow,live,price){
   let failedDir=0,recaptureStrength=0;
   const priorOutsideUp=recent.slice(0,-1).some(q=>q.high>=range.high+a*CFG.breakoutBufferAtr);
   const priorOutsideDown=recent.slice(0,-1).some(q=>q.low<=range.low-a*CFG.breakoutBufferAtr);
-  if(priorOutsideUp&&last.close<=range.high-a*CFG.breakoutRecaptureAtr){
+  if(priorOutsideUp&&probePrice<=range.high-a*CFG.breakoutRecaptureAtr){
     failedDir=-1;
-    recaptureStrength=clip((range.high-last.close)/(a*.40));
-  }else if(priorOutsideDown&&last.close>=range.low+a*CFG.breakoutRecaptureAtr){
+    recaptureStrength=clip((range.high-probePrice)/(a*.40));
+  }else if(priorOutsideDown&&probePrice>=range.low+a*CFG.breakoutRecaptureAtr){
     failedDir=1;
-    recaptureStrength=clip((last.close-range.low)/(a*.40));
+    recaptureStrength=clip((probePrice-range.low)/(a*.40));
   }
 
   return {
     attemptDir,acceptedDir,failedDir,
     outsideAtr:attemptDir>0?upOutside:attemptDir<0?downOutside:0,
     expansion,volPart,flowAligned,alignedClose,recaptureStrength,
-    priorOutsideUp,priorOutsideDown,baseContext:true,liveAttempt:!!(live?.available&&attemptDir),closedAttemptDir,reason:'base_context_confirmed'
+    priorOutsideUp,priorOutsideDown,baseContext:true,liveAttempt:!!(live?.available&&attemptDir),liveFailure:!!(live?.available&&failedDir),closedAttemptDir,reason:'base_context_confirmed'
   };
 }
 
