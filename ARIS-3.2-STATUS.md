@@ -152,3 +152,37 @@ Compare identical market windows and measure:
 - which thresholds should actually be calibrated
 
 Do not promote 3.2 to default until this review is completed.
+
+
+## UI renderer correction — 2026-10-02
+
+Issue found after first main integration:
+- ARIS 3.2 engine was running, but the visible renderer only had dedicated branches for ARIS 3.0/3.1 and ARIS 4.
+- ARIS 3.2 therefore fell into the generic ARIS fallback, visually resembling older ARIS 2.x behavior.
+- The 3.x checklist was hidden.
+- Fibonacci summary did not read the 3.2 snapshot.
+- WATCH score formatting used the generic ARIS scale.
+- Setup-profile statistics could fall back to a prior 7.1 sample pool when 3.2 had too few samples.
+
+Fix:
+- ARIS 3.2 now has a native four-card decision view:
+  1. Market Stage
+  2. Direction Edge
+  3. Stage Trigger
+  4. Entry Quality
+- Stage confidence and top competing stages are shown.
+- Direction Edge shows HIGH/LOW 0–100 plus the strongest active stage contributions.
+- Trigger shows trigger family quality, READY threshold, and missing evidence.
+- Entry Quality shows candidate confirmation and penalties.
+- Fibonacci summary reads the 3.2 Feature Brain output.
+- renderEvent treats 3.2 as its own engine rather than sending it through the generic decision fallback.
+- 3.2 historical setup stats are isolated from legacy 7.1 fallback samples.
+
+Verification:
+- all inline JavaScript blocks in index.html compile successfully,
+- ARIS 3.2 permanent regression remains 13/13,
+- renderer unit smoke test confirms the four 3.2 cards render from a native 3.2 snapshot,
+- frozen legacy engine files remain untouched.
+
+Backup before renderer fix:
+- `backup/aris-3.2-before-ui-render-fix-20261002`
