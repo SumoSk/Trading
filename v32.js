@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-audit-r1';
+const REVISION='stage-brain-b1-audit-r2';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -348,26 +348,31 @@ function fibContext(sw,price,a,zones){
   };
 }
 
-function breakoutContext(bars,a,range,vol,seq,flow){
+function breakoutContext(bars,a,range,vol,seq,flow,live,price){
   if(!range)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_reference_range'};
   const boundedBase=range.baseEff<=.52&&(range.crosses>=1||(range.lowerTouches>=2&&range.upperTouches>=2));
   const compressionBase=seq.compressionRangeRatio<=.82&&seq.compressionBodyRatio<=.88;
   const baseContext=boundedBase||compressionBase;
   if(!baseContext)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_breakout_base'};
   const closed=bars.filter(q=>q.closed),last=closed.at(-1),prev=closed.at(-2),recent=closed.slice(-7);
-  const upOutside=(last.close-range.high)/Math.max(a,1e-9),downOutside=(range.low-last.close)/Math.max(a,1e-9);
+  const probePrice=finite(price)?price:(live?.available?live.close:last.close);
+  const upOutside=(probePrice-range.high)/Math.max(a,1e-9),downOutside=(range.low-probePrice)/Math.max(a,1e-9);
   const attemptDir=upOutside>=CFG.breakoutBufferAtr?1:downOutside>=CFG.breakoutBufferAtr?-1:0;
-  const lastM=candleMetric(last,a);
-  const expansion=lastM.rangeAtr>=CFG.breakoutExpansionRangeAtr||lastM.bodyAtr>=CFG.breakoutExpansionBodyAtr;
-  const volPart=Math.max(vol.rel,vol.ratio3)>=1.10;
-  const alignedClose=attemptDir>0?lastM.closeLoc:attemptDir<0?1-lastM.closeLoc:.5;
+  const lastM=candleMetric(last,a),probeM=live?.available?live:lastM;
+  const expansion=probeM.rangeAtr>=CFG.breakoutExpansionRangeAtr||probeM.bodyAtr>=CFG.breakoutExpansionBodyAtr;
+  const volPart=Math.max(vol.rel,vol.ratio3,finite(live?.volumePace)?live.volumePace:0)>=1.10;
+  const alignedClose=attemptDir>0?probeM.closeLoc:attemptDir<0?1-probeM.closeLoc:.5;
   const flowAligned=attemptDir&&finite(flow)?attemptDir*flow:0;
 
   let acceptedDir=0;
-  if(attemptDir&&alignedClose>=CFG.breakoutCloseMin&&expansion&&(volPart||flowAligned>.02))acceptedDir=attemptDir;
-  if(attemptDir&&prev){
-    const prevOutside=attemptDir>0?(prev.close-range.high)/Math.max(a,1e-9):(range.low-prev.close)/Math.max(a,1e-9);
-    if(prevOutside>=CFG.breakoutAcceptedAtr&&alignedClose>=.52)acceptedDir=attemptDir;
+  const closedUpOutside=(last.close-range.high)/Math.max(a,1e-9),closedDownOutside=(range.low-last.close)/Math.max(a,1e-9);
+  const closedAttemptDir=closedUpOutside>=CFG.breakoutBufferAtr?1:closedDownOutside>=CFG.breakoutBufferAtr?-1:0;
+  const closedAligned=closedAttemptDir>0?lastM.closeLoc:closedAttemptDir<0?1-lastM.closeLoc:.5;
+  const closedExpansion=lastM.rangeAtr>=CFG.breakoutExpansionRangeAtr||lastM.bodyAtr>=CFG.breakoutExpansionBodyAtr;
+  if(closedAttemptDir&&closedAligned>=CFG.breakoutCloseMin&&closedExpansion&&(Math.max(vol.rel,vol.ratio3)>=1.10||closedAttemptDir*flow>.02))acceptedDir=closedAttemptDir;
+  if(closedAttemptDir&&prev){
+    const prevOutside=closedAttemptDir>0?(prev.close-range.high)/Math.max(a,1e-9):(range.low-prev.close)/Math.max(a,1e-9);
+    if(prevOutside>=CFG.breakoutAcceptedAtr&&closedAligned>=.52)acceptedDir=closedAttemptDir;
   }
 
   let failedDir=0,recaptureStrength=0;
@@ -385,7 +390,7 @@ function breakoutContext(bars,a,range,vol,seq,flow){
     attemptDir,acceptedDir,failedDir,
     outsideAtr:attemptDir>0?upOutside:attemptDir<0?downOutside:0,
     expansion,volPart,flowAligned,alignedClose,recaptureStrength,
-    priorOutsideUp,priorOutsideDown,baseContext:true,reason:'base_context_confirmed'
+    priorOutsideUp,priorOutsideDown,baseContext:true,liveAttempt:!!(live?.available&&attemptDir),closedAttemptDir,reason:'base_context_confirmed'
   };
 }
 
@@ -418,7 +423,7 @@ function featureBrain(input){
   const rangePosition=range?clip((price-range.low)/Math.max(range.width,1e-9)):.5;
   const flow=finite(+input.flow)?+input.flow:0;
   const book=finite(+input.book)?+input.book:0;
-  const breakout=breakoutContext(closed,a,range,vol,seq,flow);
+  const breakout=breakoutContext(closed,a,range,vol,seq,flow,live,price);
   const htf={m5:higherFrameContext(input.bars5m),m15:higherFrameContext(input.bars15m)};
 
   const current=candleMetric(closed.at(-1),a);
