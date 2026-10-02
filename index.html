@@ -1877,7 +1877,7 @@ body{
         <div class="signal-description" id="signal-description">รอข้อมูลตลาด</div>
         <p id="event-detail"></p>
       </div>
-      <section class="v3-entry-checklist" id="v3-entry-checklist" hidden aria-live="polite">
+      <section class="v3-entry-checklist" id="v3-entry-checklist" hidden aria-live="polite" data-role="entry-checklist">
         <div class="v3-check-head">
           <span>V3 CHECKLIST</span>
           <b id="v3-check-summary">0/4 · WAIT</b>
@@ -5904,7 +5904,7 @@ function openReport(){
     const conf=Math.round((stage.dominantConfidence||0)*100),high=Math.round(dir.highEdge??50),low=Math.round(dir.lowEdge??50);
     const readyThreshold=trigger?.thresholds?.ready??m.triggerThresholdReady,triggerQuality=trigger?.quality??m.triggerQuality;
     const stageTop=(stage.ranked||[]).slice(0,3).map(x=>v32StageThai(x.stage)+' '+Math.round((x.confidence||0)*100)+'%').join(' · ');
-    if(heading)heading.textContent='ARIS 3.2 · STAGE ADAPTIVE';
+    if(heading)heading.textContent='เช็กลิสต์จุดเข้า · ARIS 3.2';
     summary.textContent=(stage.dominant?v32StageThai(stage.dominant)+' '+conf+'%':'กำลังอ่าน Stage')+(trigger?' · '+v32TriggerThai(trigger.id)+' '+Math.round(triggerQuality||0)+'/'+(readyThreshold??'—'):' · ยังไม่มี Trigger');
 
     const activeModel=dir.models?.[trigger?.stage||stage.dominant]||null;
@@ -5913,14 +5913,14 @@ function openReport(){
     const missing=[...(trigger?.missing||m.missing||[])],penalties=[...(trigger?.penalties||m.penalties||[])],blocks=[...(trigger?.hardBlocks||m.hardBlocks||[])];
     const eq=Number.isFinite(m.entryQuality)?Math.round(m.entryQuality):Number.isFinite(st?.currentEntryQuality)?Math.round(st.currentEntryQuality):null;
     const cards=[
-     {id:'v3-check-structure',title:'Market Stage',mark:'●',badge:stage.dominant?'ACTIVE':'WAIT',cls:stage.dominant?'watching':'pending',
-      reason:(stageTop||'ยังไม่มี Stage ที่อ่านได้')+(stage.rangeForming?' · ตรวจพบแนวโน้มกำลังคลายไปหา Range':'')},
-     {id:'v3-check-location',title:'Direction Edge',mark:dir.direction==='HIGH'?'↑':dir.direction==='LOW'?'↓':'◐',badge:dir.direction||'BALANCED',cls:dir.direction&&dir.direction!=='BALANCED'?'pass':'developing',
+     {id:'v3-check-structure',title:'1 · ตลาดตอนนี้',mark:'●',badge:stage.dominant?'อ่านได้แล้ว':'รอข้อมูล',cls:stage.dominant?'watching':'pending',
+      reason:(stageTop||'กำลังรวบรวมแท่งเพื่ออ่าน Stage')+(stage.rangeForming?' · ตรวจพบแนวโน้มกำลังคลายไปหา Range':'')},
+     {id:'v3-check-location',title:'2 · ฝั่งได้เปรียบ',mark:dir.direction==='HIGH'?'↑':dir.direction==='LOW'?'↓':'◐',badge:dir.direction&&dir.direction!=='BALANCED'?dir.direction:'ยังสูสี',cls:dir.direction&&dir.direction!=='BALANCED'?'pass':'developing',
       reason:'HIGH '+high+'/100 · LOW '+low+'/100 · '+modelWhy},
-     {id:'v3-check-behavior',title:'Stage Trigger',mark:blocks.length?'×':trigger?.ready?'✓':trigger?'◐':'□',badge:blocks.length?'BLOCK':trigger?.ready?'READY':trigger?.status||'WATCH',cls:blocks.length?'block':trigger?.ready?'pass':trigger?'developing':'pending',
-      reason:trigger?(v32TriggerThai(trigger.id)+' · คุณภาพ '+Math.round(triggerQuality||0)+'/100'+(readyThreshold!=null?' · READY ≥ '+readyThreshold:'')+(missing.length?' · ยังขาด '+missing.slice(0,2).join(' / '):'')):'Stage ยังไม่มี Trigger ที่ควรตาม'},
-     {id:'v3-check-micro',title:'Entry Quality',mark:v?.status==='new'?'✓':v?.status==='confirming'?'◐':blocks.length?'×':'□',badge:v?.status==='new'?'ENTER':v?.status==='confirming'?'CONFIRM':v?.status==='issued'?'RE-ARM':'WAIT',cls:v?.status==='new'?'pass':v?.status==='confirming'?'developing':blocks.length?'block':'watching',
-      reason:(eq!=null?'Entry Quality '+eq+'/100':'ยังไม่ถึงช่วงคำนวณ Entry Quality')+(Number.isFinite(m.candidateTicks)?' · ยืนยันสด '+m.candidateTicks+'/'+(globalThis.ArisV32Entry?.CFG?.confirmTicks||2):'')+(penalties.length?' · Penalty: '+penalties.slice(0,2).join(' / '):'')}
+     {id:'v3-check-behavior',title:'3 · ทริกเกอร์เข้า',mark:blocks.length?'×':trigger?.ready?'✓':trigger?'◐':'□',badge:blocks.length?'ติดบล็อก':trigger?.ready?'พร้อม':trigger?'กำลังรอ':'ยังไม่มี',cls:blocks.length?'block':trigger?.ready?'pass':trigger?'developing':'pending',
+      reason:trigger?(v32TriggerThai(trigger.id)+' · คุณภาพ '+Math.round(triggerQuality||0)+'/100'+(readyThreshold!=null?' · ต้องถึง '+readyThreshold:'')+(missing.length?' · ยังขาด '+missing.slice(0,2).join(' / '):'')):'ยังไม่มี Trigger ของ Stage นี้ที่ควรเข้า'},
+     {id:'v3-check-micro',title:'4 · ความพร้อมเข้า',mark:v?.status==='new'?'✓':v?.status==='confirming'?'◐':blocks.length?'×':'□',badge:v?.status==='new'?'เข้าได้':v?.status==='confirming'?'กำลังยืนยัน':v?.status==='issued'?'รอรีอาร์ม':'ยังรอ',cls:v?.status==='new'?'pass':v?.status==='confirming'?'developing':blocks.length?'block':'watching',
+      reason:(eq!=null?'Entry Quality '+eq+'/100':'กำลังรอข้อมูลพอสำหรับคำนวณ Entry Quality')+(Number.isFinite(m.candidateTicks)?' · ยืนยันสด '+m.candidateTicks+'/'+(globalThis.ArisV32Entry?.CFG?.confirmTicks||2):'')+(penalties.length?' · ลดคะแนน: '+penalties.slice(0,2).join(' / '):'')}
     ];
     for(const x of cards){
      const card=$(x.id);if(!card)continue;card.className='v3-check-card '+x.cls;
@@ -7119,6 +7119,15 @@ function openReport(){
     if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-3.2.0','ARIS-4.0.0'].includes(next)||next===CFG.version)return;
     try{localStorage.setItem(ACTIVE_VERSION_STORE,next);}catch{}
     location.reload();
+   });
+  }
+  if(CFG.version==='ARIS-3.2.0'){
+   const checklist=$('v3-entry-checklist');
+   if(checklist)checklist.hidden=false;
+   renderV3EntryChecklist(lastView||{
+    status:'warmup',
+    v32Story:{stage:{dominant:null,dominantConfidence:0,ranked:[],rangeForming:false},direction:{direction:'BALANCED',highEdge:50,lowEdge:50,models:{}},trigger:null,currentEntryQuality:null},
+    gate:{metrics:{}}
    });
   }
   let chartResizeFrame=0;
