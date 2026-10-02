@@ -9,7 +9,7 @@ const Entry=root.ArisV32Entry;
 if(!Entry)throw new Error('ARIS 3.2 Blocks 1–4 must load before v32-training.js');
 
 const VERSION=Entry.version;
-const REVISION='training-ledger-b5-r1';
+const REVISION='training-ledger-b5-audit-r1';
 const finite=Number.isFinite;
 const clip=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 
@@ -99,22 +99,56 @@ function decisionRecord(result){
 function reviewPath(signal,path){
   if(!signal||!path?.length)return null;
   const d=signal.direction==='HIGH'?1:-1,a=Math.max(signal.dataset?.features?.atr||1,1e-9),entry=signal.entryPrice;
-  let mfe=-Infinity,mae=Infinity,fastReverse2m=false,first2m=null;
+  let mfe=-Infinity,mae=Infinity,fastReverse1m=false,fastReverse2m=false,fastReverse5m=false;
+  let at1m=null,at2m=null,at5m=null,firstFlowFlipMs=null,structureBreakAfterEntry=false;
+  const stageChanges=[],breakoutStateChanges=[];
+  let prevStage=null,prevBreakout=null;
   for(const q of path){
     const favorable=d*(q.price-entry)/a;
     mfe=Math.max(mfe,favorable);
     mae=Math.min(mae,favorable);
-    if(q.ts<=signal.entryTime+120000){
-      first2m=favorable;
-      if(favorable<=-.18)fastReverse2m=true;
+    const age=q.ts-signal.entryTime;
+    if(age<=60000){at1m=favorable;if(favorable<=-.18)fastReverse1m=true;}
+    if(age<=120000){at2m=favorable;if(favorable<=-.18)fastReverse2m=true;}
+    if(age<=300000){at5m=favorable;if(favorable<=-.18)fastReverse5m=true;}
+    if(firstFlowFlipMs==null&&finite(q.flow)&&d*q.flow<-.03)firstFlowFlipMs=Math.max(0,age);
+    if(q.structureAgainst===true)structureBreakAfterEntry=true;
+    if(q.stage&&q.stage!==prevStage){
+      stageChanges.push({ts:q.ts,ageMs:Math.max(0,age),stage:q.stage});
+      prevStage=q.stage;
+    }
+    if(q.breakoutState&&q.breakoutState!==prevBreakout){
+      breakoutStateChanges.push({ts:q.ts,ageMs:Math.max(0,age),state:q.breakoutState});
+      prevBreakout=q.breakoutState;
     }
   }
   return {
     samples:path.length,
     mfeAtr:finite(mfe)?Math.round(mfe*1000)/1000:null,
     maeAtr:finite(mae)?Math.round(mae*1000)/1000:null,
-    fastReverse2m,
-    last2mAtr:first2m
+    fastReverse1m,fastReverse2m,fastReverse5m,
+    at1mAtr:finite(at1m)?Math.round(at1m*1000)/1000:null,
+    at2mAtr:finite(at2m)?Math.round(at2m*1000)/1000:null,
+    at5mAtr:finite(at5m)?Math.round(at5m*1000)/1000:null,
+    firstFlowFlipMs,
+    structureBreakAfterEntry,
+    stageChanges,
+    breakoutStateChanges
+  };
+}
+
+function observationFromSnapshot(ts,price,snapshot,signal){
+  const d=signal?.direction==='HIGH'?1:signal?.direction==='LOW'?-1:0;
+  const s=snapshot?.structure||{};
+  const b=snapshot?.features?.breakout||{};
+  const breakoutState=b.failedDir?'FAILED_'+(b.failedDir>0?'UP':'DOWN'):b.acceptedDir?'ACCEPTED_'+(b.acceptedDir>0?'UP':'DOWN'):b.attemptDir?'ATTEMPT_'+(b.attemptDir>0?'UP':'DOWN'):'NONE';
+  return {
+    ts,price,
+    stage:snapshot?.stage?.dominant||null,
+    stageConfidence:snapshot?.stage?.dominantConfidence??null,
+    flow:finite(snapshot?.features?.flow)?snapshot.features.flow:null,
+    structureAgainst:d>0?!!s.bullBroken:d<0?!!s.bearBroken:false,
+    breakoutState
   };
 }
 
@@ -136,18 +170,23 @@ class V32TrainingLedger{
       if(!this.signals.some(x=>x.id===sig.id)){
         this.signals.push(sig);
         if(this.signals.length>CFG.maxSignals)this.signals.shift();
-        this.paths[sig.id]=[{ts:sig.entryTime,price:sig.entryPrice}];
+        this.paths[sig.id]=[observationFromSnapshot(sig.entryTime,sig.entryPrice,result.snapshot,sig)];
       }
+    }
+    if(result?.snapshot?.ready&&finite(result.snapshot.ts)&&finite(result.snapshot.price)){
+      this.observe(result.snapshot.ts,result.snapshot.price,result.snapshot);
     }
     return row;
   }
 
-  observe(ts,price){
+  observe(ts,price,snapshot=null){
     if(!finite(ts)||!finite(price))return;
     for(const sig of this.signals){
       if(sig.result!=='pending')continue;
       const path=this.paths[sig.id]||(this.paths[sig.id]=[]);
-      if(!path.length||ts>path.at(-1).ts)path.push({ts,price});
+      const obs=observationFromSnapshot(ts,price,snapshot,sig);
+      if(!path.length||ts>path.at(-1).ts)path.push(obs);
+      else if(ts===path.at(-1).ts)path[path.length-1]={...path.at(-1),...obs};
       if(path.length>700)path.splice(1,path.length-700);
       if(ts+CFG.settlementToleranceMs<sig.expiresAt)continue;
       const d=sig.direction==='HIGH'?1:-1,delta=d*(price-sig.entryPrice);
@@ -220,7 +259,8 @@ class V32TrainingLedger{
       revision:REVISION,
       exportedAt:Date.now(),
       decisions:clone(this.decisions),
-      signals:clone(this.signals)
+      signals:clone(this.signals),
+      paths:clone(this.paths)
     };
   }
 
@@ -233,6 +273,7 @@ root.ArisV32Training=Object.freeze({
   CFG,
   Ledger:V32TrainingLedger,
   reviewPath,
+  observationFromSnapshot,
   aggregate
 });
 
