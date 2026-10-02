@@ -50,6 +50,18 @@ function compactCandles(bars,a,n=10){
   });
 }
 
+function compatFib(raw){
+  if(!raw?.valid)return raw||null;
+  const levels=Object.entries(raw.levels||{}).map(([ratio,price])=>({ratio:+ratio,price:+price})).filter(x=>finite(x.ratio)&&finite(x.price)).sort((a,b)=>a.ratio-b.ratio);
+  const extensions=Object.entries(raw.extensions||{}).map(([ratio,price])=>({ratio:+ratio,price:+price})).filter(x=>finite(x.ratio)&&finite(x.price)).sort((a,b)=>a.ratio-b.ratio);
+  const retr=raw.retracement,ext=raw.extension;
+  const retraceZone=raw.zone||(
+    finite(retr)?retr<.236?'ตื้นกว่า 23.6%':retr<=.382?'23.6–38.2%':retr<=.5?'38.2–50%':retr<=.618?'50–61.8%':retr<=.786?'61.8–78.6%':'ลึกเกิน 78.6%':'—'
+  );
+  const extensionZone=finite(ext)?ext>=1.618?'เหนือ 161.8%':ext>=1.272?'127.2–161.8%':ext>=1?'100–127.2%':'ยังไม่ extension':'—';
+  return {...raw,levels,extensions,retraceZone,extensionZone};
+}
+
 function compatZones(snap){
   const p=snap?.price??0;
   return (snap?.features?.zones?.zones||[]).map(z=>({
@@ -334,7 +346,7 @@ class V32CompatEngine extends BaseEngine{
         trigger,
         explanation:snap?.explanation,
         structure:snap?.structure,
-        fib:snap?.features?.fib,
+        fib:compatFib(snap?.features?.fib),
         zones:snap?.features?.zones,
         range:snap?.features?.range,
         breakout:snap?.features?.breakout,
