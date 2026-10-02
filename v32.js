@@ -1,0 +1,716 @@
+/* ARIS 3.2 — Stage-Adaptive Event Engine
+   Block 1: standalone Feature Brain + Structure Brain + Stage Brain.
+   This file intentionally does NOT import decision logic from v2.js / v3.js / v31.js / v4.js.
+   No entry signal is emitted in Block 1. */
+
+(function(root){
+'use strict';
+
+const VERSION='ARIS-3.2.0';
+const REVISION='stage-brain-b1-audit-r3';
+
+const CFG=Object.freeze({
+  version:VERSION,
+  revision:REVISION,
+  horizonMs:600000,
+
+  // Data sufficiency
+  minBars1m:40,
+  atrBars:14,
+  featureLookback:80,
+  pivotLookback:70,
+
+  // Structure
+  pivotWing:2,
+  pivotEqualAtr:.03,
+  structureBreakAtr:.08,
+  zoneClusterAtr:.28,
+  zoneNearAtr:.30,
+  fibMinLegAtr:.80,
+  fibZoneAtr:.16,
+
+  // Range / compression
+  rangeLookback:18,
+  rangeGuardBars:6,
+  rangeMinWidthAtr:1.60,
+  rangeMaxWidthAtr:8.50,
+  rangeEdgeBand:.24,
+  rangeEfficiencyGood:.22,
+  rangeSlopeGood:.15,
+  compressionRecentBars:4,
+  compressionPriorBars:6,
+  compressionRangeRatio:.72,
+  compressionBodyRatio:.72,
+
+  // Breakout
+  breakoutBufferAtr:.06,
+  breakoutAcceptedAtr:.04,
+  breakoutRecaptureAtr:.03,
+  breakoutCloseMin:.58,
+  breakoutExpansionRangeAtr:.55,
+  breakoutExpansionBodyAtr:.30,
+
+  // Trend / exhaustion / transition
+  trendEffMin:.30,
+  trendSlopeMin:.16,
+  trendSepMin:.18,
+  exhaustionExtensionAtr:1.85,
+  exhaustionBodyDecayRatio:.72,
+  transitionEffDrop:.18,
+  transitionSlopeDrop:.12,
+  transitionProgressRatio:.62,
+
+  // Stage confidence
+  softmaxTemperature:.19,
+  confidenceFloor:.01
+});
+
+const clip=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const finite=Number.isFinite;
+const avg=a=>a?.length?a.reduce((s,v)=>s+v,0)/a.length:0;
+const sum=a=>a?.reduce((s,v)=>s+v,0)||0;
+const median=a=>{
+  if(!a?.length)return 0;
+  const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);
+  return s.length%2?s[m]:(s[m-1]+s[m])/2;
+};
+const sign=(v,dead=0)=>v>dead?1:v<-dead?-1:0;
+const safeDiv=(a,b,fallback=0)=>Math.abs(b)>1e-12?a/b:fallback;
+const unique=a=>[...new Set((a||[]).filter(Boolean))];
+
+function ema(values,n){
+  if(!values?.length)return [];
+  const k=2/(n+1);
+  let x=values[0];
+  return values.map(v=>(x=x+k*(v-x)));
+}
+
+function trueRangeSeries(bars){
+  const out=[];
+  for(let i=1;i<bars.length;i++){
+    const q=bars[i],p=bars[i-1].close;
+    out.push(Math.max(q.high-q.low,Math.abs(q.high-p),Math.abs(q.low-p)));
+  }
+  return out;
+}
+
+function atr(bars,n=14){
+  const tr=trueRangeSeries(bars);
+  return avg(tr.slice(-n));
+}
+
+function validBar(q){
+  if(!q||!finite(+q.open)||!finite(+q.high)||!finite(+q.low)||!finite(+q.close))return false;
+  const o=+q.open,h=+q.high,l=+q.low,c=+q.close;
+  return o>0&&h>0&&l>0&&c>0&&h>=Math.max(o,c,l)&&l<=Math.min(o,c,h);
+}
+
+function sanitizeBars(rows){
+  return (rows||[])
+    .filter(validBar)
+    .map(q=>({
+      time:+(q.time??q.openTime??q.ts??0),
+      open:+q.open,high:+q.high,low:+q.low,close:+q.close,
+      volume:finite(+q.volume)?Math.max(0,+q.volume):0,
+      closed:q.closed!==false
+    }))
+    .sort((a,b)=>a.time-b.time);
+}
+
+function dataQuality(input,rawRows,bars){
+  if(input?.fresh===false)return {ready:false,hardBlock:true,reason:'stale_market_data'};
+  if(Object.prototype.hasOwnProperty.call(input||{},'price')&&!finite(+input.price))return {ready:false,hardBlock:true,reason:'invalid_live_price'};
+  const raw=(rawRows||[]).filter(Boolean);
+  if(raw.length&&bars.length<raw.length*.90)return {ready:false,hardBlock:true,reason:'invalid_ohlc_sequence',rawBars:raw.length,validBars:bars.length};
+  const orderedRaw=raw.filter(validBar).map(q=>+(q.time??q.openTime??q.ts??0));
+  for(let i=1;i<orderedRaw.length;i++){
+    if(orderedRaw[i]&&orderedRaw[i-1]&&orderedRaw[i]<orderedRaw[i-1])return {ready:false,hardBlock:true,reason:'non_monotonic_bars'};
+  }
+  return {ready:true,hardBlock:false,reason:'ok'};
+}
+
+function candleMetric(q,a){
+  const r=Math.max(q.high-q.low,1e-9),body=q.close-q.open;
+  return {
+    d:Math.sign(body),
+    bodyAtr:Math.abs(body)/Math.max(a,1e-9),
+    rangeAtr:r/Math.max(a,1e-9),
+    closeLoc:clip((q.close-q.low)/r),
+    upper:clip((q.high-Math.max(q.open,q.close))/r),
+    lower:clip((Math.min(q.open,q.close)-q.low)/r),
+    bodyRatio:Math.abs(body)/r
+  };
+}
+
+function pathEfficiency(closes,n){
+  const c=closes.slice(-(n+1));
+  if(c.length<n+1)return 0;
+  let path=0;
+  for(let i=1;i<c.length;i++)path+=Math.abs(c[i]-c[i-1]);
+  return path?safeDiv(Math.abs(c.at(-1)-c[0]),path):0;
+}
+
+function signedProgress(closes,n,a){
+  if(closes.length<n+1)return 0;
+  return safeDiv(closes.at(-1)-closes.at(-(n+1)),Math.max(a,1e-9));
+}
+
+function regressionSlope(values,n,a){
+  const y=values.slice(-n);
+  if(y.length<3)return 0;
+  const xm=(y.length-1)/2,ym=avg(y);
+  let num=0,den=0;
+  for(let i=0;i<y.length;i++){
+    const dx=i-xm;
+    num+=dx*(y[i]-ym);
+    den+=dx*dx;
+  }
+  return safeDiv(safeDiv(num,den),Math.max(a,1e-9));
+}
+
+function confirmedPivots(bars,a){
+  const b=bars.filter(q=>q.closed).slice(-CFG.pivotLookback),raw=[],w=CFG.pivotWing;
+  for(let i=w;i<b.length-w;i++){
+    const q=b[i],left=b.slice(i-w,i),right=b.slice(i+1,i+w+1);
+    if(left.every(v=>q.high>v.high)&&right.every(v=>q.high>=v.high))raw.push({i,type:'H',price:q.high,time:q.time});
+    if(left.every(v=>q.low<v.low)&&right.every(v=>q.low<=v.low))raw.push({i,type:'L',price:q.low,time:q.time});
+  }
+  raw.sort((x,y)=>x.i-y.i);
+  const piv=[];
+  for(const q of raw){
+    const last=piv.at(-1);
+    if(last?.i===q.i)continue;
+    if(last?.type===q.type){
+      if(q.type==='H'?q.price>last.price:q.price<last.price)piv[piv.length-1]=q;
+    }else piv.push(q);
+  }
+  const highs=piv.filter(q=>q.type==='H'),lows=piv.filter(q=>q.type==='L');
+  const h1=highs.at(-1),h0=highs.at(-2),l1=lows.at(-1),l0=lows.at(-2),eq=a*CFG.pivotEqualAtr;
+  const highTag=h1&&h0?(h1.price>h0.price+eq?'HH':h1.price<h0.price-eq?'LH':'EH'):'—';
+  const lowTag=l1&&l0?(l1.price>l0.price+eq?'HL':l1.price<l0.price-eq?'LL':'EL'):'—';
+  let dir=0;
+  if(highTag==='HH'&&lowTag==='HL')dir=1;
+  else if(highTag==='LH'&&lowTag==='LL')dir=-1;
+  const mixed=(highTag==='HH'||lowTag==='HL')&&(highTag==='LH'||lowTag==='LL');
+  const lastLeg=piv.length>=2?{
+    start:piv.at(-2),end:piv.at(-1),
+    d:piv.at(-1).price>piv.at(-2).price?1:-1,
+    moveAtr:Math.abs(piv.at(-1).price-piv.at(-2).price)/Math.max(a,1e-9)
+  }:null;
+  return {pivots:piv,highs,lows,lastHigh:h1,prevHigh:h0,lastLow:l1,prevLow:l0,
+    highTag,lowTag,dir,integrity:dir>0?'BULLISH':dir<0?'BEARISH':mixed?'MIXED':'UNCONFIRMED',lastLeg};
+}
+
+function rangeReference(bars,a){
+  const closed=bars.filter(q=>q.closed);
+  const guard=Math.max(3,CFG.rangeGuardBars||6);
+  const base=closed.slice(-(CFG.rangeLookback+guard),-guard);
+  if(base.length<Math.max(10,CFG.rangeLookback-4))return null;
+  const high=Math.max(...base.map(q=>q.high)),low=Math.min(...base.map(q=>q.low));
+  const width=Math.max(high-low,1e-9),widthAtr=width/Math.max(a,1e-9),mid=(high+low)/2;
+  const current=closed.at(-1)?.close??mid;
+  const position=clip((current-low)/width);
+  let crosses=0;
+  for(let i=1;i<base.length;i++){
+    if((base[i-1].close-mid)*(base[i].close-mid)<0)crosses++;
+  }
+  const touchBand=a*CFG.rangeEdgeBand;
+  const lowerTouches=base.filter(q=>q.low<=low+touchBand).length;
+  const upperTouches=base.filter(q=>q.high>=high-touchBand).length;
+  const baseCloses=base.map(q=>q.close);
+  const baseEff=pathEfficiency(baseCloses,Math.min(10,baseCloses.length-1));
+  return {high,low,mid,width,widthAtr,position,crosses,lowerTouches,upperTouches,baseEff,startTime:base[0].time,endTime:base.at(-1).time};
+}
+
+function volumeContext(bars){
+  const closed=bars.filter(q=>q.closed),v=closed.map(q=>q.volume||0),last=v.at(-1)||0;
+  const med20=Math.max(median(v.slice(-21,-1)),1e-9),avg3=Math.max(avg(v.slice(-4,-1)),1e-9);
+  return {
+    rel:last/med20,
+    ratio3:last/avg3,
+    median20:med20,
+    last
+  };
+}
+
+function liveContext(input,a,vol){
+  const q=input?.currentCandle||input?.liveCandle||input?.current||null;
+  if(!validBar(q))return {available:false,reason:'no_live_candle',volumePace:finite(+input?.liveVolumePace)?+input.liveVolumePace:null};
+  const metric=candleMetric({open:+q.open,high:+q.high,low:+q.low,close:+q.close},a);
+  const explicitPace=finite(+input?.liveVolumePace)?+input.liveVolumePace:null;
+  const pace=explicitPace??(finite(+q.volume)&&vol?.median20?Math.max(0,+q.volume)/Math.max(vol.median20,1e-9):null);
+  return {
+    available:true,
+    time:+(q.time??q.openTime??q.ts??0),
+    open:+q.open,high:+q.high,low:+q.low,close:+q.close,
+    volume:finite(+q.volume)?Math.max(0,+q.volume):0,
+    volumePace:finite(pace)?pace:null,
+    ...metric
+  };
+}
+
+function sequenceContext(bars,a){
+  const closed=bars.filter(q=>q.closed),rows=closed.slice(-12),m=rows.map(q=>({...candleMetric(q,a),bar:q}));
+  const recent=m.slice(-CFG.compressionRecentBars),prior=m.slice(-(CFG.compressionRecentBars+CFG.compressionPriorBars),-CFG.compressionRecentBars);
+  const recentRange=avg(recent.map(x=>x.rangeAtr)),priorRange=avg(prior.map(x=>x.rangeAtr));
+  const recentBody=avg(recent.map(x=>x.bodyAtr)),priorBody=avg(prior.map(x=>x.bodyAtr));
+  const compressionRangeRatio=safeDiv(recentRange,Math.max(priorRange,1e-9),1);
+  const compressionBodyRatio=safeDiv(recentBody,Math.max(priorBody,1e-9),1);
+  const pressure=clip(avg(recent.map(x=>x.d*(x.bodyAtr*.55+(x.d>0?x.closeLoc:1-x.closeLoc)*.45))),-1,1);
+  const upFollow=recent.filter(x=>x.d>0&&x.closeLoc>=.62).length/recent.length;
+  const downFollow=recent.filter(x=>x.d<0&&x.closeLoc<=.38).length/recent.length;
+  const rejectionUp=avg(recent.map(x=>x.lower>=.30&&x.closeLoc>=.48?1:0));
+  const rejectionDown=avg(recent.map(x=>x.upper>=.30&&x.closeLoc<=.52?1:0));
+  const bodyDecay=safeDiv(recentBody,Math.max(priorBody,1e-9),1);
+
+  const highs=rows.map(q=>q.high),lows=rows.map(q=>q.low),closes=rows.map(q=>q.close);
+  const recentHighProgress=highs.length>=6?Math.max(0,Math.max(...highs.slice(-3))-Math.max(...highs.slice(-6,-3)))/Math.max(a,1e-9):0;
+  const recentLowProgress=lows.length>=6?Math.max(0,Math.min(...lows.slice(-6,-3))-Math.min(...lows.slice(-3)))/Math.max(a,1e-9):0;
+  const priorHighProgress=highs.length>=9?Math.max(0,Math.max(...highs.slice(-6,-3))-Math.max(...highs.slice(-9,-6)))/Math.max(a,1e-9):0;
+  const priorLowProgress=lows.length>=9?Math.max(0,Math.min(...lows.slice(-9,-6))-Math.min(...lows.slice(-6,-3)))/Math.max(a,1e-9):0;
+  const progRows=rows.slice(-6);
+  let hh=0,hl=0,hc=0,lh=0,ll=0,lc=0,steps=0;
+  for(let i=1;i<progRows.length;i++){
+    const p=progRows[i-1],q=progRows[i];steps++;
+    if(q.high>p.high)hh++; if(q.low>p.low)hl++; if(q.close>p.close)hc++;
+    if(q.high<p.high)lh++; if(q.low<p.low)ll++; if(q.close<p.close)lc++;
+  }
+  const progressionUp=steps?avg([hh/steps,hl/steps,hc/steps]):0;
+  const progressionDown=steps?avg([lh/steps,ll/steps,lc/steps]):0;
+  const directionalVolumeUp=median(rows.slice(-6).filter(q=>q.close>q.open).map(q=>q.volume||0));
+  const directionalVolumeDown=median(rows.slice(-6).filter(q=>q.close<q.open).map(q=>q.volume||0));
+
+  return {
+    metrics:m,recentRange,priorRange,recentBody,priorBody,
+    compressionRangeRatio,compressionBodyRatio,pressure,
+    followUp:upFollow,followDown:downFollow,
+    rejectionUp,rejectionDown,bodyDecay,
+    recentHighProgress,recentLowProgress,priorHighProgress,priorLowProgress,
+    progressionUp,progressionDown,
+    higherHighRate:steps?hh/steps:0,higherLowRate:steps?hl/steps:0,higherCloseRate:steps?hc/steps:0,
+    lowerHighRate:steps?lh/steps:0,lowerLowRate:steps?ll/steps:0,lowerCloseRate:steps?lc/steps:0,
+    directionalVolumeUp,directionalVolumeDown
+  };
+}
+
+function zoneContext(sw,range,price,a){
+  const points=[];
+  for(const q of sw?.pivots||[])points.push({price:q.price,type:q.type==='L'?'support':'resistance',time:q.time,weight:1});
+  if(range){points.push({price:range.low,type:'support',time:range.endTime,weight:1.25});points.push({price:range.high,type:'resistance',time:range.endTime,weight:1.25});}
+  const tol=Math.max(a*CFG.zoneClusterAtr,price*.00001),clusters=[];
+  for(const p of points.sort((x,y)=>x.price-y.price)){
+    let z=clusters.find(q=>Math.abs(q.price-p.price)<=tol);
+    if(!z){z={price:p.price,weight:0,touches:0,types:{support:0,resistance:0},lastTime:p.time||0};clusters.push(z);}
+    const w=p.weight||1;
+    z.price=(z.price*z.weight+p.price*w)/(z.weight+w);
+    z.weight+=w;z.touches++;z.types[p.type]=(z.types[p.type]||0)+1;z.lastTime=Math.max(z.lastTime,p.time||0);
+  }
+  const zones=clusters.map(z=>({...z,type:z.types.support>z.types.resistance?'support':z.types.resistance>z.types.support?'resistance':'mixed',
+    distanceAtr:(z.price-price)/Math.max(a,1e-9),strength:clip((z.weight+Math.min(3,z.touches))/6)}));
+  const support=[...zones].filter(z=>z.price<=price).sort((x,y)=>y.price-x.price)[0]||null;
+  const resistance=[...zones].filter(z=>z.price>=price).sort((x,y)=>x.price-y.price)[0]||null;
+  return {
+    zones,
+    nearestSupport:support,
+    nearestResistance:resistance,
+    roomUpAtr:resistance?Math.max(0,(resistance.price-price)/a):Infinity,
+    roomDownAtr:support?Math.max(0,(price-support.price)/a):Infinity
+  };
+}
+
+function fibContext(sw,price,a,zones){
+  const leg=sw?.lastLeg;
+  if(!leg||leg.moveAtr<CFG.fibMinLegAtr)return {valid:false,reason:'no_confirmed_leg'};
+  const start=leg.start.price,end=leg.end.price,d=leg.d,move=Math.abs(end-start);
+  if(move<=1e-9)return {valid:false,reason:'zero_leg'};
+  const levels=[.236,.382,.5,.618,.786];
+  const extLevels=[1.272,1.618];
+  const retracement=d>0?(end-price)/move:(price-end)/move;
+  const extension=d>0?(price-start)/move:(start-price)/move;
+  const levelPrices=Object.fromEntries(levels.map(r=>[String(r),d>0?end-move*r:end+move*r]));
+  const extensionPrices=Object.fromEntries(extLevels.map(r=>[String(r),d>0?start+move*r:start-move*r]));
+  let nearest=null;
+  for(const r of levels){
+    const p=levelPrices[String(r)],dist=Math.abs(price-p)/Math.max(a,1e-9);
+    if(!nearest||dist<nearest.distanceAtr)nearest={ratio:r,price:p,distanceAtr:dist};
+  }
+  const nearZone=zones?.zones?.some(z=>Math.abs(z.price-(nearest?.price??price))<=a*CFG.fibZoneAtr)||false;
+  return {
+    valid:true,d,start,end,moveAtr:leg.moveAtr,retracement,extension,
+    levels:levelPrices,extensions:extensionPrices,nearest,
+    healthy:retracement>=.382&&retracement<=.618,
+    deep:retracement>.618&&retracement<=.786,
+    overRetraced:retracement>.786,
+    extended:extension>=1.0,
+    confluence:nearZone,
+    zone:retracement<.236?'shallow':retracement<=.382?'23.6-38.2':retracement<=.50?'38.2-50':retracement<=.618?'50-61.8':retracement<=.786?'61.8-78.6':retracement<=1?'78.6-100 over-retraced':'beyond_leg'
+  };
+}
+
+function breakoutContext(bars,a,range,vol,seq,flow,live,price){
+  if(!range)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_reference_range'};
+  const boundedBase=range.baseEff<=.52&&(range.crosses>=1||(range.lowerTouches>=2&&range.upperTouches>=2));
+  const compressionBase=seq.compressionRangeRatio<=.82&&seq.compressionBodyRatio<=.88;
+  const baseContext=boundedBase||compressionBase;
+  if(!baseContext)return {attemptDir:0,acceptedDir:0,failedDir:0,outsideAtr:0,recaptureStrength:0,baseContext:false,reason:'no_breakout_base'};
+  const closed=bars.filter(q=>q.closed),last=closed.at(-1),prev=closed.at(-2),recent=closed.slice(-7);
+  const probePrice=finite(price)?price:(live?.available?live.close:last.close);
+  const upOutside=(probePrice-range.high)/Math.max(a,1e-9),downOutside=(range.low-probePrice)/Math.max(a,1e-9);
+  const attemptDir=upOutside>=CFG.breakoutBufferAtr?1:downOutside>=CFG.breakoutBufferAtr?-1:0;
+  const lastM=candleMetric(last,a),probeM=live?.available?live:lastM;
+  const expansion=probeM.rangeAtr>=CFG.breakoutExpansionRangeAtr||probeM.bodyAtr>=CFG.breakoutExpansionBodyAtr;
+  const volPart=Math.max(vol.rel,vol.ratio3,finite(live?.volumePace)?live.volumePace:0)>=1.10;
+  const alignedClose=attemptDir>0?probeM.closeLoc:attemptDir<0?1-probeM.closeLoc:.5;
+  const flowAligned=attemptDir&&finite(flow)?attemptDir*flow:0;
+
+  let acceptedDir=0;
+  const closedUpOutside=(last.close-range.high)/Math.max(a,1e-9),closedDownOutside=(range.low-last.close)/Math.max(a,1e-9);
+  const closedAttemptDir=closedUpOutside>=CFG.breakoutBufferAtr?1:closedDownOutside>=CFG.breakoutBufferAtr?-1:0;
+  const closedAligned=closedAttemptDir>0?lastM.closeLoc:closedAttemptDir<0?1-lastM.closeLoc:.5;
+  const closedExpansion=lastM.rangeAtr>=CFG.breakoutExpansionRangeAtr||lastM.bodyAtr>=CFG.breakoutExpansionBodyAtr;
+  if(closedAttemptDir&&closedAligned>=CFG.breakoutCloseMin&&closedExpansion&&(Math.max(vol.rel,vol.ratio3)>=1.10||closedAttemptDir*flow>.02))acceptedDir=closedAttemptDir;
+  if(closedAttemptDir&&prev){
+    const prevOutside=closedAttemptDir>0?(prev.close-range.high)/Math.max(a,1e-9):(range.low-prev.close)/Math.max(a,1e-9);
+    if(prevOutside>=CFG.breakoutAcceptedAtr&&closedAligned>=.52)acceptedDir=closedAttemptDir;
+  }
+
+  let failedDir=0,recaptureStrength=0;
+  const priorOutsideUp=recent.slice(0,-1).some(q=>q.high>=range.high+a*CFG.breakoutBufferAtr);
+  const priorOutsideDown=recent.slice(0,-1).some(q=>q.low<=range.low-a*CFG.breakoutBufferAtr);
+  if(priorOutsideUp&&probePrice<=range.high-a*CFG.breakoutRecaptureAtr){
+    failedDir=-1;
+    recaptureStrength=clip((range.high-probePrice)/(a*.40));
+  }else if(priorOutsideDown&&probePrice>=range.low+a*CFG.breakoutRecaptureAtr){
+    failedDir=1;
+    recaptureStrength=clip((probePrice-range.low)/(a*.40));
+  }
+
+  return {
+    attemptDir,acceptedDir,failedDir,
+    outsideAtr:attemptDir>0?upOutside:attemptDir<0?downOutside:0,
+    expansion,volPart,flowAligned,alignedClose,recaptureStrength,
+    priorOutsideUp,priorOutsideDown,baseContext:true,liveAttempt:!!(live?.available&&attemptDir),liveFailure:!!(live?.available&&failedDir),closedAttemptDir,reason:'base_context_confirmed'
+  };
+}
+
+function higherFrameContext(rows){
+  const b=sanitizeBars(rows).filter(q=>q.closed).slice(-60);
+  if(b.length<20)return {available:false,dir:0,eff:0,slope:0,sep:0};
+  const a=Math.max(atr(b,14),b.at(-1).close*.00005,1e-9),c=b.map(q=>q.close),e8=ema(c,8),e21=ema(c,21);
+  const eff=pathEfficiency(c,10),slope=regressionSlope(e21,5,a),sep=(e8.at(-1)-e21.at(-1))/a;
+  return {available:true,dir:sign(sep*.55+slope*.45,.08),eff,slope,sep};
+}
+
+function featureBrain(input){
+  const rawRows=input?.bars1m??input?.bars??[];
+  const bars=sanitizeBars(rawRows);
+  const quality=dataQuality(input,rawRows,bars);
+  if(!quality.ready)return {ready:false,reason:quality.reason,hardBlock:true,dataQuality:quality};
+  if(bars.length<CFG.minBars1m)return {ready:false,reason:'need_more_1m_bars',have:bars.length,need:CFG.minBars1m,dataQuality:quality};
+
+  const b=bars.slice(-CFG.featureLookback),closed=b.filter(q=>q.closed);
+  if(closed.length<CFG.minBars1m)return {ready:false,reason:'need_more_closed_1m_bars',have:closed.length,need:CFG.minBars1m,dataQuality:quality};
+  const price=finite(+input.price)?+input.price:closed.at(-1).close;
+  const a=Math.max(atr(closed,CFG.atrBars),price*.00004,1e-9),c=closed.map(q=>q.close),e8=ema(c,8),e21=ema(c,21);
+  const seq=sequenceContext(closed,a),vol=volumeContext(closed),range=rangeReference(closed,a),sw=confirmedPivots(closed,a);
+  const zones=zoneContext(sw,range,price,a),fib=fibContext(sw,price,a,zones),live=liveContext(input,a,vol);
+  const eff6=pathEfficiency(c,6),eff12=pathEfficiency(c,12),eff24=pathEfficiency(c,24);
+  const slope5=regressionSlope(e21,5,a),slope12=regressionSlope(e21,12,a),slope24=regressionSlope(e21,24,a),sep=(e8.at(-1)-e21.at(-1))/a;
+  const mom3=signedProgress(c,3,a),mom8=signedProgress(c,8,a),mom16=signedProgress(c,16,a),mom24=signedProgress(c,24,a);
+  const momAccel=mom3-safeDiv(mom8,8/3);
+  const extension=(price-e21.at(-1))/a;
+  const rangePosition=range?clip((price-range.low)/Math.max(range.width,1e-9)):.5;
+  const flow=finite(+input.flow)?+input.flow:0;
+  const book=finite(+input.book)?+input.book:0;
+  const breakout=breakoutContext(closed,a,range,vol,seq,flow,live,price);
+  const htf={m5:higherFrameContext(input.bars5m),m15:higherFrameContext(input.bars15m)};
+
+  const current=candleMetric(closed.at(-1),a);
+  const priorEff=pathEfficiency(c.slice(0,-3),12);
+  const effDrop=Math.max(0,priorEff-eff12);
+  const slopeDrop=Math.max(0,Math.abs(slope12)-Math.abs(slope5));
+
+  return {
+    ready:true,price,atr:a,bars:closed,
+    ema8:e8.at(-1),ema21:e21.at(-1),emaSepAtr:sep,emaSlope5:slope5,emaSlope12:slope12,emaSlope24:slope24,
+    eff6,eff12,eff24,priorEff,effDrop,slopeDrop,
+    momentum3:mom3,momentum8:mom8,momentum16:mom16,momentum24:mom24,momentumAccel:momAccel,
+    extensionAtr:extension,current,live,seq,vol,range,rangePosition,sw,zones,fib,breakout,flow,book,htf,dataQuality:quality,
+    sourceMode:finite(+input.price)?'LIVE_PRICE':'BAR_CLOSE'
+  };
+}
+
+function structureBrain(f){
+  if(!f.ready)return {ready:false};
+  const s=f.sw,price=f.price,a=f.atr;
+  const protectedLow=s.lastLow?.price??Math.min(...f.bars.slice(-8).map(q=>q.low));
+  const protectedHigh=s.lastHigh?.price??Math.max(...f.bars.slice(-8).map(q=>q.high));
+  const bullBroken=price<protectedLow-a*CFG.structureBreakAtr;
+  const bearBroken=price>protectedHigh+a*CFG.structureBreakAtr;
+  const trendDir=sign(f.emaSepAtr*.38+f.emaSlope5*.27+f.momentum8*.20+f.seq.pressure*.15,.10);
+  const dir=s.dir||trendDir;
+  const strength=clip(
+    Math.abs(f.emaSepAtr)*.22+
+    Math.abs(f.emaSlope5)*.22+
+    f.eff12*.32+
+    Math.abs(f.momentum8)*.14+
+    Math.abs(f.seq.pressure)*.10
+  );
+  return {
+    ready:true,dir,swingDir:s.dir,trendDir,strength,
+    highTag:s.highTag,lowTag:s.lowTag,integrity:s.integrity,
+    protectedLow,protectedHigh,bullBroken,bearBroken,
+    reverseUp:(s.dir<=0||s.integrity==='MIXED')&&bearBroken,
+    reverseDown:(s.dir>=0||s.integrity==='MIXED')&&bullBroken,
+    summary:s.highTag+' / '+s.lowTag+' · '+s.integrity
+  };
+}
+
+function rangeQuality(f,s){
+  if(!f.range)return 0;
+  if(f.range.widthAtr<CFG.rangeMinWidthAtr||f.range.widthAtr>CFG.rangeMaxWidthAtr)return 0;
+  const widthOK=1-clip(Math.abs(f.range.widthAtr-4.0)/4.5);
+  const eff=1-clip(f.eff12/Math.max(CFG.rangeEfficiencyGood,.01));
+  const slope=1-clip(Math.abs(f.emaSlope5)/Math.max(CFG.rangeSlopeGood,.01));
+  const sep=1-clip(Math.abs(f.emaSepAtr)/.45);
+  const rotation=clip(f.range.crosses/4);
+  const touches=clip((Math.min(f.range.lowerTouches,3)+Math.min(f.range.upperTouches,3))/6);
+  const structurePenalty=s.dir?Math.min(.25,s.strength*.25):0;
+  return clip(widthOK*.16+eff*.24+slope*.18+sep*.14+rotation*.14+touches*.14-structurePenalty);
+}
+
+function trendQuality(f,s){
+  const eff=clip((f.eff12-CFG.trendEffMin)/.55);
+  const slope=clip((Math.abs(f.emaSlope5)-CFG.trendSlopeMin)/.65);
+  const sep=clip((Math.abs(f.emaSepAtr)-CFG.trendSepMin)/1.0);
+  const structure=s.dir?clip(.50+s.strength*.50):clip(s.strength*.65);
+  const d=s.dir||s.trendDir||sign(f.momentum8,.10);
+  const follow=d>0?f.seq.followUp:d<0?f.seq.followDown:0;
+  const momentum=d?clip(d*f.momentum8/1.5):0;
+  return clip(eff*.22+slope*.16+sep*.12+structure*.20+follow*.15+momentum*.15);
+}
+
+function compressionQuality(f){
+  const rr=1-clip((f.seq.compressionRangeRatio-CFG.compressionRangeRatio)/.55);
+  const br=1-clip((f.seq.compressionBodyRatio-CFG.compressionBodyRatio)/.55);
+  const lowEff=1-clip(f.eff6/.48);
+  const narrow=f.range?1-clip((f.range.widthAtr-2.6)/4.5):.2;
+  return clip(rr*.34+br*.28+lowEff*.22+narrow*.16);
+}
+
+function exhaustionQuality(f,s){
+  const d=s.dir||s.trendDir||sign(f.momentum8,.08);
+  if(!d)return 0;
+  const ext=clip((d*f.extensionAtr-CFG.exhaustionExtensionAtr)/1.7);
+  const bodyDecay=clip((CFG.exhaustionBodyDecayRatio-f.seq.bodyDecay)/CFG.exhaustionBodyDecayRatio);
+  const opposingWick=d>0?f.seq.rejectionDown:f.seq.rejectionUp;
+  const progressRecent=d>0?f.seq.recentHighProgress:f.seq.recentLowProgress;
+  const progressPrior=d>0?f.seq.priorHighProgress:f.seq.priorLowProgress;
+  const progressDecay=progressPrior>.03?clip(1-safeDiv(progressRecent,progressPrior)):0;
+  const effDecay=clip(f.effDrop/.40);
+  return clip(ext*.30+bodyDecay*.18+opposingWick*.18+progressDecay*.20+effDecay*.14);
+}
+
+function transitionQuality(f,s,trendScore,rangeScore,exhaustScore){
+  const flatten=clip(f.slopeDrop/.35);
+  const effLoss=clip(f.effDrop/.45);
+  const mixed=s.integrity==='MIXED'?1:s.integrity==='UNCONFIRMED'?.55:0;
+  const d=s.dir||s.trendDir||sign(f.momentum16,.08);
+  const recentProgress=d>0?f.seq.recentHighProgress:d<0?f.seq.recentLowProgress:0;
+  const priorProgress=d>0?f.seq.priorHighProgress:d<0?f.seq.priorLowProgress:0;
+  const progressRatio=priorProgress>.03?safeDiv(recentProgress,priorProgress,1):1;
+  const progressLoss=priorProgress>.03?clip((CFG.transitionProgressRatio-progressRatio)/Math.max(CFG.transitionProgressRatio,.01)):0;
+  const defense=d>0?f.seq.rejectionDown:d<0?f.seq.rejectionUp:Math.max(f.seq.rejectionUp,f.seq.rejectionDown);
+  const recentMomRef=Math.max(Math.abs(f.momentum8),Math.abs(f.momentum16));
+  const longMomRef=Math.abs(f.momentum24);
+  const momentumDecay=clip((Math.max(recentMomRef,longMomRef)-Math.abs(f.momentum3))/Math.max(Math.max(recentMomRef,longMomRef),.25));
+  const slopeRef=Math.max(Math.abs(f.emaSlope12),Math.abs(f.emaSlope24));
+  const slopeFlatten=clip(1-Math.abs(f.emaSlope5)/Math.max(slopeRef,.08));
+  const longTrendMemory=clip(
+    Math.max(0,Math.abs(f.emaSlope24)-Math.abs(f.emaSlope5))/.55*.55+
+    Math.max(0,Math.abs(f.momentum24)-Math.abs(f.momentum3))/1.8*.45
+  );
+  const between=clip((1-Math.abs(trendScore-rangeScore))*0.55+.15);
+  return clip(flatten*.10+effLoss*.12+mixed*.08+progressLoss*.14+defense*.10+momentumDecay*.17+slopeFlatten*.12+longTrendMemory*.12+exhaustScore*.02+between*.03);
+}
+
+function pullbackQuality(f,s,trendScore){
+  const d=s.dir||s.trendDir;
+  if(!d||trendScore<.35)return 0;
+  const dist8=Math.abs(f.price-f.ema8)/f.atr,dist21=Math.abs(f.price-f.ema21)/f.atr;
+  const nearValue=1-clip(Math.min(dist8,dist21)/1.2);
+  const counterMove=d>0?clip(-f.momentum3/.9):clip(f.momentum3/.9);
+  const structureIntact=d>0?!s.bullBroken:!s.bearBroken;
+  const followBefore=d>0?f.seq.followUp:f.seq.followDown;
+  const notDeep=clip(1-Math.max(0,-d*f.extensionAtr-.35)/1.6);
+  return structureIntact?clip(trendScore*.28+nearValue*.28+counterMove*.18+followBefore*.10+notDeep*.16):0;
+}
+
+function reversalQuality(f,s,exhaustScore){
+  const upBreak=s.reverseUp?1:0,downBreak=s.reverseDown?1:0,breakSeen=Math.max(upBreak,downBreak);
+  const newDir=upBreak?1:downBreak?-1:0;
+  const rejection=newDir>0?f.seq.rejectionUp:newDir<0?f.seq.rejectionDown:Math.max(f.seq.rejectionUp,f.seq.rejectionDown)*.35;
+  const flowFlip=newDir?clip(newDir*f.flow/.12):0;
+  const pressure=newDir?clip(newDir*f.seq.pressure/.30):0;
+  return clip(breakSeen*.38+exhaustScore*.20+rejection*.16+flowFlip*.12+pressure*.14);
+}
+
+function breakoutAttemptQuality(f){
+  const b=f.breakout;
+  if(!b.attemptDir)return 0;
+  const displacement=clip(Math.abs(b.outsideAtr)/.65);
+  const close=clip((b.alignedClose-.50)/.45);
+  const expansion=b.expansion?1:0;
+  const participation=clip(Math.max(f.vol.rel/1.5,f.vol.ratio3/1.5,Math.max(0,b.flowAligned)/.10));
+  return clip(displacement*.28+close*.24+expansion*.20+participation*.28);
+}
+
+function breakoutAcceptedQuality(f){
+  const b=f.breakout;
+  if(!b.acceptedDir)return 0;
+  const follow=b.acceptedDir>0?f.seq.followUp:f.seq.followDown;
+  const participation=clip(Math.max(f.vol.rel/1.5,f.vol.ratio3/1.5,Math.max(0,b.flowAligned)/.10));
+  return clip(.42+follow*.22+participation*.24+clip(Math.abs(b.outsideAtr)/.65)*.12);
+}
+
+function failedBreakoutQuality(f){
+  const b=f.breakout;
+  if(!b.failedDir)return 0;
+  const rejection=b.failedDir>0?f.seq.rejectionUp:f.seq.rejectionDown;
+  const pressure=clip(b.failedDir*f.seq.pressure/.30);
+  const flow=clip(b.failedDir*f.flow/.10);
+  return clip(.38+b.recaptureStrength*.28+rejection*.12+pressure*.11+flow*.11);
+}
+
+function softmaxScores(raw){
+  const entries=Object.entries(raw),t=Math.max(CFG.softmaxTemperature,.05);
+  const max=Math.max(...entries.map(([,v])=>v/t));
+  const exp=entries.map(([k,v])=>[k,Math.exp(v/t-max)]);
+  const total=sum(exp.map(([,v])=>v));
+  const floored=exp.map(([k,v])=>[k,Math.max(CFG.confidenceFloor,v/Math.max(total,1e-12))]);
+  const floorTotal=sum(floored.map(([,v])=>v));
+  return Object.fromEntries(floored.map(([k,v])=>[k,v/Math.max(floorTotal,1e-12)]));
+}
+
+function stageBrain(f,s){
+  if(!f.ready||!s.ready)return {ready:false,reason:'features_not_ready'};
+
+  const trend=trendQuality(f,s);
+  const range=rangeQuality(f,s);
+  const compression=compressionQuality(f);
+  const exhaustion=exhaustionQuality(f,s);
+  const transition=transitionQuality(f,s,trend,range,exhaustion);
+  const pullback=pullbackQuality(f,s,trend);
+  const reversal=reversalQuality(f,s,exhaustion);
+  const breakoutAttempt=breakoutAttemptQuality(f);
+  const breakoutAccepted=breakoutAcceptedQuality(f);
+  const failedBreakout=failedBreakoutQuality(f);
+
+  // Competition adjustments: accepted/failed breakout are distinct hypotheses.
+  let raw={
+    TREND_ADVANCE:trend*(1-exhaustion*.45)*(1-breakoutAccepted*.30)*(1-transition*.50),
+    RANGE:range*(1-breakoutAccepted*.75)*(1-breakoutAttempt*.30),
+    COMPRESSION:compression*(1-breakoutAttempt*.60),
+    BREAKOUT_ATTEMPT:breakoutAttempt*(1-breakoutAccepted*.55)*(1-failedBreakout*.80),
+    BREAKOUT_ACCEPTED:breakoutAccepted*(1-failedBreakout*.95),
+    FAILED_BREAKOUT:failedBreakout*(1-breakoutAccepted*.95),
+    PULLBACK:pullback*(1-reversal*.65)*(1-transition*.75),
+    EXHAUSTION:exhaustion*(.65+trend*.35),
+    REVERSAL_DEVELOPING:reversal,
+    TRANSITION:transition*(1-breakoutAccepted*.35)
+  };
+
+  for(const k of Object.keys(raw))raw[k]=clip(raw[k]);
+
+  const confidence=softmaxScores(raw);
+  const ranked=Object.entries(confidence).sort((a,b)=>b[1]-a[1]).map(([stage,confidence])=>({stage,confidence,raw:raw[stage]}));
+  const dominant=ranked[0]?.stage||'TRANSITION';
+
+  const reasons=[];
+  if(dominant==='TREND_ADVANCE')reasons.push('โครงสร้างและการเดินราคายังมีประสิทธิภาพ','EMA/โมเมนตัมยังมีทิศ','แท่งถัดไปยังมี follow-through');
+  if(dominant==='RANGE')reasons.push('ประสิทธิภาพการเดินทางต่ำ','ราคาเกิดการหมุนในกรอบ','ความชันและระยะ EMA ไม่ได้คุมตลาดแรง');
+  if(dominant==='COMPRESSION')reasons.push('ช่วงแท่งและ body กำลังหด','ตลาดกำลังสะสมแรงมากกว่ากำลังเดินทาง');
+  if(dominant==='BREAKOUT_ATTEMPT')reasons.push('ราคาเริ่มออกนอกกรอบ','การยอมรับราคานอกกรอบยังไม่ครบ');
+  if(dominant==='BREAKOUT_ACCEPTED')reasons.push('ราคาออกนอกกรอบและเริ่มยืนได้','มี expansion/participation สนับสนุน');
+  if(dominant==='FAILED_BREAKOUT')reasons.push('ราคาเคยออกนอกกรอบแต่ถูกดึงกลับ','การ recapture ให้น้ำหนักฝั่งตรงข้าม');
+  if(dominant==='PULLBACK')reasons.push('โครงสร้างหลักยังอยู่','ราคากำลังย้อนกลับเข้า value/base ของขาเดิม');
+  if(dominant==='EXHAUSTION')reasons.push('ราคาเริ่มยืดจาก value','ความคืบหน้าของ high/low หรือ body เริ่มลดลง');
+  if(dominant==='REVERSAL_DEVELOPING')reasons.push('protected structure เริ่มถูกเจาะ','แรงฝั่งใหม่เริ่มมี rejection/flow/pressure รองรับ');
+  if(dominant==='TRANSITION')reasons.push('คุณสมบัติของเทรนด์เดิมกำลังเสื่อม','ตลาดยังไม่ได้สร้าง regime ใหม่ที่ชัด');
+
+  const currentTrendDir=s.dir||s.trendDir||sign(f.momentum8,.08);
+  const priorTrendDir=sign(f.emaSlope24*.55+f.momentum24*.45,.08)||currentTrendDir;
+  const rangeForming=(dominant==='TRANSITION'||confidence.TRANSITION>=.20)&&priorTrendDir!==0&&(
+    f.effDrop>=CFG.transitionEffDrop||
+    f.slopeDrop>=CFG.transitionSlopeDrop||
+    (Math.abs(f.momentum24)>.25&&Math.abs(f.momentum3)<Math.abs(f.momentum24)*.45)||
+    exhaustion>=.38
+  );
+
+  return {
+    ready:true,
+    dominant,
+    dominantConfidence:ranked[0]?.confidence||0,
+    ranked,
+    confidence,
+    raw,
+    rangeForming,
+    priorTrendDir,
+    reasons:unique(reasons),
+    diagnostics:{
+      trend,range,compression,breakoutAttempt,breakoutAccepted,failedBreakout,pullback,exhaustion,reversal,transition,
+      effDrop:f.effDrop,slopeDrop:f.slopeDrop,
+      rangePosition:f.rangePosition,
+      breakout:f.breakout
+    }
+  };
+}
+
+function explainStage(f,s,stage){
+  if(!stage?.ready)return {headline:'รอข้อมูล',details:[stage?.reason||'ข้อมูลยังไม่พอ']};
+  const top=stage.ranked.slice(0,3);
+  const details=[
+    ...stage.reasons,
+    'Stage mix: '+top.map(q=>q.stage+' '+Math.round(q.confidence*100)+'%').join(' · ')
+  ];
+  if(stage.rangeForming)details.push('ตรวจพบลักษณะ trend deceleration → range forming เร็วกว่าการรอให้กรอบ Sideway สมบูรณ์');
+  if(f.range)details.push('ตำแหน่งในกรอบอ้างอิง '+Math.round(f.rangePosition*100)+'% · ความกว้าง '+f.range.widthAtr.toFixed(2)+' ATR');
+  details.push('Structure: '+s.summary);
+  return {headline:stage.dominant,details};
+}
+
+function analyze(input={}){
+  const features=featureBrain(input);
+  if(!features.ready)return {schema:'aris-v32-stage-snapshot-v1',version:VERSION,revision:REVISION,ready:false,reason:features.reason,features};
+  const structure=structureBrain(features);
+  const stage=stageBrain(features,structure);
+  return {
+    schema:'aris-v32-stage-snapshot-v1',
+    version:VERSION,
+    revision:REVISION,
+    ready:true,
+    ts:finite(+input.ts)?+input.ts:Date.now(),
+    horizonMs:CFG.horizonMs,
+    price:features.price,
+    features,
+    structure,
+    stage,
+    explanation:explainStage(features,structure,stage)
+  };
+}
+
+root.ArisV32=Object.freeze({
+  version:VERSION,
+  revision:REVISION,
+  CFG,
+  analyze,
+  featureBrain,
+  structureBrain,
+  stageBrain,
+  internals:Object.freeze({
+    validBar,sanitizeBars,dataQuality,atr,ema,pathEfficiency,regressionSlope,confirmedPivots,rangeReference,
+    sequenceContext,liveContext,zoneContext,fibContext,breakoutContext,higherFrameContext,softmaxScores
+  })
+});
+
+})(typeof globalThis!=='undefined'?globalThis:window);
