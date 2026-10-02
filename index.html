@@ -5261,7 +5261,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=cleanReportText(t);ul.append(li);}};
     const support=[],warn=[],fib=st.fib;
     if(st.structure?.summary)support.push('โครงสร้าง · '+st.structure.summary);
-    if(fib?.valid)support.push('Fib '+(finite(fib.retracement)?Math.max(0,fib.retracement*100).toFixed(1)+'% retrace':finite(fib.extension)?(fib.extension*100).toFixed(1)+'% extension':'พร้อม')+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
+    if(fib?.valid)support.push('Fib '+(Number.isFinite(fib.retracement)?Math.max(0,fib.retracement*100).toFixed(1)+'% retrace':Number.isFinite(fib.extension)?(fib.extension*100).toFixed(1)+'% extension':'พร้อม')+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
     if(trigger?.penalties?.length)warn.push(...trigger.penalties);
     if(trigger?.hardBlocks?.length)warn.unshift(...trigger.hardBlocks);
     if(trigger?.missing?.length)warn.push('ยังขาด '+trigger.missing.slice(0,3).join(' / '));
