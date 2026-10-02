@@ -3957,7 +3957,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="v32-triggers.js?v=20261002-r1"></script>
 <script src="v32-entry.js?v=20261002-r1"></script>
 <script src="v32-training.js?v=20261002-r1"></script>
-<script src="v32-adapter.js?v=20261002-r1"></script>
+<script src="v32-adapter.js?v=20261002-r2"></script>
 <script src="v4.js?v=20261001-r1"></script>
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
@@ -4353,6 +4353,12 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 }
   function v3GateThai(v){
    return ({PASS:'ผ่าน',DEVELOPING:'กำลังก่อตัว',BLOCK:'ไม่ผ่าน',READY:'พร้อม',BLOCKED:'ติดเงื่อนไข',OBSERVE:'เฝ้าดู',WATCH:'จับตา',WAIT:'รอ',ENTER:'เข้าได้'})[v]||v||'—';
+  }
+  function v32StageThai(v){
+   return ({TREND_ADVANCE:'เทรนด์กำลังเดิน',RANGE:'ไซด์เวย์ในกรอบ',COMPRESSION:'กำลังบีบตัว',BREAKOUT_ATTEMPT:'กำลังลองเบรก',BREAKOUT_ACCEPTED:'เบรกและยอมรับราคา',FAILED_BREAKOUT:'เบรกไม่ผ่าน',PULLBACK:'ย่อในเทรนด์',EXHAUSTION:'แรงเริ่มหมด',REVERSAL_DEVELOPING:'กำลังก่อตัวกลับตัว',TRANSITION:'ช่วงเปลี่ยนสภาพ'})[v]||String(v||'—').replaceAll('_',' ');
+  }
+  function v32TriggerThai(v){
+   return ({RANGE_LOWER_REJECTION:'เด้งจากขอบล่าง',RANGE_UPPER_REJECTION:'เด้งจากขอบบน',BREAKOUT_FOLLOW:'เบรกแล้วไปต่อ',FAILED_BREAKOUT_REVERSAL:'เบรกไม่ผ่านแล้วสวนกลับ',TREND_FOLLOW_THROUGH:'ตามเทรนด์ที่ยังเดินต่อ',PULLBACK_RECLAIM:'ย่อแล้วกลับมายืน',TRANSITION_EDGE_DEFENSE:'เริ่มรับที่ขอบช่วงเปลี่ยนสภาพ',REVERSAL_TRANSFER:'แรงกำลังย้ายฝั่ง',COMPRESSION_WATCH:'บีบตัว · รอเลือกฝั่ง'})[v]||String(v||'—').replaceAll('_',' ');
   }
   function v3ShockThai(v){
    return ({UNRESOLVED:'ยังไม่เฉลย',HOLD:'ยืนราคาได้',RETEST:'กลับมาทดสอบ',FAIL:'ถูกตีกลับ / ล้มเหลว',ABSORB:'ถูกดูดซับ',EXHAUST:'แรงหมด'})[v]||v||'—';
@@ -4953,7 +4959,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    const box=$('candle-fib-summary'),stateEl=$('candle-fib-state'),nowEl=$('candle-fib-now'),nextEl=$('candle-fib-next'),planEl=$('candle-fib-plan'),noteEl=$('candle-fib-note');
    if(!box||!stateEl||!nowEl||!nextEl||!planEl)return;
    box.className='candle-fib-summary neutral';
-   const story=v?.v3Story||v?.phase?.v3View?.story||v?.v2Story||v?.phase?.v2View?.story||null;
+   const story=v?.v32Story||v?.phase?.v32Snapshot&&{fib:v.phase.v32Snapshot.features?.fib}||v?.v3Story||v?.phase?.v3View?.story||v?.v2Story||v?.phase?.v2View?.story||null;
    const fib=story?.fib||null;
    if(!fib?.valid){
     stateEl.textContent='ยังไม่มี Swing ยืนยัน';
@@ -5860,10 +5866,49 @@ function openReport(){
   function renderV3EntryChecklist(v){
    const box=$('v3-entry-checklist'),summary=$('v3-check-summary'),note=$('v3-check-note');
    if(!box||!summary||!note)return;
-   const isV3=['ARIS-3.0.0','ARIS-3.1.0'].includes(CFG.version),isV4=CFG.version==='ARIS-4.0.0';
-   if(!isV3&&!isV4){box.hidden=true;return;}
+   const isV3=['ARIS-3.0.0','ARIS-3.1.0'].includes(CFG.version),isV32=CFG.version==='ARIS-3.2.0',isV4=CFG.version==='ARIS-4.0.0';
+   if(!isV3&&!isV32&&!isV4){box.hidden=true;return;}
    box.hidden=false;
    const heading=box.querySelector('.v3-check-head span');
+
+   if(isV32){
+    const st=v?.v32Story||v?.phase?.v32Snapshot&&{stage:v.phase.v32Snapshot.stage,direction:v.phase.v32Snapshot.direction,trigger:v.phase.v32Snapshot.triggers?.primary,structure:v.phase.v32Snapshot.structure,fib:v.phase.v32Snapshot.features?.fib,currentEntryQuality:v?.gate?.metrics?.entryQuality};
+    const stage=st?.stage||{},dir=st?.direction||{},trigger=st?.trigger||null,m=v?.gate?.metrics||{};
+    const conf=Math.round((stage.dominantConfidence||0)*100),high=Math.round(dir.highEdge??50),low=Math.round(dir.lowEdge??50);
+    const readyThreshold=trigger?.thresholds?.ready??m.triggerThresholdReady,triggerQuality=trigger?.quality??m.triggerQuality;
+    const stageTop=(stage.ranked||[]).slice(0,3).map(x=>v32StageThai(x.stage)+' '+Math.round((x.confidence||0)*100)+'%').join(' · ');
+    if(heading)heading.textContent='ARIS 3.2 · STAGE ADAPTIVE';
+    summary.textContent=(stage.dominant?v32StageThai(stage.dominant)+' '+conf+'%':'กำลังอ่าน Stage')+(trigger?' · '+v32TriggerThai(trigger.id)+' '+Math.round(triggerQuality||0)+'/'+(readyThreshold??'—'):' · ยังไม่มี Trigger');
+
+    const activeModel=dir.models?.[trigger?.stage||stage.dominant]||null;
+    const strongest=[...(activeModel?.components||[])].sort((a,b)=>Math.abs(b.contribution||0)-Math.abs(a.contribution||0)).slice(0,3);
+    const modelWhy=strongest.length?strongest.map(x=>x.label+' '+((x.contribution||0)>=0?'+':'')+Math.round((x.contribution||0)*100)).join(' · '):'กำลังรวมน้ำหนักตาม Stage';
+    const missing=[...(trigger?.missing||m.missing||[])],penalties=[...(trigger?.penalties||m.penalties||[])],blocks=[...(trigger?.hardBlocks||m.hardBlocks||[])];
+    const eq=Number.isFinite(m.entryQuality)?Math.round(m.entryQuality):Number.isFinite(st?.currentEntryQuality)?Math.round(st.currentEntryQuality):null;
+    const cards=[
+     {id:'v3-check-structure',title:'Market Stage',mark:'●',badge:stage.dominant?'ACTIVE':'WAIT',cls:stage.dominant?'watching':'pending',
+      reason:(stageTop||'ยังไม่มี Stage ที่อ่านได้')+(stage.rangeForming?' · ตรวจพบแนวโน้มกำลังคลายไปหา Range':'')},
+     {id:'v3-check-location',title:'Direction Edge',mark:dir.direction==='HIGH'?'↑':dir.direction==='LOW'?'↓':'◐',badge:dir.direction||'BALANCED',cls:dir.direction&&dir.direction!=='BALANCED'?'pass':'developing',
+      reason:'HIGH '+high+'/100 · LOW '+low+'/100 · '+modelWhy},
+     {id:'v3-check-behavior',title:'Stage Trigger',mark:blocks.length?'×':trigger?.ready?'✓':trigger?'◐':'□',badge:blocks.length?'BLOCK':trigger?.ready?'READY':trigger?.status||'WATCH',cls:blocks.length?'block':trigger?.ready?'pass':trigger?'developing':'pending',
+      reason:trigger?(v32TriggerThai(trigger.id)+' · คุณภาพ '+Math.round(triggerQuality||0)+'/100'+(readyThreshold!=null?' · READY ≥ '+readyThreshold:'')+(missing.length?' · ยังขาด '+missing.slice(0,2).join(' / '):'')):'Stage ยังไม่มี Trigger ที่ควรตาม'},
+     {id:'v3-check-micro',title:'Entry Quality',mark:v?.status==='new'?'✓':v?.status==='confirming'?'◐':blocks.length?'×':'□',badge:v?.status==='new'?'ENTER':v?.status==='confirming'?'CONFIRM':v?.status==='issued'?'RE-ARM':'WAIT',cls:v?.status==='new'?'pass':v?.status==='confirming'?'developing':blocks.length?'block':'watching',
+      reason:(eq!=null?'Entry Quality '+eq+'/100':'ยังไม่ถึงช่วงคำนวณ Entry Quality')+(Number.isFinite(m.candidateTicks)?' · ยืนยันสด '+m.candidateTicks+'/'+(globalThis.ArisV32Entry?.CFG?.confirmTicks||2):'')+(penalties.length?' · Penalty: '+penalties.slice(0,2).join(' / '):'')}
+    ];
+    for(const x of cards){
+     const card=$(x.id);if(!card)continue;card.className='v3-check-card '+x.cls;
+     const title=card.querySelector('.v3-check-card-top strong'),mark=card.querySelector('.v3-check-box'),badge=card.querySelector('.v3-check-state'),reason=card.querySelector('.v3-check-reason');
+     if(title)title.textContent=x.title;if(mark)mark.textContent=x.mark;if(badge)badge.textContent=x.badge;if(reason){reason.textContent=cleanReportText(x.reason);reason.title=reason.textContent;}
+    }
+    if(blocks.length)note.textContent='Hard Block: '+cleanReportText(blocks[0]);
+    else if(v?.status==='new')note.textContent='Stage → น้ำหนัก → Trigger → Entry Quality ผ่าน และปล่อยไม้แล้ว';
+    else if(v?.status==='confirming')note.textContent='Trigger ผ่านเกณฑ์แล้ว · กำลังยืนยันสดก่อน ENTER';
+    else if(v?.status==='issued')note.textContent='ตระกูล Trigger นี้ออกไม้ไปแล้ว · รอเงื่อนไข re-arm ของมันเอง';
+    else if(missing.length)note.textContent='กำลังรอ: '+cleanReportText(missing.slice(0,2).join(' · '));
+    else note.textContent='3.2 เปลี่ยนน้ำหนักและ Trigger ตาม Stage · ไม่มี 4/4 ชุดเดียวใช้กับทุกตลาด';
+    return;
+   }
+
    if(heading)heading.textContent=isV4?'V4 SIDEWAY CHECKLIST':'V3 CHECKLIST';
    const st=isV4?(v?.v4Story||v?.phase?.v4View?.story||null):(v?.v3Story||v?.phase?.v3View?.story||null);
    const g=st?.gates||{},passed=Number.isFinite(st?.gatePassed)?st.gatePassed:0,total=st?.gateTotal||4;
@@ -5975,7 +6020,7 @@ function openReport(){
    const tf=state.analysisTf,tfLabel=TF_LABELS[tf]||tf,contextMode=tf!=='1m';
    globalThis.EntryScoreV1?.update?.(engine.signals);
    globalThis.AuditEngineV2?.update?.(engine.signals);
-   const e=v.event,modelD=e?.d||0,freshSignal=v.status==='new',preview=e?(['ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0'].includes(CFG.version)?{direction:modelD>0?'HIGH':'LOW',reason:v.reason}:selectOutputDecision(e.type,modelD,v.f,v.phase)):null;
+   const e=v.event,modelD=e?.d||0,freshSignal=v.status==='new',preview=e?(['ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-3.2.0'].includes(CFG.version)?{direction:modelD>0?'HIGH':'LOW',reason:v.reason}:selectOutputDecision(e.type,modelD,v.f,v.phase)):null;
    const watchD=v.watch?.direction==='HIGH'?1:v.watch?.direction==='LOW'?-1:0,continuousD=state.continuousView?.direction==='HIGH'?1:state.continuousView?.direction==='LOW'?-1:0;
    const d=freshSignal&&v.signal?(v.signal.direction==='HIGH'?1:-1):preview?.direction==='HIGH'?1:preview?.direction==='LOW'?-1:watchD||continuousD;
    $('signal-panel').className='signal-panel '+(d>0?'up':d<0?'down':'wait');
@@ -6007,16 +6052,32 @@ function openReport(){
     :v.phase?.phase==='EXHAUSTION'?'แรงเริ่มหมด · รอยืนยันการกลับตัว'
     :v.phase?.phase==='REVERSAL'?'กำลังกลับตัว · รอดูว่าจะไปต่อไหม'
     :v.regime?.mode==='TREND'?'ตลาดเป็นเทรนด์ · มองจังหวะย่อแล้วไปต่อ':'ตลาดอยู่ช่วงเปลี่ยนจังหวะ';
-   $('entry-state').textContent=e?cleanReportText(`${typeName[e.type]||v.v2Story?.playbookLabel||e.type} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`)
+   $('entry-state').textContent=CFG.version==='ARIS-3.2.0'
+    ?(()=>{const s=v?.v32Story||{},t=s.trigger,w=v.watch;return t?`${v32TriggerThai(t.id)} · ${t.direction||w?.direction||'—'} · Trigger ${Math.round(t.quality||0)}/100 · ${v.gate?.state||t.status||'WATCH'}`:w?`${v32StageThai(s.stage?.dominant)} · ${w.direction||'—'} · Edge ${Math.round(w.score||0)}/100`:`${v32StageThai(s.stage?.dominant)} · ยังไม่มี Trigger เข้า`;})()
+    :e?cleanReportText(`${typeName[e.type]||v.v2Story?.playbookLabel||e.type} · ${d>0?'สูงกว่า':d<0?'ต่ำกว่า':'รอยืนยัน'}${v.gate?.state?' · '+v.gate.state:''}`)
     :v.watch?(CFG.version==='ARIS-2.0.0'?`${v.watch.state} ${v.watch.direction||'—'} · คะแนน ${Math.round(v.watch.score)}/100`:['ARIS-3.0.0','ARIS-3.1.0'].includes(CFG.version)?`${v.watch.state} ${v.watch.direction||'—'} · ${v.v3Story?.stateLabel||'กำลังอ่าน Episode'}`:CFG.version.startsWith('ARIS-')?`${v.watch.state} ${v.watch.direction} · คะแนน ${(v.watch.score/100).toFixed(2)}`:`${v.watch.state} ${v.watch.direction} · คะแนนจับตา ${v.watch.score}/${CFG.watchReadyScore}`)
     :d?`มุมมอง ${d>0?'HIGH':'LOW'} · Entry ยังรอ trigger`
     :contextMode?'บริบท '+tf+' · '+idle:idle;
 
    const eventRange=e&&Number.isFinite(e.entryLow)&&Number.isFinite(e.entryHigh)?' · ช่วงราคา '+money(e.entryLow)+'–'+money(e.entryHigh):'';
-   $('event-detail').textContent=e?`${phaseThai(v.phase?.phase||'TRANSITION')} · ${tfHumanText(preview?.reason||'กำลังประเมินช่วงตลาด')} · โมเดลมอง ${directionThai(modelD>0?'HIGH':'LOW')}${preview?.direction?' → ระบบเลือก '+directionThai(preview.direction):''} · แนวสำคัญ ${money(e.level)}${eventRange}${Number.isFinite(e.evidenceScore)?' · คะแนนหลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}${contextMode?' · ไม่บันทึกเป็นไม้จริง':''}`:'';
+   if(CFG.version==='ARIS-3.2.0'){
+    const s=v?.v32Story||{},t=s.trigger,m=v?.gate?.metrics||{},eq=Number.isFinite(m.entryQuality)?Math.round(m.entryQuality):null;
+    $('event-detail').textContent=t
+     ?v32StageThai(s.stage?.dominant)+' '+Math.round((s.stage?.dominantConfidence||0)*100)+'% · '+v32TriggerThai(t.id)+' · Trigger '+Math.round(t.quality||0)+'/'+(t.thresholds?.ready??m.triggerThresholdReady??'—')+(eq!=null?' · Entry Quality '+eq+'/100':'')+(t.missing?.length?' · ยังขาด '+t.missing.slice(0,2).join(' / '):'')
+     :v32StageThai(s.stage?.dominant)+' · ยังไม่มี Stage-specific Trigger'+(contextMode?' · โหมดบริบท ไม่บันทึกไม้จริง':'');
+   }else{
+    $('event-detail').textContent=e?`${phaseThai(v.phase?.phase||'TRANSITION')} · ${tfHumanText(preview?.reason||'กำลังประเมินช่วงตลาด')} · โมเดลมอง ${directionThai(modelD>0?'HIGH':'LOW')}${preview?.direction?' → ระบบเลือก '+directionThai(preview.direction):''} · แนวสำคัญ ${money(e.level)}${eventRange}${Number.isFinite(e.evidenceScore)?' · คะแนนหลักฐาน '+e.evidenceScore+'/'+(e.type==='breakout'?CFG.breakoutMinScore:CFG.rangeMinScore):''}${contextMode?' · ไม่บันทึกเป็นไม้จริง':''}`:'';
+   }
    if(v.f){
     setComponent('analysis-trend',v.f.trend);setComponent('analysis-momentum',Math.tanh(v.f.mom));$('analysis-volatility').textContent=money(v.f.atr);
-    const ph=$('analysis-phase');ph.textContent=phaseThai(v.phase?.phase)+(v.phase?.dir?' '+(v.phase.dir>0?'↑':'↓'):'');ph.className=['IMPULSE','MATURE_IMPULSE','REVERSAL'].includes(v.phase?.phase)?'up':v.phase?.phase==='EXHAUSTION'?'down':'neutral';
+    const ph=$('analysis-phase');
+    if(CFG.version==='ARIS-3.2.0'){
+     const s=v?.v32Story?.stage||{},sd=v?.v32Story?.direction?.direction;
+     ph.textContent=v32StageThai(s.dominant)+' '+Math.round((s.dominantConfidence||0)*100)+'%'+(sd==='HIGH'?' ↑':sd==='LOW'?' ↓':'');
+     ph.className=sd==='HIGH'?'up':sd==='LOW'?'down':'neutral';
+    }else{
+     ph.textContent=phaseThai(v.phase?.phase)+(v.phase?.dir?' '+(v.phase.dir>0?'↑':'↓'):'');ph.className=['IMPULSE','MATURE_IMPULSE','REVERSAL'].includes(v.phase?.phase)?'up':v.phase?.phase==='EXHAUSTION'?'down':'neutral';
+    }
     const rv=$('analysis-relvol'),rel=Math.max(v.f.relVolume||0,v.phase?.liveVolumePace||0);rv.textContent=Number.isFinite(rel)?rel.toFixed(2)+'x':'—';rv.className=rel>=1.45?'up':'neutral';
     const reg=$('analysis-regime'),mode=v.regime?.mode||'TRANSITION';reg.textContent=regimeThai(mode);reg.className=mode==='TREND'?'up':'neutral';
     const pos=$('analysis-position'),pct=Math.round((v.regime?.position??v.f.rangePosition)*100);pos.textContent=(pct>=70?'ขอบบน ':pct<=30?'ขอบล่าง ':'กลางกรอบ ')+pct+'%';pos.className=pct>=70?'down':pct<=30?'up':'neutral';
