@@ -4564,7 +4564,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    const snaps={HIGH:setupLiveSnapshot(v,directionView,micro,'HIGH'),LOW:setupLiveSnapshot(v,directionView,micro,'LOW')};
    const primary=state.analysisTf==='1m',own=primary?setupDoneSignals():[],previous=primary&&CFG.version!=='7.1.0'?setupDoneSignals('7.1.0'):[];
    const ownEnough=['HIGH','LOW'].every(d=>own.filter(s=>s.direction===d).length>=3);
-   const usePrevious=CFG.version!=='ARIS-2.0.0'&&primary&&!ownEnough&&previous.length>=6;
+   const usePrevious=!['ARIS-2.0.0','ARIS-3.2.0'].includes(CFG.version)&&primary&&!ownEnough&&previous.length>=6;
    const source=usePrevious?previous:own;
    const version=usePrevious?'7.1.0':CFG.version;
    const high=setupComparison(snaps.HIGH,source),low=setupComparison(snaps.LOW,source);
@@ -5990,6 +5990,16 @@ function openReport(){
    else if(cv?.available&&['HIGH','LOW'].includes(cv.direction))rows.push('Direction Engine เอน '+cv.direction+' '+(cv.direction==='HIGH'?cv.high:cv.low)+'% แต่ Entry Engine ยังไม่มี trigger ที่ผ่าน','กำลังรอรูปแบบจุดเข้า ไม่ได้แปลว่าทิศทางหาย');
    else rows.push(v.reason||'ยังไม่มี trigger จุดเข้า');
    const m=gate?.metrics;
+   if(m&&CFG.version==='ARIS-3.2.0'){
+    if(m.stage)rows.push('Stage '+v32StageThai(m.stage)+(Number.isFinite(m.stageConfidence)?' '+Math.round(m.stageConfidence*100)+'%':''));
+    if(m.trigger)rows.push('Trigger '+v32TriggerThai(m.trigger)+(Number.isFinite(m.triggerQuality)?' · '+Math.round(m.triggerQuality)+'/100':'')+(Number.isFinite(m.triggerThresholdReady)?' · READY ≥ '+m.triggerThresholdReady:''));
+    if(Number.isFinite(m.entryQuality))rows.push('Entry Quality '+Math.round(m.entryQuality)+'/100 · คำนวณจาก Trigger + Direction ที่สอดคล้อง + Stage confidence − penalties');
+    if(Number.isFinite(m.candidateTicks))rows.push('กำลังยืนยันสด '+m.candidateTicks+'/'+(globalThis.ArisV32Entry?.CFG?.confirmTicks||2)+' ครั้ง');
+    if(m.missing?.length)rows.push('ยังขาด '+m.missing.slice(0,2).join(' / '));
+    if(m.penalties?.length)rows.push('Penalty '+m.penalties.slice(0,2).join(' / '));
+    if(m.hardBlocks?.length)rows.push('Hard Block '+m.hardBlocks[0]);
+    if(m.rearmArmed===false)rows.push('Trigger family '+(m.rearmFamily||'นี้')+' ยังไม่ re-arm');
+   }
    if(m&&['ARIS-3.0.0','ARIS-3.1.0'].includes(CFG.version)){
     if(m.episodeId)rows.push('เหตุการณ์ตลาด '+m.episodeId+(m.legKey?' · ขาที่ '+m.legIndex+' · '+m.legKey:''));
     if(m.gateStates){rows.push('โครงสร้าง '+v3GateThai(m.gateStates.structure)+' · เงื่อนไขหลัก');rows.push('ตำแหน่งราคา '+v3GateThai(m.gateStates.location)+' · พฤติกรรมราคา '+v3GateThai(m.gateStates.behavior)+' · แรงซื้อขายระยะสั้น '+v3GateThai(m.gateStates.micro));}
