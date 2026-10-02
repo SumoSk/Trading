@@ -9,6 +9,7 @@
     {version:'ARIS-2.0.0',label:'ARIS 2.0'},
     {version:'ARIS-3.0.0',label:'ARIS 3.0'},
     {version:'ARIS-3.1.0',label:'ARIS 3.1'},
+    {version:'ARIS-3.2.0',label:'ARIS 3.2'},
     {version:'ARIS-4.0.0',label:'ARIS 4.0 · Sideway'}
   ]);
   const allowed=new Set(SUPPORTED.map(x=>x.version));
@@ -38,6 +39,12 @@
       '<script src="'+escapeHtml(asset('v2.js','20260930-r6'))+'"><\/script>'+ 
       '<script src="'+escapeHtml(asset('v3.js','20261001-r6'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v31.js','20261001-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32.js','20261002-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32-direction.js','20261002-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32-triggers.js','20261002-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32-entry.js','20261002-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32-training.js','20261002-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32-adapter.js','20261002-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v4.js','20261001-r1'))+'"><\/script>'+
       '</body></html>';
     document.body.append(frame);
