@@ -44,7 +44,7 @@
       '<script src="'+escapeHtml(asset('v32-triggers.js','20261002-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v32-entry.js','20261002-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v32-training.js','20261002-r1'))+'"><\/script>'+
-      '<script src="'+escapeHtml(asset('v32-adapter.js','20261002-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v32-adapter.js','20261002-r2'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v4.js','20261001-r1'))+'"><\/script>'+
       '</body></html>';
     document.body.append(frame);
