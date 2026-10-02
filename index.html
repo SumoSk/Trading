@@ -1779,461 +1779,362 @@ body{
 </style>
 
 
-<style id="cyber-toolbar-final-20261002">
-@property --aris-cy-angle{
- syntax:'<angle>';
- inherits:false;
- initial-value:0deg;
-}
-/* ARIS cyber toolbar skin — visual only.
-   Preserve current controls, order, behavior and compact dimensions. */
+
+<style id="toolbar-cyber-v2-final-20261003">
+/* FINAL toolbar skin — compact, brighter, readable, animated.
+   Visual only: keep current controls, order and trading behavior. */
 #chart-toolbar{
- --cy-cyan:105,220,255;
- --cy-violet:169,140,255;
- --cy-green:99,240,189;
- --cy-ink:9,16,27;
+ --tb-cyan:79,222,255;
+ --tb-violet:173,119,255;
+ --tb-green:95,241,190;
+ --tb-bg1:#14273d;
+ --tb-bg2:#0d1a2b;
  position:relative!important;
- isolation:isolate;
+ isolation:isolate!important;
+ display:grid!important;
+ grid-template-columns:64px 64px 94px 52px 28px!important;
+ gap:4px!important;
+ align-items:center!important;
+ justify-content:start!important;
+ width:max-content!important;
+ max-width:100%!important;
+ min-width:0!important;
+ height:40px!important;
+ min-height:40px!important;
+ padding:4px!important;
+ box-sizing:border-box!important;
  overflow:visible!important;
- border-color:rgba(var(--cy-cyan),.26)!important;
+ border:1px solid transparent!important;
+ border-radius:11px!important;
  background:
-   linear-gradient(180deg,rgba(14,24,38,.96),rgba(8,15,26,.97))!important;
+   linear-gradient(180deg,rgba(20,39,61,.98),rgba(12,25,42,.985)) padding-box,
+   linear-gradient(115deg,
+     rgba(var(--tb-cyan),.95),
+     rgba(var(--tb-cyan),.18) 22%,
+     rgba(var(--tb-violet),.92) 48%,
+     rgba(var(--tb-violet),.16) 72%,
+     rgba(var(--tb-cyan),.95)
+   ) border-box!important;
+ background-size:100% 100%,260% 100%!important;
  box-shadow:
-   0 12px 30px rgba(0,0,0,.38),
-   0 0 0 1px rgba(var(--cy-violet),.035),
-   0 0 20px rgba(var(--cy-cyan),.045),
-   inset 0 1px 0 rgba(255,255,255,.035),
-   inset 0 -1px 0 rgba(var(--cy-violet),.045)!important;
+   0 10px 28px rgba(0,0,0,.36),
+   0 0 12px rgba(var(--tb-cyan),.14),
+   0 0 20px rgba(var(--tb-violet),.08),
+   inset 0 1px 0 rgba(255,255,255,.07)!important;
+ animation:toolbarOuterFlow 6.2s linear infinite!important;
+ backdrop-filter:blur(15px) saturate(135%)!important;
 }
 
-/* Continuous cyber border: one lightweight animated layer for the whole bar. */
 #chart-toolbar::before{
- content:'';
- position:absolute;
- inset:-1px;
- z-index:0;
- pointer-events:none;
- border-radius:14px;
- padding:1px;
- background:
-   conic-gradient(
-     from var(--aris-cy-angle),
-     transparent 0deg 62deg,
-     rgba(var(--cy-cyan),.12) 72deg,
-     rgba(var(--cy-cyan),.98) 83deg,
-     rgba(var(--cy-violet),.92) 94deg,
-     rgba(var(--cy-violet),.10) 106deg,
-     transparent 118deg 360deg
-   );
- -webkit-mask:
-   linear-gradient(#000 0 0) content-box,
-   linear-gradient(#000 0 0);
- -webkit-mask-composite:xor;
- mask-composite:exclude;
- filter:drop-shadow(0 0 4px rgba(var(--cy-cyan),.42));
- animation:arisCyberBorderRun 5.8s linear infinite;
-}
-
-/* Small scanner streak across the top edge. */
-#chart-toolbar::after{
- content:'';
- position:absolute;
- z-index:2;
- pointer-events:none;
- top:-1px;
- left:0;
- width:54px;
- height:1px;
- border-radius:999px;
- background:linear-gradient(90deg,transparent,rgba(var(--cy-cyan),.95),rgba(var(--cy-violet),.92),transparent);
- box-shadow:0 0 7px rgba(var(--cy-cyan),.6),0 0 10px rgba(var(--cy-violet),.34);
- animation:arisCyberTopSweep 4.6s ease-in-out infinite;
-}
-
-#chart-toolbar>*{
- position:relative!important;
- z-index:1;
-}
-
-/* Keep the exact current sizing; only reskin the frames. */
-body.toolbar-floating #chart-toolbar{
- background:
-   linear-gradient(180deg,rgba(14,24,38,.965),rgba(8,15,26,.975))!important;
- border-color:rgba(var(--cy-cyan),.27)!important;
+ content:''!important;
+ position:absolute!important;
+ pointer-events:none!important;
+ z-index:5!important;
+ left:9px!important;
+ top:-1px!important;
+ width:42px!important;
+ height:2px!important;
+ border-radius:99px!important;
+ background:linear-gradient(90deg,transparent,rgba(var(--tb-cyan),1),rgba(255,255,255,.95),rgba(var(--tb-violet),.9),transparent)!important;
  box-shadow:
-   0 13px 34px rgba(0,0,0,.44),
-   0 0 18px rgba(var(--cy-cyan),.055),
-   0 0 24px rgba(var(--cy-violet),.03),
-   inset 0 1px 0 rgba(255,255,255,.035)!important;
+   0 0 6px rgba(var(--tb-cyan),.92),
+   0 0 11px rgba(var(--tb-violet),.48)!important;
+ animation:toolbarScanner 3.7s ease-in-out infinite!important;
 }
 
-/* Replace the old green separators with cool neutral-cyber separators. */
-body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
- background:linear-gradient(180deg,transparent,rgba(var(--cy-cyan),.22),rgba(var(--cy-violet),.18),transparent)!important;
- box-shadow:0 0 5px rgba(var(--cy-cyan),.10)!important;
+#chart-toolbar::after{
+ content:''!important;
+ position:absolute!important;
+ pointer-events:none!important;
+ z-index:0!important;
+ inset:3px!important;
+ border-radius:8px!important;
+ background:
+   radial-gradient(circle at 12% 0%,rgba(var(--tb-cyan),.08),transparent 24%),
+   radial-gradient(circle at 72% 100%,rgba(var(--tb-violet),.07),transparent 25%)!important;
 }
 
-/* Individual frames: subtle, not a Christmas tree. */
+/* Legacy hidden row never participates in sizing. */
+#chart-toolbar>.timeframes{display:none!important}
+
+/* All visible toolbar children stay above the animated shell. */
+#chart-toolbar>.analysis-tf-control,
+#chart-toolbar>.toolbar-main-button,
+#chart-toolbar>.drawing-tools,
+#chart-toolbar>.toolbar-more{
+ position:relative!important;
+ z-index:2!important;
+ width:auto!important;
+ min-width:0!important;
+ max-width:none!important;
+ margin:0!important;
+ flex:none!important;
+ box-sizing:border-box!important;
+}
+
+/* One consistent compact frame language. */
 #chart-toolbar .analysis-tf-control,
 #chart-toolbar .toolbar-main-button,
 #chart-toolbar .drawing-tools>summary,
 #chart-toolbar .toolbar-more>summary{
- border-color:rgba(93,126,166,.40)!important;
+ position:relative!important;
+ width:100%!important;
+ min-width:0!important;
+ max-width:100%!important;
+ height:30px!important;
+ min-height:30px!important;
+ max-height:30px!important;
+ box-sizing:border-box!important;
+ border:1px solid transparent!important;
+ border-radius:8px!important;
  background:
-   linear-gradient(180deg,rgba(18,29,46,.94),rgba(11,20,33,.94))!important;
- color:#c8d7e9!important;
+   linear-gradient(180deg,rgba(27,49,73,.98),rgba(16,31,50,.99)) padding-box,
+   linear-gradient(110deg,
+     rgba(var(--tb-cyan),.65),
+     rgba(var(--tb-cyan),.10) 28%,
+     rgba(var(--tb-violet),.68) 58%,
+     rgba(var(--tb-violet),.10) 78%,
+     rgba(var(--tb-cyan),.58)
+   ) border-box!important;
+ background-size:100% 100%,220% 100%!important;
+ background-position:0 0,0% 0!important;
+ color:#edf8ff!important;
  box-shadow:
-   inset 0 1px 0 rgba(255,255,255,.025),
-   inset 0 0 12px rgba(var(--cy-cyan),.012),
-   0 0 0 1px rgba(var(--cy-violet),.012)!important;
- transition:
-   border-color .18s ease,
-   color .18s ease,
-   background .18s ease,
-   box-shadow .18s ease,
-   transform .18s ease!important;
+   inset 0 1px 0 rgba(255,255,255,.055),
+   inset 0 0 9px rgba(var(--tb-cyan),.025),
+   0 0 7px rgba(var(--tb-cyan),.055)!important;
+ animation:toolbarCellFlow 7s linear infinite!important;
+ transition:filter .16s ease,box-shadow .16s ease,transform .16s ease!important;
+}
+
+/* Alternate animation phase makes the whole row feel alive, not synchronized. */
+#chart-toolbar>*:nth-child(even) .toolbar-main-button,
+#chart-toolbar>*:nth-child(even)>summary,
+#chart-toolbar>.analysis-tf-control:nth-child(even){
+ animation-delay:-3.4s!important;
 }
 
 #chart-toolbar .analysis-tf-control:hover,
 #chart-toolbar .toolbar-main-button:hover,
 #chart-toolbar .drawing-tools>summary:hover,
 #chart-toolbar .toolbar-more>summary:hover{
- border-color:rgba(var(--cy-cyan),.48)!important;
- color:#ecf9ff!important;
- background:
-   linear-gradient(180deg,rgba(20,35,54,.98),rgba(12,23,38,.98))!important;
+ filter:brightness(1.13)!important;
  box-shadow:
-   inset 0 1px 0 rgba(255,255,255,.04),
-   0 0 10px rgba(var(--cy-cyan),.08)!important;
+   inset 0 1px 0 rgba(255,255,255,.09),
+   0 0 9px rgba(var(--tb-cyan),.17),
+   0 0 13px rgba(var(--tb-violet),.09)!important;
 }
 
-/* TF controls keep their present dimensions; selected value gets a violet/cyan focus. */
-#chart-toolbar .analysis-tf-control>span{
- color:#8094ae!important;
-}
-#chart-toolbar .analysis-tf-control select{
- background:linear-gradient(180deg,#17253a,#111c2d)!important;
- color:#e0eaf6!important;
- box-shadow:inset 0 0 0 1px rgba(var(--cy-cyan),.025)!important;
-}
-#chart-toolbar .analysis-tf-control:focus-within{
- border-color:rgba(var(--cy-violet),.60)!important;
- box-shadow:
-   inset 0 0 13px rgba(var(--cy-violet),.035),
-   0 0 10px rgba(var(--cy-violet),.10)!important;
-}
-
-/* Indicator active: cyan/green only when it is actually on. */
-#chart-toolbar .indicator-toggle[aria-pressed=true]{
- border-color:rgba(var(--cy-green),.48)!important;
- background:linear-gradient(180deg,rgba(19,50,45,.94),rgba(12,34,32,.94))!important;
- color:#a4f6d8!important;
- text-shadow:0 0 8px rgba(var(--cy-green),.30);
- box-shadow:
-   inset 0 0 12px rgba(var(--cy-green),.035),
-   0 0 10px rgba(var(--cy-green),.08)!important;
-}
-
-/* Drawing active = violet. More-menu active = cyan. */
-#chart-toolbar .drawing-tools[open]>summary,
-#chart-toolbar .drawing-tools.active>summary{
- border-color:rgba(var(--cy-violet),.62)!important;
- background:linear-gradient(180deg,rgba(42,32,70,.96),rgba(25,22,49,.96))!important;
- color:#e6ddff!important;
- text-shadow:0 0 8px rgba(var(--cy-violet),.30);
- box-shadow:0 0 11px rgba(var(--cy-violet),.11),inset 0 0 12px rgba(var(--cy-violet),.035)!important;
-}
-#chart-toolbar .toolbar-more[open]>summary{
- border-color:rgba(var(--cy-cyan),.55)!important;
- background:linear-gradient(180deg,rgba(20,42,58,.96),rgba(13,28,43,.96))!important;
- color:#e8f9ff!important;
- box-shadow:0 0 10px rgba(var(--cy-cyan),.10),inset 0 0 12px rgba(var(--cy-cyan),.03)!important;
-}
-
-/* Popovers match the toolbar skin. */
-#chart-toolbar .toolbar-more-popover,
-#chart-toolbar .drawing-tools-popover{
- border-color:rgba(var(--cy-cyan),.24)!important;
- background:
-   linear-gradient(180deg,rgba(13,23,37,.985),rgba(8,15,26,.99))!important;
- box-shadow:
-   0 20px 54px rgba(0,0,0,.62),
-   0 0 18px rgba(var(--cy-violet),.035),
-   inset 0 1px 0 rgba(255,255,255,.025)!important;
-}
-
-/* Live dot gets a controlled pulse; no layout changes. */
-body[data-feed=live] #chart-toolbar .tiny-dot{
- background:rgb(var(--cy-green))!important;
- box-shadow:0 0 7px rgba(var(--cy-green),.86),0 0 13px rgba(var(--cy-green),.28)!important;
-}
-
-/* Phone: same layout rules already used by the app; lighter effects only. */
-@media(max-width:700px){
- #chart-toolbar{
-   box-shadow:
-     0 9px 24px rgba(0,0,0,.38),
-     0 0 12px rgba(var(--cy-cyan),.035),
-     inset 0 1px 0 rgba(255,255,255,.03)!important;
- }
- #chart-toolbar::before{
-   filter:drop-shadow(0 0 2px rgba(var(--cy-cyan),.34));
-   animation-duration:7.2s;
- }
- #chart-toolbar::after{
-   width:42px;
-   animation-duration:5.6s;
- }
- body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
-   background:linear-gradient(180deg,transparent,rgba(var(--cy-cyan),.17),rgba(var(--cy-violet),.12),transparent)!important;
- }
-}
-@media(max-width:430px){
- #chart-toolbar::after{width:34px}
-}
-
-/* Accessibility / battery: stop motion but retain the cyber frame. */
-@media(prefers-reduced-motion:reduce){
- #chart-toolbar::before,
- #chart-toolbar::after{
-   animation:none!important;
- }
- #chart-toolbar::before{
-   background:linear-gradient(90deg,rgba(var(--cy-cyan),.55),rgba(var(--cy-violet),.52))!important;
- }
-}
-
-@keyframes arisCyberBorderRun{
- to{--aris-cy-angle:360deg}
-}
-@keyframes arisCyberTopSweep{
- 0%{transform:translateX(-70px);opacity:0}
- 12%{opacity:.95}
- 50%{opacity:.72}
- 88%{opacity:.95}
- 100%{transform:translateX(calc(860px - 22px));opacity:0}
-}
-@media(max-width:700px){
- @keyframes arisCyberTopSweep{
-   0%{transform:translateX(-55px);opacity:0}
-   12%{opacity:.9}
-   88%{opacity:.82}
-   100%{transform:translateX(calc(100vw - 40px));opacity:0}
- }
-}
-</style>
-
-
-<style id="toolbar-responsive-final-20261002">
-/* Final responsive authority for the existing toolbar.
-   Keep every control and order; only make the current layout fit its real container. */
-.chart-toolbar-slot{
- width:100%!important;
- max-width:100%!important;
- min-width:0!important;
- box-sizing:border-box!important;
-}
-
-#chart-toolbar{
- width:min(860px,100%)!important;
- max-width:100%!important;
- min-width:0!important;
- box-sizing:border-box!important;
- margin-left:0!important;
- margin-right:0!important;
- display:grid!important;
- grid-template-columns:
-   minmax(0,96px)
-   minmax(0,96px)
-   minmax(0,96px)
-   minmax(0,96px)
-   minmax(34px,40px)!important;
- align-items:center!important;
- justify-content:start!important;
- column-gap:6px!important;
- row-gap:0!important;
-}
-
-/* The hidden legacy timeframe row must never consume a grid column. */
-#chart-toolbar>.timeframes{display:none!important}
-
-/* Kill old fixed flex-basis/width rules so the grid owns sizing. */
-#chart-toolbar>.analysis-tf-control,
-#chart-toolbar>.toolbar-main-button,
-#chart-toolbar>.drawing-tools,
-#chart-toolbar>.toolbar-more{
- width:auto!important;
- min-width:0!important;
- max-width:none!important;
- flex:none!important;
- margin:0!important;
- box-sizing:border-box!important;
-}
-
-#chart-toolbar>.analysis-tf-control,
-#chart-toolbar>.toolbar-main-button,
-#chart-toolbar>.drawing-tools>summary,
-#chart-toolbar>.toolbar-more>summary{
- width:100%!important;
- min-width:0!important;
- max-width:100%!important;
- box-sizing:border-box!important;
-}
-
-/* Selects must shrink inside their cell rather than forcing the cell wider. */
+/* TF cells: readable 1m/5m without a huge box. */
 #chart-toolbar .analysis-tf-control{
+ display:flex!important;
+ justify-content:center!important;
+ align-items:center!important;
+ padding:2px 3px!important;
  overflow:hidden!important;
 }
+#chart-toolbar .analysis-tf-control>span,
+#chart-toolbar .analysis-tf-control small{
+ display:none!important;
+}
 #chart-toolbar .analysis-tf-control select{
- width:min(54px,100%)!important;
+ width:100%!important;
  min-width:0!important;
  max-width:100%!important;
+ height:26px!important;
+ min-height:26px!important;
+ padding:0 16px 0 5px!important;
  box-sizing:border-box!important;
+ border:0!important;
+ border-radius:6px!important;
+ background:linear-gradient(180deg,#203955,#162b45)!important;
+ color:#f5fbff!important;
+ font:700 10px/1 'Segoe UI','IBM Plex Sans Thai',sans-serif!important;
+ text-align:center!important;
+ text-shadow:0 0 6px rgba(var(--tb-cyan),.18)!important;
 }
 
-/* Text is allowed to compress cleanly instead of pushing outside the viewport. */
-#chart-toolbar .toolbar-main-button,
-#chart-toolbar .drawing-tools>summary{
+/* Real buttons: smaller boxes, larger/brighter text than before. */
+#chart-toolbar .toolbar-main-button{
+ display:flex!important;
+ align-items:center!important;
+ justify-content:center!important;
+ padding:0 5px!important;
  overflow:hidden!important;
  text-overflow:ellipsis!important;
  white-space:nowrap!important;
+ font:650 9.5px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
+ letter-spacing:0!important;
+}
+#chart-toolbar .drawing-tools>summary{
+ display:grid!important;
+ place-items:center!important;
+ padding:0 4px!important;
+ overflow:hidden!important;
+ text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+ color:#f0f7ff!important;
+ font:650 9px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
 }
 #chart-toolbar .toolbar-more>summary{
  display:grid!important;
  place-items:center!important;
+ width:100%!important;
+ padding:0!important;
+ color:#f4f8ff!important;
+ font:800 13px/1 'Segoe UI',sans-serif!important;
 }
 
-/* Floating mode follows the viewport; embedded mode follows the chart container. */
+/* Stronger active states: visible at a glance. */
+#chart-toolbar .indicator-toggle[aria-pressed=true]{
+ color:#baffdf!important;
+ text-shadow:0 0 8px rgba(var(--tb-green),.46)!important;
+ background:
+   linear-gradient(180deg,rgba(25,61,56,.98),rgba(15,41,39,.99)) padding-box,
+   linear-gradient(110deg,rgba(var(--tb-green),.88),rgba(var(--tb-cyan),.36),rgba(var(--tb-green),.88)) border-box!important;
+ box-shadow:
+   inset 0 0 12px rgba(var(--tb-green),.055),
+   0 0 9px rgba(var(--tb-green),.16)!important;
+}
+#chart-toolbar .drawing-tools[open]>summary,
+#chart-toolbar .drawing-tools.active>summary{
+ color:#f3eaff!important;
+ text-shadow:0 0 8px rgba(var(--tb-violet),.50)!important;
+ background:
+   linear-gradient(180deg,rgba(55,39,84,.99),rgba(34,27,59,.99)) padding-box,
+   linear-gradient(110deg,rgba(var(--tb-violet),.95),rgba(var(--tb-cyan),.34),rgba(var(--tb-violet),.95)) border-box!important;
+ box-shadow:0 0 10px rgba(var(--tb-violet),.20)!important;
+}
+#chart-toolbar .toolbar-more[open]>summary{
+ color:white!important;
+ background:
+   linear-gradient(180deg,rgba(30,58,82,.99),rgba(18,40,61,.99)) padding-box,
+   linear-gradient(110deg,rgba(var(--tb-cyan),.95),rgba(var(--tb-violet),.45),rgba(var(--tb-cyan),.95)) border-box!important;
+ box-shadow:0 0 10px rgba(var(--tb-cyan),.18)!important;
+}
+
+/* Popovers are brighter and more legible than the previous nearly-black surfaces. */
+#chart-toolbar .toolbar-more-popover,
+#chart-toolbar .drawing-tools-popover{
+ top:35px!important;
+ border:1px solid rgba(var(--tb-cyan),.30)!important;
+ border-radius:10px!important;
+ background:linear-gradient(180deg,rgba(20,38,58,.995),rgba(12,26,43,.995))!important;
+ color:#edf7ff!important;
+ box-shadow:
+   0 18px 48px rgba(0,0,0,.50),
+   0 0 14px rgba(var(--tb-cyan),.09),
+   0 0 20px rgba(var(--tb-violet),.055)!important;
+}
+
+/* Floating toolbar keeps the same compact dimensions instead of stretching. */
 body.toolbar-floating #chart-toolbar{
- width:min(860px,calc(100vw - 12px))!important;
+ width:max-content!important;
  max-width:calc(100vw - 12px)!important;
  left:50%!important;
  right:auto!important;
  transform:translateX(-50%)!important;
+ top:6px!important;
 }
 
-/* Scanner now travels using parent-relative left positions, never an 860px hard-coded trip. */
-#chart-toolbar::after{
- left:-46px!important;
- transform:none!important;
- animation:arisCyberTopSweepResponsive 4.8s ease-in-out infinite!important;
-}
-@keyframes arisCyberTopSweepResponsive{
- 0%{left:-46px;opacity:0}
- 12%{opacity:.95}
- 50%{opacity:.72}
- 88%{opacity:.92}
- 100%{left:calc(100% - 10px);opacity:0}
-}
-
-/* Tablet / phone: same bar, same controls, fluid cells. */
-@media(max-width:700px){
+/* Screenshot-sized / tablet widths: still one compact row. */
+@media(max-width:900px){
  #chart-toolbar{
-   width:100%!important;
-   max-width:100%!important;
-   grid-template-columns:
-     repeat(4,minmax(0,1fr))
-     34px!important;
-   column-gap:4px!important;
-   padding:5px!important;
- }
- body.toolbar-floating #chart-toolbar{
-   width:calc(100vw - 10px)!important;
-   max-width:calc(100vw - 10px)!important;
- }
- #chart-toolbar .analysis-tf-control,
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary,
- #chart-toolbar .toolbar-more>summary{
-   height:34px!important;
-   min-height:34px!important;
-   max-height:34px!important;
- }
- #chart-toolbar .analysis-tf-control{
-   padding:3px 3px!important;
-   justify-content:center!important;
- }
- #chart-toolbar .analysis-tf-control>span{
-   display:none!important;
- }
- #chart-toolbar .analysis-tf-control select{
-   width:100%!important;
-   padding:0 16px 0 5px!important;
-   text-align:center!important;
-   font-size:8.5px!important;
- }
- #chart-toolbar .toolbar-main-button{
-   padding:0 4px!important;
-   font-size:7.7px!important;
- }
- #chart-toolbar .drawing-tools>summary{
-   padding:0 4px!important;
-   font-size:7.7px!important;
- }
- #chart-toolbar .toolbar-more>summary{
-   width:100%!important;
-   font-size:13px!important;
- }
- #chart-toolbar::after{
-   width:38px!important;
-   animation-duration:5.8s!important;
- }
-}
-
-@media(max-width:430px){
- #chart-toolbar{
-   grid-template-columns:
-     repeat(4,minmax(0,1fr))
-     30px!important;
-   column-gap:3px!important;
-   padding:4px!important;
- }
- #chart-toolbar .analysis-tf-control,
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary,
- #chart-toolbar .toolbar-more>summary{
-   height:32px!important;
-   min-height:32px!important;
-   max-height:32px!important;
-   border-radius:8px!important;
- }
- #chart-toolbar .analysis-tf-control select{
-   font-size:8px!important;
-   padding-left:3px!important;
-   padding-right:14px!important;
- }
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary{
-   font-size:7px!important;
-   padding-left:2px!important;
-   padding-right:2px!important;
- }
- #chart-toolbar .toolbar-more>summary{
-   font-size:12px!important;
- }
-}
-
-/* Very narrow phones still keep everything in one row. */
-@media(max-width:360px){
- #chart-toolbar{
-   grid-template-columns:
-     repeat(4,minmax(0,1fr))
-     28px!important;
-   column-gap:2px!important;
+   grid-template-columns:60px 60px 88px 48px 27px!important;
+   gap:3px!important;
+   height:38px!important;
+   min-height:38px!important;
    padding:3px!important;
  }
+ #chart-toolbar .analysis-tf-control,
  #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary{
-   font-size:6.5px!important;
- }
- #chart-toolbar .analysis-tf-control select{
-   font-size:7.5px!important;
+ #chart-toolbar .drawing-tools>summary,
+ #chart-toolbar .toolbar-more>summary{
+   height:30px!important;
+   min-height:30px!important;
+   max-height:30px!important;
  }
 }
 
-/* Reduced motion remains respected. */
+/* Phone: shrink frames, NOT the readable text into oblivion. */
+@media(max-width:560px){
+ #chart-toolbar{
+   grid-template-columns:56px 56px minmax(72px,84px) 44px 26px!important;
+   gap:3px!important;
+   width:max-content!important;
+   max-width:100%!important;
+   height:36px!important;
+   min-height:36px!important;
+   padding:3px!important;
+   border-radius:9px!important;
+ }
+ #chart-toolbar .analysis-tf-control,
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary,
+ #chart-toolbar .toolbar-more>summary{
+   height:28px!important;
+   min-height:28px!important;
+   max-height:28px!important;
+   border-radius:7px!important;
+ }
+ #chart-toolbar .analysis-tf-control select{
+   height:24px!important;
+   min-height:24px!important;
+   padding-left:3px!important;
+   padding-right:13px!important;
+   font-size:9.5px!important;
+ }
+ #chart-toolbar .toolbar-main-button{
+   padding:0 3px!important;
+   font-size:8.6px!important;
+ }
+ #chart-toolbar .drawing-tools>summary{
+   padding:0 2px!important;
+   font-size:8.5px!important;
+ }
+ #chart-toolbar .toolbar-more>summary{font-size:12px!important}
+ #chart-toolbar::before{
+   width:32px!important;
+   animation-duration:4.6s!important;
+ }
+}
+
+/* Extra-narrow phones: use the container width exactly, but preserve one row. */
+@media(max-width:350px){
+ #chart-toolbar{
+   width:100%!important;
+   grid-template-columns:52px 52px minmax(0,1fr) 40px 24px!important;
+   gap:2px!important;
+   padding:2px!important;
+ }
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary{font-size:8px!important}
+}
+
+/* Reduce motion without sacrificing visual hierarchy. */
 @media(prefers-reduced-motion:reduce){
- #chart-toolbar::after{animation:none!important}
+ #chart-toolbar,
+ #chart-toolbar .analysis-tf-control,
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary,
+ #chart-toolbar .toolbar-more>summary,
+ #chart-toolbar::before{
+   animation:none!important;
+ }
+}
+
+@keyframes toolbarOuterFlow{
+ to{background-position:0 0,260% 0}
+}
+@keyframes toolbarCellFlow{
+ to{background-position:0 0,220% 0}
+}
+@keyframes toolbarScanner{
+ 0%{left:8px;opacity:.25}
+ 12%{opacity:1}
+ 50%{opacity:.85}
+ 88%{opacity:1}
+ 100%{left:calc(100% - 50px);opacity:.25}
 }
 </style>
 
