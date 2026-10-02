@@ -7,7 +7,7 @@
 'use strict';
 
 const VERSION='ARIS-3.2.0';
-const REVISION='stage-brain-b1-r6';
+const REVISION='stage-brain-b1-audit-r1';
 
 const CFG=Object.freeze({
   version:VERSION,
@@ -24,6 +24,10 @@ const CFG=Object.freeze({
   pivotWing:2,
   pivotEqualAtr:.03,
   structureBreakAtr:.08,
+  zoneClusterAtr:.28,
+  zoneNearAtr:.30,
+  fibMinLegAtr:.80,
+  fibZoneAtr:.16,
 
   // Range / compression
   rangeLookback:18,
@@ -95,16 +99,35 @@ function atr(bars,n=14){
   return avg(tr.slice(-n));
 }
 
+function validBar(q){
+  if(!q||!finite(+q.open)||!finite(+q.high)||!finite(+q.low)||!finite(+q.close))return false;
+  const o=+q.open,h=+q.high,l=+q.low,c=+q.close;
+  return o>0&&h>0&&l>0&&c>0&&h>=Math.max(o,c,l)&&l<=Math.min(o,c,h);
+}
+
 function sanitizeBars(rows){
   return (rows||[])
-    .filter(q=>q&&finite(+q.open)&&finite(+q.high)&&finite(+q.low)&&finite(+q.close))
+    .filter(validBar)
     .map(q=>({
       time:+(q.time??q.openTime??q.ts??0),
       open:+q.open,high:+q.high,low:+q.low,close:+q.close,
-      volume:finite(+q.volume)?+q.volume:0,
+      volume:finite(+q.volume)?Math.max(0,+q.volume):0,
       closed:q.closed!==false
     }))
     .sort((a,b)=>a.time-b.time);
+}
+
+function dataQuality(input,rawRows,bars){
+  if(input?.fresh===false)return {ready:false,hardBlock:true,reason:'stale_market_data'};
+  if(Object.prototype.hasOwnProperty.call(input||{},'price')&&!finite(+input.price))return {ready:false,hardBlock:true,reason:'invalid_live_price'};
+  const raw=(rawRows||[]).filter(Boolean);
+  if(raw.length&&bars.length<raw.length*.90)return {ready:false,hardBlock:true,reason:'invalid_ohlc_sequence',rawBars:raw.length,validBars:bars.length};
+  if(bars.length>=2){
+    for(let i=1;i<bars.length;i++){
+      if(bars[i].time&&bars[i-1].time&&bars[i].time<bars[i-1].time)return {ready:false,hardBlock:true,reason:'non_monotonic_bars'};
+    }
+  }
+  return {ready:true,hardBlock:false,reason:'ok'};
 }
 
 function candleMetric(q,a){
@@ -211,6 +234,22 @@ function volumeContext(bars){
   };
 }
 
+function liveContext(input,a,vol){
+  const q=input?.currentCandle||input?.liveCandle||input?.current||null;
+  if(!validBar(q))return {available:false,reason:'no_live_candle',volumePace:finite(+input?.liveVolumePace)?+input.liveVolumePace:null};
+  const metric=candleMetric({open:+q.open,high:+q.high,low:+q.low,close:+q.close},a);
+  const explicitPace=finite(+input?.liveVolumePace)?+input.liveVolumePace:null;
+  const pace=explicitPace??(finite(+q.volume)&&vol?.median20?Math.max(0,+q.volume)/Math.max(vol.median20,1e-9):null);
+  return {
+    available:true,
+    time:+(q.time??q.openTime??q.ts??0),
+    open:+q.open,high:+q.high,low:+q.low,close:+q.close,
+    volume:finite(+q.volume)?Math.max(0,+q.volume):0,
+    volumePace:finite(pace)?pace:null,
+    ...metric
+  };
+}
+
 function sequenceContext(bars,a){
   const closed=bars.filter(q=>q.closed),rows=closed.slice(-12),m=rows.map(q=>({...candleMetric(q,a),bar:q}));
   const recent=m.slice(-CFG.compressionRecentBars),prior=m.slice(-(CFG.compressionRecentBars+CFG.compressionPriorBars),-CFG.compressionRecentBars);
@@ -225,18 +264,87 @@ function sequenceContext(bars,a){
   const rejectionDown=avg(recent.map(x=>x.upper>=.30&&x.closeLoc<=.52?1:0));
   const bodyDecay=safeDiv(recentBody,Math.max(priorBody,1e-9),1);
 
-  const highs=rows.map(q=>q.high),lows=rows.map(q=>q.low);
+  const highs=rows.map(q=>q.high),lows=rows.map(q=>q.low),closes=rows.map(q=>q.close);
   const recentHighProgress=highs.length>=6?Math.max(0,Math.max(...highs.slice(-3))-Math.max(...highs.slice(-6,-3)))/Math.max(a,1e-9):0;
   const recentLowProgress=lows.length>=6?Math.max(0,Math.min(...lows.slice(-6,-3))-Math.min(...lows.slice(-3)))/Math.max(a,1e-9):0;
   const priorHighProgress=highs.length>=9?Math.max(0,Math.max(...highs.slice(-6,-3))-Math.max(...highs.slice(-9,-6)))/Math.max(a,1e-9):0;
   const priorLowProgress=lows.length>=9?Math.max(0,Math.min(...lows.slice(-9,-6))-Math.min(...lows.slice(-6,-3)))/Math.max(a,1e-9):0;
+  const progRows=rows.slice(-6);
+  let hh=0,hl=0,hc=0,lh=0,ll=0,lc=0,steps=0;
+  for(let i=1;i<progRows.length;i++){
+    const p=progRows[i-1],q=progRows[i];steps++;
+    if(q.high>p.high)hh++; if(q.low>p.low)hl++; if(q.close>p.close)hc++;
+    if(q.high<p.high)lh++; if(q.low<p.low)ll++; if(q.close<p.close)lc++;
+  }
+  const progressionUp=steps?avg([hh/steps,hl/steps,hc/steps]):0;
+  const progressionDown=steps?avg([lh/steps,ll/steps,lc/steps]):0;
+  const directionalVolumeUp=median(rows.slice(-6).filter(q=>q.close>q.open).map(q=>q.volume||0));
+  const directionalVolumeDown=median(rows.slice(-6).filter(q=>q.close<q.open).map(q=>q.volume||0));
 
   return {
     metrics:m,recentRange,priorRange,recentBody,priorBody,
     compressionRangeRatio,compressionBodyRatio,pressure,
     followUp:upFollow,followDown:downFollow,
     rejectionUp,rejectionDown,bodyDecay,
-    recentHighProgress,recentLowProgress,priorHighProgress,priorLowProgress
+    recentHighProgress,recentLowProgress,priorHighProgress,priorLowProgress,
+    progressionUp,progressionDown,
+    higherHighRate:steps?hh/steps:0,higherLowRate:steps?hl/steps:0,higherCloseRate:steps?hc/steps:0,
+    lowerHighRate:steps?lh/steps:0,lowerLowRate:steps?ll/steps:0,lowerCloseRate:steps?lc/steps:0,
+    directionalVolumeUp,directionalVolumeDown
+  };
+}
+
+function zoneContext(sw,range,price,a){
+  const points=[];
+  for(const q of sw?.pivots||[])points.push({price:q.price,type:q.type==='L'?'support':'resistance',time:q.time,weight:1});
+  if(range){points.push({price:range.low,type:'support',time:range.endTime,weight:1.25});points.push({price:range.high,type:'resistance',time:range.endTime,weight:1.25});}
+  const tol=Math.max(a*CFG.zoneClusterAtr,price*.00001),clusters=[];
+  for(const p of points.sort((x,y)=>x.price-y.price)){
+    let z=clusters.find(q=>Math.abs(q.price-p.price)<=tol);
+    if(!z){z={price:p.price,weight:0,touches:0,types:{support:0,resistance:0},lastTime:p.time||0};clusters.push(z);}
+    const w=p.weight||1;
+    z.price=(z.price*z.weight+p.price*w)/(z.weight+w);
+    z.weight+=w;z.touches++;z.types[p.type]=(z.types[p.type]||0)+1;z.lastTime=Math.max(z.lastTime,p.time||0);
+  }
+  const zones=clusters.map(z=>({...z,type:z.types.support>z.types.resistance?'support':z.types.resistance>z.types.support?'resistance':'mixed',
+    distanceAtr:(z.price-price)/Math.max(a,1e-9),strength:clip((z.weight+Math.min(3,z.touches))/6)}));
+  const support=[...zones].filter(z=>z.price<=price).sort((x,y)=>y.price-x.price)[0]||null;
+  const resistance=[...zones].filter(z=>z.price>=price).sort((x,y)=>x.price-y.price)[0]||null;
+  return {
+    zones,
+    nearestSupport:support,
+    nearestResistance:resistance,
+    roomUpAtr:resistance?Math.max(0,(resistance.price-price)/a):Infinity,
+    roomDownAtr:support?Math.max(0,(price-support.price)/a):Infinity
+  };
+}
+
+function fibContext(sw,price,a,zones){
+  const leg=sw?.lastLeg;
+  if(!leg||leg.moveAtr<CFG.fibMinLegAtr)return {valid:false,reason:'no_confirmed_leg'};
+  const start=leg.start.price,end=leg.end.price,d=leg.d,move=Math.abs(end-start);
+  if(move<=1e-9)return {valid:false,reason:'zero_leg'};
+  const levels=[.236,.382,.5,.618,.786];
+  const extLevels=[1.272,1.618];
+  const retracement=d>0?(end-price)/move:(price-end)/move;
+  const extension=d>0?(price-start)/move:(start-price)/move;
+  const levelPrices=Object.fromEntries(levels.map(r=>[String(r),d>0?end-move*r:end+move*r]));
+  const extensionPrices=Object.fromEntries(extLevels.map(r=>[String(r),d>0?start+move*r:start-move*r]));
+  let nearest=null;
+  for(const r of levels){
+    const p=levelPrices[String(r)],dist=Math.abs(price-p)/Math.max(a,1e-9);
+    if(!nearest||dist<nearest.distanceAtr)nearest={ratio:r,price:p,distanceAtr:dist};
+  }
+  const nearZone=zones?.zones?.some(z=>Math.abs(z.price-(nearest?.price??price))<=a*CFG.fibZoneAtr)||false;
+  return {
+    valid:true,d,start,end,moveAtr:leg.moveAtr,retracement,extension,
+    levels:levelPrices,extensions:extensionPrices,nearest,
+    healthy:retracement>=.382&&retracement<=.618,
+    deep:retracement>.618&&retracement<=.786,
+    overRetraced:retracement>.786,
+    extended:extension>=1.0,
+    confluence:nearZone,
+    zone:retracement<.236?'shallow':retracement<=.382?'23.6-38.2':retracement<=.50?'38.2-50':retracement<=.618?'50-61.8':retracement<=.786?'61.8-78.6':retracement<=1?'deep':'beyond_leg'
   };
 }
 
@@ -290,12 +398,18 @@ function higherFrameContext(rows){
 }
 
 function featureBrain(input){
-  const bars=sanitizeBars(input?.bars1m??input?.bars??[]);
-  if(bars.length<CFG.minBars1m)return {ready:false,reason:'need_more_1m_bars',have:bars.length,need:CFG.minBars1m};
+  const rawRows=input?.bars1m??input?.bars??[];
+  const bars=sanitizeBars(rawRows);
+  const quality=dataQuality(input,rawRows,bars);
+  if(!quality.ready)return {ready:false,reason:quality.reason,hardBlock:true,dataQuality:quality};
+  if(bars.length<CFG.minBars1m)return {ready:false,reason:'need_more_1m_bars',have:bars.length,need:CFG.minBars1m,dataQuality:quality};
 
-  const b=bars.slice(-CFG.featureLookback),closed=b.filter(q=>q.closed),price=finite(+input.price)?+input.price:closed.at(-1).close;
+  const b=bars.slice(-CFG.featureLookback),closed=b.filter(q=>q.closed);
+  if(closed.length<CFG.minBars1m)return {ready:false,reason:'need_more_closed_1m_bars',have:closed.length,need:CFG.minBars1m,dataQuality:quality};
+  const price=finite(+input.price)?+input.price:closed.at(-1).close;
   const a=Math.max(atr(closed,CFG.atrBars),price*.00004,1e-9),c=closed.map(q=>q.close),e8=ema(c,8),e21=ema(c,21);
   const seq=sequenceContext(closed,a),vol=volumeContext(closed),range=rangeReference(closed,a),sw=confirmedPivots(closed,a);
+  const zones=zoneContext(sw,range,price,a),fib=fibContext(sw,price,a,zones),live=liveContext(input,a,vol);
   const eff6=pathEfficiency(c,6),eff12=pathEfficiency(c,12),eff24=pathEfficiency(c,24);
   const slope5=regressionSlope(e21,5,a),slope12=regressionSlope(e21,12,a),slope24=regressionSlope(e21,24,a),sep=(e8.at(-1)-e21.at(-1))/a;
   const mom3=signedProgress(c,3,a),mom8=signedProgress(c,8,a),mom16=signedProgress(c,16,a),mom24=signedProgress(c,24,a);
@@ -317,7 +431,8 @@ function featureBrain(input){
     ema8:e8.at(-1),ema21:e21.at(-1),emaSepAtr:sep,emaSlope5:slope5,emaSlope12:slope12,emaSlope24:slope24,
     eff6,eff12,eff24,priorEff,effDrop,slopeDrop,
     momentum3:mom3,momentum8:mom8,momentum16:mom16,momentum24:mom24,momentumAccel:momAccel,
-    extensionAtr:extension,current,seq,vol,range,rangePosition,sw,breakout,flow,book,htf
+    extensionAtr:extension,current,live,seq,vol,range,rangePosition,sw,zones,fib,breakout,flow,book,htf,dataQuality:quality,
+    sourceMode:finite(+input.price)?'LIVE_PRICE':'BAR_CLOSE'
   };
 }
 
@@ -349,6 +464,7 @@ function structureBrain(f){
 
 function rangeQuality(f,s){
   if(!f.range)return 0;
+  if(f.range.widthAtr<CFG.rangeMinWidthAtr||f.range.widthAtr>CFG.rangeMaxWidthAtr)return 0;
   const widthOK=1-clip(Math.abs(f.range.widthAtr-4.0)/4.5);
   const eff=1-clip(f.eff12/Math.max(CFG.rangeEfficiencyGood,.01));
   const slope=1-clip(Math.abs(f.emaSlope5)/Math.max(CFG.rangeSlopeGood,.01));
@@ -398,7 +514,8 @@ function transitionQuality(f,s,trendScore,rangeScore,exhaustScore){
   const d=s.dir||s.trendDir||sign(f.momentum16,.08);
   const recentProgress=d>0?f.seq.recentHighProgress:d<0?f.seq.recentLowProgress:0;
   const priorProgress=d>0?f.seq.priorHighProgress:d<0?f.seq.priorLowProgress:0;
-  const progressLoss=priorProgress>.03?clip(1-safeDiv(recentProgress,priorProgress)):0;
+  const progressRatio=priorProgress>.03?safeDiv(recentProgress,priorProgress,1):1;
+  const progressLoss=priorProgress>.03?clip((CFG.transitionProgressRatio-progressRatio)/Math.max(CFG.transitionProgressRatio,.01)):0;
   const defense=d>0?f.seq.rejectionDown:d<0?f.seq.rejectionUp:Math.max(f.seq.rejectionUp,f.seq.rejectionDown);
   const recentMomRef=Math.max(Math.abs(f.momentum8),Math.abs(f.momentum16));
   const longMomRef=Math.abs(f.momentum24);
@@ -466,7 +583,9 @@ function softmaxScores(raw){
   const max=Math.max(...entries.map(([,v])=>v/t));
   const exp=entries.map(([k,v])=>[k,Math.exp(v/t-max)]);
   const total=sum(exp.map(([,v])=>v));
-  return Object.fromEntries(exp.map(([k,v])=>[k,Math.max(CFG.confidenceFloor,v/total)]));
+  const floored=exp.map(([k,v])=>[k,Math.max(CFG.confidenceFloor,v/Math.max(total,1e-12))]);
+  const floorTotal=sum(floored.map(([,v])=>v));
+  return Object.fromEntries(floored.map(([k,v])=>[k,v/Math.max(floorTotal,1e-12)]));
 }
 
 function stageBrain(f,s){
@@ -567,6 +686,7 @@ function analyze(input={}){
     revision:REVISION,
     ready:true,
     ts:finite(+input.ts)?+input.ts:Date.now(),
+    horizonMs:CFG.horizonMs,
     price:features.price,
     features,
     structure,
@@ -584,8 +704,8 @@ root.ArisV32=Object.freeze({
   structureBrain,
   stageBrain,
   internals:Object.freeze({
-    sanitizeBars,atr,ema,pathEfficiency,regressionSlope,confirmedPivots,rangeReference,
-    sequenceContext,breakoutContext,higherFrameContext,softmaxScores
+    validBar,sanitizeBars,dataQuality,atr,ema,pathEfficiency,regressionSlope,confirmedPivots,rangeReference,
+    sequenceContext,liveContext,zoneContext,fibContext,breakoutContext,higherFrameContext,softmaxScores
   })
 });
 
