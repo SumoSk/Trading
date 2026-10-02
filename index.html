@@ -1780,6 +1780,11 @@ body{
 
 
 <style id="cyber-toolbar-final-20261002">
+@property --aris-cy-angle{
+ syntax:'<angle>';
+ inherits:false;
+ initial-value:0deg;
+}
 /* ARIS cyber toolbar skin — visual only.
    Preserve current controls, order, behavior and compact dimensions. */
 #chart-toolbar{
@@ -1812,7 +1817,7 @@ body{
  padding:1px;
  background:
    conic-gradient(
-     from 0deg,
+     from var(--aris-cy-angle),
      transparent 0deg 62deg,
      rgba(var(--cy-cyan),.12) 72deg,
      rgba(var(--cy-cyan),.98) 83deg,
@@ -1999,7 +2004,7 @@ body[data-feed=live] #chart-toolbar .tiny-dot{
 }
 
 @keyframes arisCyberBorderRun{
- to{transform:rotate(360deg)}
+ to{--aris-cy-angle:360deg}
 }
 @keyframes arisCyberTopSweep{
  0%{transform:translateX(-70px);opacity:0}
