@@ -3957,12 +3957,12 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="v32-triggers.js?v=20261002-r1"></script>
 <script src="v32-entry.js?v=20261002-r1"></script>
 <script src="v32-training.js?v=20261002-r1"></script>
-<script src="v32-adapter.js?v=20261002-r2"></script>
+<script src="v32-adapter.js?v=20261002-r3"></script>
 <script src="v4.js?v=20261001-r1"></script>
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
 <script src="audit-engine.js?v=20261001-r4"></script>\n<script src="historical-data.js?v=20261001-r3"></script>
-<script src="training-engine-registry.js?v=20261002-r12"></script>
+<script src="training-engine-registry.js?v=20261002-r13"></script>
 <script src="replay-engine.js?v=20261001-r7"></script>
 <script src="training-analytics.js?v=20261001-r1"></script>\n<script src="10-candle-challenge.js?v=20261002-r6"></script>\n<script src="training-lab.js?v=20261002-r15"></script>\n<script src="training-validation.js?v=20261001-r5"></script>
 <script>
@@ -4198,10 +4198,12 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 
   function renderAutoFibOverlay(svg,make,w,h){
    const activeVersion=globalThis.EventSignalV6?.CFG?.version;
-   if(!['ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0'].includes(activeVersion))return;
-   const fib=['ARIS-3.0.0','ARIS-3.1.0'].includes(activeVersion)
-    ?(lastView?.v3Story?.fib||lastView?.phase?.v3View?.story?.fib)
-    :(lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib);
+   if(!['ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-3.2.0'].includes(activeVersion))return;
+   const fib=activeVersion==='ARIS-3.2.0'
+    ?(lastView?.v32Story?.fib||lastView?.phase?.v32Snapshot?.features?.fib)
+    :['ARIS-3.0.0','ARIS-3.1.0'].includes(activeVersion)
+     ?(lastView?.v3Story?.fib||lastView?.phase?.v3View?.story?.fib)
+     :(lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib);
    if(!fib?.valid||!Number.isFinite(fib.start)||!Number.isFinite(fib.end)){
     const waiting=make('text',{x:8,y:13,class:'auto-fib-status'});
     waiting.textContent='AUTO FIB · รอ Swing ยืนยัน';svg.append(waiting);return;
@@ -5242,6 +5244,31 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   function renderCompactSetupProfile(v=null,directionView=null,micro={}){
    const target=$('setup-profile-compact');if(!target)return;
    const primary=state.analysisTf==='1m',tf=state.analysisTf,main=state.continuousView?.available?state.continuousView:null,candle=state.candleView?.available?state.candleView:null;
+   if(CFG.version==='ARIS-3.2.0'&&v?.v32Story){
+    const st=v.v32Story,stage=st.stage||{},dirObj=st.direction||{},trigger=st.trigger||null,dir=dirObj.direction==='HIGH'?'HIGH':dirObj.direction==='LOW'?'LOW':null;
+    target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
+    $('setup-compact-next').textContent=cleanReportText(v32StageThai(stage.dominant)+' '+Math.round((stage.dominantConfidence||0)*100)+'%');$('setup-compact-next').className=dir==='HIGH'?'up':dir==='LOW'?'down':'neutral';
+    $('setup-compact-name').textContent=cleanReportText((trigger?v32TriggerThai(trigger.id):'ยังไม่มี Stage Trigger')+(dir?' · '+directionThai(dir):''));
+    $('setup-compact-status').textContent=trigger?(trigger.ready?'READY':'WATCH')+' · '+Math.round(trigger.quality||0)+'/100':'กำลังอ่าน Stage';
+    const reasons=[];
+    if(stage.ranked?.length)reasons.push(stage.ranked.slice(0,3).map(x=>v32StageThai(x.stage)+' '+Math.round((x.confidence||0)*100)+'%').join(' · '));
+    if(trigger?.reasons?.length)reasons.push(trigger.reasons.slice(0,2).join(' · '));
+    if(trigger?.missing?.length)reasons.push('ยังขาด '+trigger.missing.slice(0,2).join(' / '));
+    $('setup-compact-desc').textContent=cleanReportText(reasons.join(' · ')||'กำลังประเมิน Stage → Direction → Trigger');
+    const title=$('signal-title')?.textContent||'กำลังเฝ้ากราฟ',es=$('entry-state')?.textContent||'WATCH';$('setup-compact-entry').textContent=cleanReportText(title+' · '+es);
+    const eq=Number.isFinite(st.currentEntryQuality)?Math.round(st.currentEntryQuality):null;
+    $('setup-compact-entry-reason').textContent=cleanReportText('Stage: '+v32StageThai(stage.dominant)+' · Direction: '+(dir||'BALANCED')+' · Trigger: '+(trigger?v32TriggerThai(trigger.id):'ยังไม่มี')+(eq!=null?' · Entry Quality '+eq+'/100':'')+(st.rearm?.armed===false?' · รอ re-arm':''));
+    const fill=(id,rows,fallback)=>{const ul=$(id);if(!ul)return;ul.replaceChildren();for(const t of (rows.length?rows:[fallback])){const li=document.createElement('li');li.textContent=cleanReportText(t);ul.append(li);}};
+    const support=[],warn=[],fib=st.fib;
+    if(st.structure?.summary)support.push('โครงสร้าง · '+st.structure.summary);
+    if(fib?.valid)support.push('Fib '+(finite(fib.retracement)?Math.max(0,fib.retracement*100).toFixed(1)+'% retrace':finite(fib.extension)?(fib.extension*100).toFixed(1)+'% extension':'พร้อม')+(fib.confluence?' · ซ้อนแนวสำคัญ':''));
+    if(trigger?.penalties?.length)warn.push(...trigger.penalties);
+    if(trigger?.hardBlocks?.length)warn.unshift(...trigger.hardBlocks);
+    if(trigger?.missing?.length)warn.push('ยังขาด '+trigger.missing.slice(0,3).join(' / '));
+    fill('setup-compact-support',support.slice(0,8),'Stage/Direction กำลังสร้างน้ำหนัก');
+    fill('setup-compact-warning',warn.slice(0,8),'ยังไม่พบตัวบล็อกสำคัญ');
+    return;
+   }
    if(['ARIS-3.0.0','ARIS-3.1.0'].includes(CFG.version)&&v?.v3Story){
     const st=v.v3Story,dir=st.direction==='HIGH'?'HIGH':st.direction==='LOW'?'LOW':null,g=st.gates||{},th=st.thesis||{};
     target.classList.remove('side-high','side-low','side-conflict');if(dir)target.classList.add(dir==='HIGH'?'side-high':'side-low');else target.classList.add('side-conflict');
@@ -7089,7 +7116,7 @@ function openReport(){
    engineVersionSelect.value=CFG.version;
    engineVersionSelect.addEventListener('change',()=>{
     const next=engineVersionSelect.value;
-    if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-4.0.0'].includes(next)||next===CFG.version)return;
+    if(!['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0','ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-3.2.0','ARIS-4.0.0'].includes(next)||next===CFG.version)return;
     try{localStorage.setItem(ACTIVE_VERSION_STORE,next);}catch{}
     location.reload();
    });
