@@ -200,3 +200,48 @@ When continuing ARIS 3.2 work:
 3. inspect only the ARIS 3.2 files needed for the current block
 4. do not modify frozen version files
 5. commit each meaningful block separately
+
+
+## Audit Fix Pass — completed 2026-10-02
+
+Backup before audit:
+- `backup/aris-3.2-pre-audit-fix-20261002`
+- source commit `7bae9a92ae94433a1ce8336a8c1adbc122eb8b7c`
+
+Audit artifacts:
+- `ARIS-3.2-AUDIT.md`
+- `ARIS-3.2-CONFIG.md`
+- `v32-regression-tests.js`
+
+Audit fixes completed:
+- stale data hard block
+- normalized stage-confidence vector
+- family-specific re-arm state
+- direction-aligned Entry Quality
+- live candle / live volume evidence
+- live breakout attempt without fake closed acceptance
+- live failed-break recapture
+- standalone Fibonacci context
+- standalone support/resistance zone + real room context
+- explicit trend candle progression
+- trend volume participation
+- trigger-family-specific WATCH/READY thresholds
+- dominant-stage trigger affinity
+- expanded causal entry snapshot
+- 1m/2m/5m post-entry labels
+- stage / breakout / structure / flow post-entry labels
+- serialized training paths
+- config meaning/unit/origin registry
+- permanent regression suite
+
+Latest regression:
+- **13 passed / 0 failed**
+
+Current conclusion:
+- implementation is internally coherent enough for Block 6 shadow replay,
+- accuracy / threshold quality is NOT yet validated,
+- all current scoring and threshold coefficients remain design-priors unless the config registry says structural.
+
+Next:
+### Block 6 — identical-window shadow replay against ARIS 3.1
+Do not switch default before replay + out-of-sample + forward-shadow review.
