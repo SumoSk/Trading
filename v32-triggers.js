@@ -10,15 +10,24 @@ const Direction=root.ArisV32Direction;
 if(!Base||!Direction)throw new Error('ARIS 3.2 Block 1 and Block 2 must load before v32-triggers.js');
 
 const VERSION=Base.version;
-const REVISION='stage-triggers-b3-r2';
+const REVISION='stage-triggers-b3-audit-r1';
 const clip=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const finite=Number.isFinite;
 const sign=(v,dead=0)=>v>dead?1:v<-dead?-1:0;
 const unique=a=>[...new Set((a||[]).filter(Boolean))];
 
 const CFG=Object.freeze({
-  watchQuality:44,
-  readyQuality:62,
+  defaultQuality:Object.freeze({watch:44,ready:62}),
+  qualityByFamily:Object.freeze({
+    RANGE_REVERSION:Object.freeze({watch:40,ready:56}),
+    BREAKOUT:Object.freeze({watch:46,ready:64}),
+    FAILED_BREAKOUT:Object.freeze({watch:44,ready:60}),
+    TREND:Object.freeze({watch:48,ready:64}),
+    PULLBACK:Object.freeze({watch:46,ready:62}),
+    TRANSITION:Object.freeze({watch:44,ready:60}),
+    REVERSAL:Object.freeze({watch:48,ready:64}),
+    COMPRESSION:Object.freeze({watch:40,ready:100})
+  }),
 
   rangeStageMin:.28,
   rangeEdgeEnter:.28,
@@ -53,12 +62,14 @@ const score100=v=>Math.round(clip(v)*100);
 
 function mkTrigger({id,family,direction,quality,stage,stageConfidence,state,reasons=[],missing=[],penalties=[],hardBlocks=[],invalidation=[],meta={}}){
   const q=score100(quality);
+  const thresholds=CFG.qualityByFamily[family]||CFG.defaultQuality;
   const blocked=hardBlocks.length>0;
-  const ready=!blocked&&state!=='WATCH_ONLY'&&q>=CFG.readyQuality;
-  const watch=!ready&&!blocked&&q>=CFG.watchQuality;
+  const ready=!blocked&&state!=='WATCH_ONLY'&&q>=thresholds.ready;
+  const watch=!ready&&!blocked&&q>=thresholds.watch;
   return {
     id,family,direction:dirText(direction),d:direction,
     quality:q,
+    thresholds,
     stage,stageConfidence,
     status:blocked?'BLOCKED':ready?'READY':watch?'WATCH':'WEAK',
     ready,watch,watchOnly:state==='WATCH_ONLY',
@@ -71,6 +82,34 @@ function mkTrigger({id,family,direction,quality,stage,stageConfidence,state,reas
   };
 }
 
+function liveRejection(f,d){
+  const closed=d>0?(f.seq.rejectionUp||0):(f.seq.rejectionDown||0);
+  if(!f.live?.available)return closed;
+  const live=d>0
+    ?(f.live.lower>=.25&&f.live.closeLoc>=.48?clip(f.live.lower+(f.live.closeLoc-.48)):0)
+    :(f.live.upper>=.25&&f.live.closeLoc<=.52?clip(f.live.upper+(.52-f.live.closeLoc)):0);
+  return clip(closed*.70+live*.30);
+}
+
+function liveFollow(f,d){
+  const closed=d>0?(f.seq.followUp||0):(f.seq.followDown||0);
+  if(!f.live?.available)return closed;
+  const alignedClose=d>0?f.live.closeLoc:1-f.live.closeLoc;
+  const live=clip((alignedClose-.45)/.45*.55+f.live.bodyAtr/.55*.45);
+  return clip(closed*.72+live*.28);
+}
+
+function directionalVolume(f,d){
+  const closed=clip((Math.max(f.vol.rel,f.vol.ratio3)-.90)/1.10);
+  const live=finite(f.live?.volumePace)?clip((f.live.volumePace-.75)/1.25):null;
+  return live==null?closed:clip(closed*.65+live*.35);
+}
+
+function roomQuality(f,d){
+  const room=d>0?f.zones?.roomUpAtr:f.zones?.roomDownAtr;
+  return finite(room)?clip(room/1.50):.35;
+}
+
 function rangeTrigger(snap){
   const f=snap.features,sc=stageConf(snap,'RANGE'),tc=stageConf(snap,'TRANSITION');
   if(!f.range)return null;
@@ -79,7 +118,7 @@ function rangeTrigger(snap){
   if(!lower&&!upper)return null;
   const d=lower?1:-1;
   const edgeStrength=lower?clip((CFG.rangeEdgeWatch-p)/CFG.rangeEdgeWatch):clip((p-(1-CFG.rangeEdgeWatch))/CFG.rangeEdgeWatch);
-  const rejection=d>0?f.seq.rejectionUp:f.seq.rejectionDown;
+  const rejection=liveRejection(f,d);
   const failed=f.breakout.failedDir===d?clip(.45+(f.breakout.recaptureStrength||0)*.55):0;
   const hold=d>0?clip((f.price-f.range.low)/(f.atr*.45)):clip((f.range.high-f.price)/(f.atr*.45));
   const flow=clip(d*f.flow/.10);
@@ -123,15 +162,18 @@ function breakoutTrigger(snap){
   if(!d)return null;
   const accepted=b.acceptedDir===d;
   const sc=stageConf(snap,accepted?'BREAKOUT_ACCEPTED':'BREAKOUT_ATTEMPT');
-  const volume=clip((Math.max(f.vol.rel,f.vol.ratio3)-.90)/1.1);
+  if(accepted&&sc<CFG.breakoutAcceptedStageMin)return null;
+  if(!accepted&&sc<CFG.breakoutAttemptStageMin)return null;
+  const volume=directionalVolume(f,d);
   const flow=clip(d*f.flow/.10);
-  const follow=d>0?f.seq.followUp:f.seq.followDown;
+  const follow=liveFollow(f,d);
   const close=clip((b.alignedClose-.48)/.45);
   const displacement=clip(Math.abs(b.outsideAtr)/.75);
   const participation=clip(volume*.50+flow*.50);
+  const room=roomQuality(f,d);
   const chase=Math.abs(b.outsideAtr||0);
   const chasePenalty=clip((chase-.65)/.70);
-  let q=(accepted?.20:.08)+close*.18+displacement*.12+volume*.20+flow*.20+follow*.12+sc*.10-chasePenalty*.12;
+  let q=(accepted?.18:.07)+close*.16+displacement*.10+volume*.19+flow*.18+follow*.12+room*.07+sc*.11-chasePenalty*.12;
   q=clip(q);
   const reasons=[
     accepted?'ราคานอกกรอบเริ่มถูกยอมรับ':'ราคาเริ่มออกนอกกรอบแต่ยังไม่ accepted',
@@ -155,7 +197,7 @@ function breakoutTrigger(snap){
     state:watchOnly?'WATCH_ONLY':null,reasons,missing,penalties,
     hardBlocks:[],
     invalidation:['ราคาถูก recapture กลับเข้ากรอบเดิม','Flow พลิกสวนพร้อม rejection'],
-    meta:{accepted,volume,flow,follow,close,displacement,chase,participation}
+    meta:{accepted,liveAttempt:!!b.liveAttempt,volume,flow,follow,close,displacement,room,chase,participation}
   });
 }
 
@@ -164,7 +206,7 @@ function failedBreakTrigger(snap){
   if(!d)return null;
   const sc=stageConf(snap,'FAILED_BREAKOUT');
   const recapture=clip(f.breakout.recaptureStrength||0);
-  const rejection=d>0?f.seq.rejectionUp:f.seq.rejectionDown;
+  const rejection=liveRejection(f,d);
   const flow=clip(d*f.flow/.10);
   const pressure=clip(d*f.seq.pressure/.30);
   const meanRoom=f.range?(d>0?1-f.rangePosition:f.rangePosition):.5;
@@ -191,31 +233,38 @@ function trendTrigger(snap){
   const sc=stageConf(snap,'TREND_ADVANCE');
   if(sc<CFG.trendStageMin)return null;
   const structure=clip(.45+(s.strength||0)*.55);
-  const follow=d>0?f.seq.followUp:f.seq.followDown;
+  const follow=liveFollow(f,d);
+  const progression=d>0?(f.seq.progressionUp||0):(f.seq.progressionDown||0);
   const momentum=clip(d*(f.momentum8*.65+f.momentum3*.35)/1.25);
+  const volume=directionalVolume(f,d);
   const flow=clip(d*f.flow/.10);
   const pressure=clip(d*f.seq.pressure/.30);
   const progress=d>0?f.seq.recentHighProgress:f.seq.recentLowProgress;
   const progressive=clip(progress/.45);
+  const room=roomQuality(f,d);
   const exhaustion=stageConf(snap,'EXHAUSTION');
   const extension=Math.max(0,d*f.extensionAtr);
   const extensionPenalty=clip((extension-1.55)/1.7);
   const opposingReject=d>0?f.seq.rejectionDown:f.seq.rejectionUp;
 
-  let q=structure*.22+follow*.20+momentum*.18+flow*.12+pressure*.10+progressive*.10+clip(sc/.60)*.08;
-  q-=exhaustion*.18+extensionPenalty*.08+opposingReject*.10;
+  let q=structure*.18+follow*.14+progression*.14+momentum*.14+volume*.10+flow*.09+pressure*.07+progressive*.06+room*.04+clip(sc/.60)*.04;
+  q-=exhaustion*.18+extensionPenalty*.07+opposingReject*.09;
   q=clip(q);
 
   const reasons=[
     'โครงสร้างยังคงทิศ '+dirText(d),
     follow>=CFG.trendFollowMin?'แท่งถัดไปยัง follow-through':null,
     momentum>.35?'Momentum ยังต่อ':null,
-    progressive>.20?'High/Low ยังขยับไปข้างหน้า':null,
+    progression>.55?'High/Low/Close สูงขึ้นหรือต่ำลงต่อเนื่อง':null,
+    progressive>.20?'Swing progress ยังเดินหน้า':null,
+    volume>.20?'Volume มีส่วนร่วมกับแนวโน้ม':null,
     flow>.20?'Flow ยังมีส่วนร่วม':null
   ];
   const missing=[];
   if(follow<CFG.trendFollowMin)missing.push('Follow-through ของแท่งยังไม่ต่อเนื่อง');
   if(momentum<.25)missing.push('Momentum ระยะสั้นยังไม่พอ');
+  if(progression<.42)missing.push('ลำดับ High/Low/Close ยังไม่ต่อเนื่องพอ');
+  if(volume<.12)missing.push('Volume participation ยังอ่อน');
   if(exhaustion>CFG.trendMaxExhaustion)missing.push('Exhaustion สูง ควรรอฐานใหม่');
   const penalties=[];
   if(extensionPenalty>.1)penalties.push('ราคาเริ่มยืดจาก value แต่เป็น penalty ไม่ใช่ veto เดี่ยว');
@@ -225,7 +274,7 @@ function trendTrigger(snap){
     stage:'TREND_ADVANCE',stageConfidence:sc,
     reasons,missing,penalties,hardBlocks:[],
     invalidation:[d>0?'Protected low เสีย + follow-through ขึ้นหาย':'Protected high เสีย + follow-through ลงหาย'],
-    meta:{structure,follow,momentum,flow,pressure,progressive,exhaustion,extension,extensionPenalty}
+    meta:{structure,follow,progression,momentum,volume,flow,pressure,progressive,room,exhaustion,extension,extensionPenalty}
   });
 }
 
@@ -236,12 +285,14 @@ function pullbackTrigger(snap){
   if(sc<CFG.pullbackStageMin)return null;
   const dist8=Math.abs(f.price-f.ema8)/f.atr,dist21=Math.abs(f.price-f.ema21)/f.atr;
   const value=clip(1-Math.min(dist8,dist21)/CFG.pullbackValueMaxAtr);
-  const close=d>0?f.current.closeLoc:1-f.current.closeLoc;
+  const candle=f.live?.available?f.live:f.current;
+  const close=d>0?candle.closeLoc:1-candle.closeLoc;
   const reclaim=clip((close-.45)/.45*.35+Math.max(0,d*f.momentum3)/.75*.35+Math.max(0,d*f.seq.pressure)/.30*.30);
   const base=clip((1-f.eff6)*.55+(1-Math.min(1,f.seq.recentRange/Math.max(f.seq.priorRange,.01)))*.45);
   const intact=d>0?!s.bullBroken:!s.bearBroken;
   const flow=clip(d*f.flow/.10);
-  let q=(intact?.18:0)+value*.24+reclaim*.25+base*.14+flow*.09+clip(sc/.45)*.10;
+  const fib=f.fib?.valid&&f.fib.d===d?(f.fib.healthy?.95:f.fib.deep?.55:f.fib.retracement>=.236?.40:.15):0;
+  let q=(intact?.16:0)+value*.20+fib*.14+reclaim*.22+base*.12+flow*.07+clip(sc/.45)*.09;
   q=clip(q);
   const missing=[];
   if(value<.35)missing.push('Pullback ยังไม่กลับเข้า value/base ที่ดี');
@@ -250,10 +301,10 @@ function pullbackTrigger(snap){
   return mkTrigger({
     id:'PULLBACK_RECLAIM',family:'PULLBACK',direction:d,quality:q,
     stage:'PULLBACK',stageConfidence:sc,
-    reasons:[intact?'Protected structure ยังอยู่':null,value>.35?'ราคาอยู่ใกล้ value/EMA':null,reclaim>.35?'เริ่ม reclaim ตามเทรนด์':null],
+    reasons:[intact?'Protected structure ยังอยู่':null,value>.35?'ราคาอยู่ใกล้ value/EMA':null,fib>.45?'Fib ของขาสวิงสนับสนุนตำแหน่งย่อ':null,reclaim>.35?'เริ่ม reclaim ตามเทรนด์':null],
     missing,penalties:[],hardBlocks:!intact?['Protected structure ของเทรนด์เดิมเสียแล้ว']:[],
     invalidation:[d>0?'หลุด protected low':'ทะลุ protected high'],
-    meta:{value,reclaim,base,flow,dist8,dist21}
+    meta:{value,fib,reclaim,base,flow,dist8,dist21}
   });
 }
 
@@ -264,7 +315,7 @@ function transitionTrigger(snap){
   const p=f.rangePosition;
   const lower=p<=CFG.transitionEdgeMax,upper=p>=1-CFG.transitionEdgeMax;
   const edgeDir=lower?1:upper?-1:0;
-  const defense=edgeDir>0?f.seq.rejectionUp:edgeDir<0?f.seq.rejectionDown:0;
+  const defense=edgeDir?liveRejection(f,edgeDir):0;
   const flow=edgeDir?clip(edgeDir*f.flow/.10):0;
   const trendWasOpposing=edgeDir&&prior===-edgeDir;
   const decay=clip(f.stageDecay??(f.slopeDrop/.30*.45+Math.max(0,Math.abs(f.momentum24)-Math.abs(f.momentum3))/1.6*.55));
@@ -288,10 +339,12 @@ function reversalTrigger(snap){
   const f=snap.features,s=snap.structure,d=s.reverseUp?1:s.reverseDown?-1:0;
   if(!d)return null;
   const sc=stageConf(snap,'REVERSAL_DEVELOPING');
-  const rejection=d>0?f.seq.rejectionUp:f.seq.rejectionDown;
+  if(sc<CFG.reversalStageMin)return null;
+  const rejection=liveRejection(f,d);
   const flow=clip(d*f.flow/.10);
   const pressure=clip(d*f.seq.pressure/.30);
-  const close=d>0?f.current.closeLoc:1-f.current.closeLoc;
+  const revCandle=f.live?.available?f.live:f.current;
+  const close=d>0?revCandle.closeLoc:1-revCandle.closeLoc;
   const acceptance=clip((close-.48)/.42);
   const exhaustion=stageConf(snap,'EXHAUSTION');
   let q=.24+rejection*.18+flow*.15+pressure*.12+acceptance*.14+clip(sc/.45)*.10+clip(exhaustion/.55)*.07;
@@ -339,9 +392,18 @@ function triggerBrain(inputOrSnapshot={}){
     compressionWatch(snap)
   ].filter(Boolean);
 
-  const ready=candidates.filter(x=>x.ready).sort((a,b)=>b.quality-a.quality);
-  const watches=candidates.filter(x=>!x.ready&&!x.hardBlocks.length&&(x.watch||x.watchOnly)).sort((a,b)=>b.quality-a.quality);
-  let primary=ready[0]||watches[0]||candidates.sort((a,b)=>b.quality-a.quality)[0]||null;
+  const rankScore=x=>x.quality+(x.stageConfidence||0)*25;
+  const ready=candidates.filter(x=>x.ready).sort((a,b)=>rankScore(b)-rankScore(a));
+  const watches=candidates.filter(x=>!x.ready&&!x.hardBlocks.length&&(x.watch||x.watchOnly)).sort((a,b)=>rankScore(b)-rankScore(a));
+  let primary=ready[0]||watches[0]||[...candidates].sort((a,b)=>rankScore(b)-rankScore(a))[0]||null;
+  const dominant=snap.stage?.dominant;
+  if(dominant==='BREAKOUT_ATTEMPT'||dominant==='BREAKOUT_ACCEPTED'){
+    const bt=candidates.find(x=>x.id==='BREAKOUT_FOLLOW');
+    if(bt&&!bt.hardBlocks.length)primary=bt;
+  }else if(dominant==='RANGE'){
+    const rt=candidates.find(x=>x.family==='RANGE_REVERSION');
+    if(rt&&!rt.hardBlocks.length&&(rt.watch||rt.ready))primary=rt;
+  }
 
   // Event-specific failures/acceptance outrank generic regime triggers when ready.
   const failedEvent=candidates.find(x=>x.id==='FAILED_BREAKOUT_REVERSAL'&&x.ready);
