@@ -266,6 +266,7 @@ class V32CompatEngine extends BaseEngine{
 
     const z=compatZones(snap),regime=compatRegime(snap),phase=compatPhase(snap);
     const trigger=snap?.triggers?.primary||res.trigger||null;
+    const currentEntryQuality=trigger&&snap?.ready?Entry.entryQuality(snap,trigger):null;
     const d=trigger?.d||stageDir(snap);
     const watch=d?{
       direction:d>0?'HIGH':'LOW',
@@ -306,7 +307,18 @@ class V32CompatEngine extends BaseEngine{
         stageConfidence:snap?.stage?.dominantConfidence,
         trigger:trigger?.id||null,
         triggerQuality:trigger?.quality??null,
-        entryQuality:res.signal?.entryQuality??null,
+        triggerThresholdWatch:trigger?.thresholds?.watch??null,
+        triggerThresholdReady:trigger?.thresholds?.ready??null,
+        triggerStatus:trigger?.status||null,
+        triggerReady:!!trigger?.ready,
+        entryQuality:res.signal?.entryQuality??currentEntryQuality,
+        candidateTicks:res.candidate?.ticks??null,
+        candidateBestQuality:res.candidate?.bestQuality??null,
+        rearmFamily:res.rearm?.family||null,
+        rearmArmed:res.rearm?.armed??null,
+        missing:[...(trigger?.missing||[])],
+        penalties:[...(trigger?.penalties||[])],
+        hardBlocks:[...(trigger?.hardBlocks||[])],
         rangeForming:!!snap?.stage?.rangeForming,
         roomUpAtr:snap?.features?.zones?.roomUpAtr,
         roomDownAtr:snap?.features?.zones?.roomDownAtr
@@ -316,11 +328,21 @@ class V32CompatEngine extends BaseEngine{
     return this.lastView={
       f,z,regime,phase,
       v32Story:{
-        schema:'aris-v32-ui-story-v1',
+        schema:'aris-v32-ui-story-v2',
         stage:snap?.stage,
         direction:snap?.direction,
         trigger,
-        explanation:snap?.explanation
+        explanation:snap?.explanation,
+        structure:snap?.structure,
+        fib:snap?.features?.fib,
+        zones:snap?.features?.zones,
+        range:snap?.features?.range,
+        breakout:snap?.features?.breakout,
+        currentEntryQuality,
+        candidate:res.candidate||null,
+        rearm:res.rearm||null,
+        status:res.status,
+        reason:res.reason||reason
       },
       signal,event:trigger?{type:triggerType(trigger.id),d:trigger.d,stage:snap?.stage?.dominant}:null,
       watch,
