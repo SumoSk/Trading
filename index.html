@@ -2023,6 +2023,220 @@ body[data-feed=live] #chart-toolbar .tiny-dot{
 }
 </style>
 
+
+<style id="toolbar-responsive-final-20261002">
+/* Final responsive authority for the existing toolbar.
+   Keep every control and order; only make the current layout fit its real container. */
+.chart-toolbar-slot{
+ width:100%!important;
+ max-width:100%!important;
+ min-width:0!important;
+ box-sizing:border-box!important;
+}
+
+#chart-toolbar{
+ width:min(860px,100%)!important;
+ max-width:100%!important;
+ min-width:0!important;
+ box-sizing:border-box!important;
+ margin-left:0!important;
+ margin-right:0!important;
+ display:grid!important;
+ grid-template-columns:
+   minmax(0,96px)
+   minmax(0,96px)
+   minmax(0,96px)
+   minmax(0,96px)
+   minmax(34px,40px)!important;
+ align-items:center!important;
+ justify-content:start!important;
+ column-gap:6px!important;
+ row-gap:0!important;
+}
+
+/* The hidden legacy timeframe row must never consume a grid column. */
+#chart-toolbar>.timeframes{display:none!important}
+
+/* Kill old fixed flex-basis/width rules so the grid owns sizing. */
+#chart-toolbar>.analysis-tf-control,
+#chart-toolbar>.toolbar-main-button,
+#chart-toolbar>.drawing-tools,
+#chart-toolbar>.toolbar-more{
+ width:auto!important;
+ min-width:0!important;
+ max-width:none!important;
+ flex:none!important;
+ margin:0!important;
+ box-sizing:border-box!important;
+}
+
+#chart-toolbar>.analysis-tf-control,
+#chart-toolbar>.toolbar-main-button,
+#chart-toolbar>.drawing-tools>summary,
+#chart-toolbar>.toolbar-more>summary{
+ width:100%!important;
+ min-width:0!important;
+ max-width:100%!important;
+ box-sizing:border-box!important;
+}
+
+/* Selects must shrink inside their cell rather than forcing the cell wider. */
+#chart-toolbar .analysis-tf-control{
+ overflow:hidden!important;
+}
+#chart-toolbar .analysis-tf-control select{
+ width:min(54px,100%)!important;
+ min-width:0!important;
+ max-width:100%!important;
+ box-sizing:border-box!important;
+}
+
+/* Text is allowed to compress cleanly instead of pushing outside the viewport. */
+#chart-toolbar .toolbar-main-button,
+#chart-toolbar .drawing-tools>summary{
+ overflow:hidden!important;
+ text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+}
+#chart-toolbar .toolbar-more>summary{
+ display:grid!important;
+ place-items:center!important;
+}
+
+/* Floating mode follows the viewport; embedded mode follows the chart container. */
+body.toolbar-floating #chart-toolbar{
+ width:min(860px,calc(100vw - 12px))!important;
+ max-width:calc(100vw - 12px)!important;
+ left:50%!important;
+ right:auto!important;
+ transform:translateX(-50%)!important;
+}
+
+/* Scanner now travels using parent-relative left positions, never an 860px hard-coded trip. */
+#chart-toolbar::after{
+ left:-46px!important;
+ transform:none!important;
+ animation:arisCyberTopSweepResponsive 4.8s ease-in-out infinite!important;
+}
+@keyframes arisCyberTopSweepResponsive{
+ 0%{left:-46px;opacity:0}
+ 12%{opacity:.95}
+ 50%{opacity:.72}
+ 88%{opacity:.92}
+ 100%{left:calc(100% - 10px);opacity:0}
+}
+
+/* Tablet / phone: same bar, same controls, fluid cells. */
+@media(max-width:700px){
+ #chart-toolbar{
+   width:100%!important;
+   max-width:100%!important;
+   grid-template-columns:
+     repeat(4,minmax(0,1fr))
+     34px!important;
+   column-gap:4px!important;
+   padding:5px!important;
+ }
+ body.toolbar-floating #chart-toolbar{
+   width:calc(100vw - 10px)!important;
+   max-width:calc(100vw - 10px)!important;
+ }
+ #chart-toolbar .analysis-tf-control,
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary,
+ #chart-toolbar .toolbar-more>summary{
+   height:34px!important;
+   min-height:34px!important;
+   max-height:34px!important;
+ }
+ #chart-toolbar .analysis-tf-control{
+   padding:3px 3px!important;
+   justify-content:center!important;
+ }
+ #chart-toolbar .analysis-tf-control>span{
+   display:none!important;
+ }
+ #chart-toolbar .analysis-tf-control select{
+   width:100%!important;
+   padding:0 16px 0 5px!important;
+   text-align:center!important;
+   font-size:8.5px!important;
+ }
+ #chart-toolbar .toolbar-main-button{
+   padding:0 4px!important;
+   font-size:7.7px!important;
+ }
+ #chart-toolbar .drawing-tools>summary{
+   padding:0 4px!important;
+   font-size:7.7px!important;
+ }
+ #chart-toolbar .toolbar-more>summary{
+   width:100%!important;
+   font-size:13px!important;
+ }
+ #chart-toolbar::after{
+   width:38px!important;
+   animation-duration:5.8s!important;
+ }
+}
+
+@media(max-width:430px){
+ #chart-toolbar{
+   grid-template-columns:
+     repeat(4,minmax(0,1fr))
+     30px!important;
+   column-gap:3px!important;
+   padding:4px!important;
+ }
+ #chart-toolbar .analysis-tf-control,
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary,
+ #chart-toolbar .toolbar-more>summary{
+   height:32px!important;
+   min-height:32px!important;
+   max-height:32px!important;
+   border-radius:8px!important;
+ }
+ #chart-toolbar .analysis-tf-control select{
+   font-size:8px!important;
+   padding-left:3px!important;
+   padding-right:14px!important;
+ }
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary{
+   font-size:7px!important;
+   padding-left:2px!important;
+   padding-right:2px!important;
+ }
+ #chart-toolbar .toolbar-more>summary{
+   font-size:12px!important;
+ }
+}
+
+/* Very narrow phones still keep everything in one row. */
+@media(max-width:360px){
+ #chart-toolbar{
+   grid-template-columns:
+     repeat(4,minmax(0,1fr))
+     28px!important;
+   column-gap:2px!important;
+   padding:3px!important;
+ }
+ #chart-toolbar .toolbar-main-button,
+ #chart-toolbar .drawing-tools>summary{
+   font-size:6.5px!important;
+ }
+ #chart-toolbar .analysis-tf-control select{
+   font-size:7.5px!important;
+ }
+}
+
+/* Reduced motion remains respected. */
+@media(prefers-reduced-motion:reduce){
+ #chart-toolbar::after{animation:none!important}
+}
+</style>
+
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
