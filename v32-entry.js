@@ -9,7 +9,7 @@ const Trigger=root.ArisV32Triggers;
 if(!Trigger)throw new Error('ARIS 3.2 Blocks 1–3 must load before v32-entry.js');
 
 const VERSION=Trigger.version;
-const REVISION='entry-rearm-b4-audit-r1';
+const REVISION='entry-rearm-b4-audit-r2';
 
 const CFG=Object.freeze({
   horizonMs:600000,
@@ -311,7 +311,8 @@ class V32EntryEngine{
           signedEdge:snap.direction.signedEdge,
           highEdge:snap.direction.highEdge,
           lowEdge:snap.direction.lowEdge,
-          activeStageModels:snap.direction.activeStageModels
+          activeStageModels:snap.direction.activeStageModels,
+          triggerStageModel:JSON.parse(JSON.stringify(snap.direction.models?.[trigger.stage]||null))
         },
         trigger:JSON.parse(JSON.stringify(trigger)),
         features:{
@@ -331,10 +332,30 @@ class V32EntryEngine{
           momentum24:snap.features.momentum24,
           extensionAtr:snap.features.extensionAtr,
           rangePosition:snap.features.rangePosition,
+          progression:{
+            up:snap.features.seq?.progressionUp,
+            down:snap.features.seq?.progressionDown,
+            higherHighRate:snap.features.seq?.higherHighRate,
+            higherLowRate:snap.features.seq?.higherLowRate,
+            higherCloseRate:snap.features.seq?.higherCloseRate,
+            lowerHighRate:snap.features.seq?.lowerHighRate,
+            lowerLowRate:snap.features.seq?.lowerLowRate,
+            lowerCloseRate:snap.features.seq?.lowerCloseRate
+          },
           volume:snap.features.vol,
+          live:snap.features.live,
+          fib:snap.features.fib,
+          zones:{
+            roomUpAtr:snap.features.zones?.roomUpAtr,
+            roomDownAtr:snap.features.zones?.roomDownAtr,
+            nearestSupport:snap.features.zones?.nearestSupport||null,
+            nearestResistance:snap.features.zones?.nearestResistance||null
+          },
           breakout:snap.features.breakout,
           flow:snap.features.flow,
-          book:snap.features.book
+          book:snap.features.book,
+          sourceMode:snap.features.sourceMode,
+          dataQuality:snap.features.dataQuality
         },
         structure:JSON.parse(JSON.stringify(snap.structure)),
         reference:ref,
