@@ -9,7 +9,7 @@ const Trigger=root.ArisV32Triggers;
 if(!Trigger)throw new Error('ARIS 3.2 Blocks 1–3 must load before v32-entry.js');
 
 const VERSION=Trigger.version;
-const REVISION='entry-rearm-b4-r1';
+const REVISION='entry-rearm-b4-audit-r1';
 
 const CFG=Object.freeze({
   horizonMs:600000,
@@ -75,7 +75,9 @@ function defaultMemory(){
       TRANSITION:true
     },
     resetReason:{},
+    lastIssuedByFamily:{},
     lastStage:null,
+    lastStepTs:null,
     stageHistory:[],
     candidate:null,
     signals:[]
@@ -89,6 +91,7 @@ function normalizeMemory(saved){
     ...m,
     familyArmed:{...d.familyArmed,...(m.familyArmed||{})},
     resetReason:{...(m.resetReason||{})},
+    lastIssuedByFamily:{...(m.lastIssuedByFamily||{})},
     stageHistory:Array.isArray(m.stageHistory)?m.stageHistory.slice(-60):[],
     signals:Array.isArray(m.signals)?m.signals.slice(-CFG.maxSignals):[],
     candidate:m.candidate||null
@@ -101,7 +104,6 @@ function rearmFamily(mem,key,reason){
 }
 
 function updateRearm(mem,snap){
-  const last=mem.lastIssued;
   const f=snap.features||{},stage=snap.stage||{},conf=stage.confidence||{};
   const currentStage=stage.dominant||null;
 
@@ -110,54 +112,63 @@ function updateRearm(mem,snap){
     if(mem.stageHistory.length>60)mem.stageHistory.shift();
     mem.lastStage=currentStage;
   }
-  if(!last)return;
 
-  const key=last.familyKey;
-  const movedAtr=Math.abs((snap.price-last.price)/Math.max(f.atr||last.atr||1,1e-9));
+  for(const [key,last] of Object.entries(mem.lastIssuedByFamily||{})){
+    if(mem.familyArmed[key]!==false||!last)continue;
+    const movedAtr=Math.abs((snap.price-last.price)/Math.max(f.atr||last.atr||1,1e-9));
 
-  if(key==='RANGE'||key==='TRANSITION'){
-    const p=f.rangePosition;
-    if(finite(p)&&p>=CFG.rangeMidLow&&p<=CFG.rangeMidHigh){
-      rearmFamily(mem,key,'ราคาได้หมุนกลับผ่านกลางกรอบหลังไม้ก่อน');
+    if(key==='RANGE'){
+      const p=f.rangePosition;
+      if(finite(p)&&p>=CFG.rangeMidLow&&p<=CFG.rangeMidHigh)rearmFamily(mem,key,'ราคาได้หมุนกลับผ่านกลางกรอบหลังไม้ก่อน');
     }
-  }
 
-  if(key==='TREND'){
-    const resetStage=(conf.PULLBACK||0)>=.18||(conf.COMPRESSION||0)>=.18||(conf.TRANSITION||0)>=.22;
-    const microReset=movedAtr>=CFG.trendResetMoveAtr&&(f.eff6||1)<=CFG.trendResetEffMax;
-    if(resetStage||microReset){
-      rearmFamily(mem,'TREND',resetStage?'เกิด pullback/compression/transition ใหม่':'ราคาเดินห่างและสร้าง micro reset ใหม่');
+    if(key==='TRANSITION'){
+      const p=f.rangePosition;
+      const centerRotate=finite(p)&&p>=CFG.rangeMidLow&&p<=CFG.rangeMidHigh;
+      const regimeReset=(conf.TRANSITION||0)<CFG.transitionRearmConfidence&&movedAtr>=.35;
+      if(centerRotate||regimeReset)rearmFamily(mem,key,centerRotate?'ราคาได้หมุนกลับผ่านกลางกรอบหลังไม้ก่อน':'Transition เดิมคลายตัวและราคาเดินห่างพอสำหรับเหตุการณ์ใหม่');
     }
-  }
 
-  if(key==='PULLBACK'){
-    if((conf.TREND_ADVANCE||0)>=.30&&movedAtr>=.35){
-      rearmFamily(mem,'PULLBACK','pullback เดิมจบและราคาเดินกลับเข้าสู่ trend advance แล้ว');
+    if(key==='TREND'){
+      const resetStage=((conf.PULLBACK||0)>=.18||(conf.COMPRESSION||0)>=.18||(conf.TRANSITION||0)>=.22)&&movedAtr>=.20;
+      const microReset=movedAtr>=CFG.trendResetMoveAtr&&(f.eff6||1)<=CFG.trendResetEffMax;
+      if(resetStage||microReset)rearmFamily(mem,'TREND',resetStage?'เกิด pullback/compression/transition ใหม่หลังราคาเดินออกจากจุดเดิม':'ราคาเดินห่างและสร้าง micro reset ใหม่');
     }
-  }
 
-  if(key==='BREAKOUT'){
-    const cleared=(conf.BREAKOUT_ATTEMPT||0)<CFG.breakoutClearConfidence&&(conf.BREAKOUT_ACCEPTED||0)<CFG.breakoutClearConfidence&&
-      !f.breakout?.attemptDir&&!f.breakout?.acceptedDir;
-    if(cleared)rearmFamily(mem,'BREAKOUT','เหตุการณ์ breakout เดิมจบแล้ว รอฐาน/กรอบใหม่');
-  }
+    if(key==='PULLBACK'){
+      if((conf.TREND_ADVANCE||0)>=.30&&movedAtr>=.35)rearmFamily(mem,'PULLBACK','pullback เดิมจบและราคาเดินกลับเข้าสู่ trend advance แล้ว');
+    }
 
-  if(key==='FAILED_BREAKOUT'){
-    if(!f.breakout?.failedDir)rearmFamily(mem,'FAILED_BREAKOUT','failed-break event เดิมเคลียร์แล้ว');
-  }
+    if(key==='BREAKOUT'){
+      const cleared=(conf.BREAKOUT_ATTEMPT||0)<CFG.breakoutClearConfidence&&(conf.BREAKOUT_ACCEPTED||0)<CFG.breakoutClearConfidence&&
+        !f.breakout?.attemptDir&&!f.breakout?.acceptedDir;
+      if(cleared)rearmFamily(mem,'BREAKOUT','เหตุการณ์ breakout เดิมจบแล้ว รอฐาน/กรอบใหม่');
+    }
 
-  if(key==='REVERSAL'){
-    const sig=structureSignature(snap.structure);
-    if(sig!==last.structureSignature&&movedAtr>=.30)rearmFamily(mem,'REVERSAL','โครงสร้างเปลี่ยน materially หลัง reversal เดิม');
+    if(key==='FAILED_BREAKOUT'){
+      if(!f.breakout?.failedDir)rearmFamily(mem,'FAILED_BREAKOUT','failed-break event เดิมเคลียร์แล้ว');
+    }
+
+    if(key==='REVERSAL'){
+      const sig=structureSignature(snap.structure);
+      if(sig!==last.structureSignature&&movedAtr>=.30)rearmFamily(mem,'REVERSAL','โครงสร้างเปลี่ยน materially หลัง reversal เดิม');
+    }
   }
 }
 
 function entryQuality(snap,trigger){
   if(!trigger)return 0;
-  const edge=Math.abs(snap.direction?.signedEdge||0);
+  const d=trigger.d||0;
+  const globalEdge=snap.direction?.signedEdge||0;
+  const stageModel=snap.direction?.models?.[trigger.stage];
+  const stageEdge=stageModel?.score??globalEdge;
+  const alignedStage=clip(d*stageEdge,-1,1);
+  const alignedGlobal=clip(d*globalEdge,-1,1);
   const stage=trigger.stageConfidence||0;
   const penalty=Math.min(12,(trigger.penalties||[]).length*3);
-  return Math.round(clip((trigger.quality*.66+edge*100*.22+stage*100*.12-penalty)/100)*100);
+  const oppositionPenalty=Math.max(0,-alignedStage)*18+Math.max(0,-alignedGlobal)*8;
+  const raw=trigger.quality*.60+Math.max(0,alignedStage)*100*.20+stage*100*.12+Math.max(0,alignedGlobal)*100*.08-penalty-oppositionPenalty;
+  return Math.round(clip(raw/100)*100);
 }
 
 function signalReason(snap,trigger,quality){
@@ -191,10 +202,16 @@ class V32EntryEngine{
   }
 
   step(input={}){
+    const inputTs=finite(+input.ts)?+input.ts:null;
+    if(inputTs!=null&&this.memory.lastStepTs!=null&&inputTs<=this.memory.lastStepTs){
+      return {status:'DUPLICATE',signal:null,snapshot:null,reason:'timestamp ไม่เดินหน้า'};
+    }
     const snap=Trigger.analyze(input);
+    if(inputTs!=null)this.memory.lastStepTs=inputTs;
     if(!snap.ready||!snap.triggers?.ready){
       this.memory.candidate=null;
-      return {status:'WARMUP',signal:null,snapshot:snap,reason:snap.reason||snap.triggers?.reason||'ข้อมูลยังไม่พร้อม'};
+      const hard=!!snap.features?.hardBlock;
+      return {status:hard?'BLOCKED_DATA':'WARMUP',signal:null,snapshot:snap,reason:snap.reason||snap.triggers?.reason||'ข้อมูลยังไม่พร้อม'};
     }
 
     updateRearm(this.memory,snap);
@@ -206,7 +223,7 @@ class V32EntryEngine{
 
     const key=familyKey(trigger),ref=referenceSignature(snap,trigger);
     const armed=this.memory.familyArmed[key]!==false;
-    const duplicate=this.memory.lastIssued&&this.memory.lastIssued.reference===ref&&!armed;
+    const duplicate=!armed;
 
     if(trigger.hardBlocks?.length){
       this.memory.candidate=null;
@@ -217,7 +234,7 @@ class V32EntryEngine{
       this.memory.candidate=null;
       return {
         status:'WAIT_REARM',signal:null,snapshot:snap,trigger,
-        reason:'Trigger เดิมถูกใช้แล้ว แต่ยังไม่เกิด re-arm ของตระกูล '+key,
+        reason:'ตระกูล '+key+' ยังไม่เกิด re-arm หลังไม้ก่อน แม้ reference window จะขยับ',
         rearm:{family:key,armed:false,lastReason:this.memory.resetReason[key]||null}
       };
     }
@@ -338,6 +355,7 @@ class V32EntryEngine{
       reference:ref,
       structureSignature:structureSignature(snap.structure)
     };
+    this.memory.lastIssuedByFamily[key]={...this.memory.lastIssued};
     this.memory.familyArmed[key]=false;
     this.memory.resetReason[key]=null;
     this.memory.candidate=null;
