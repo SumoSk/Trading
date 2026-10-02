@@ -9,7 +9,7 @@ const Base=root.ArisV32;
 if(!Base)throw new Error('ARIS 3.2 Block 1 (v32.js) must load before v32-direction.js');
 
 const VERSION=Base.version;
-const REVISION='adaptive-direction-b2-r1';
+const REVISION='adaptive-direction-b2-audit-r1';
 const clip=(v,a=-1,b=1)=>Math.max(a,Math.min(b,v));
 const finite=Number.isFinite;
 const avg=a=>a?.length?a.reduce((s,v)=>s+v,0)/a.length:0;
@@ -24,7 +24,7 @@ const PROFILE_SPECS=Object.freeze({
   }),
   TREND_ADVANCE:Object.freeze({
     name:'Trend follow-through',
-    weights:Object.freeze({structure:.25,momentum:.20,trendSlope:.15,followThrough:.15,flow:.12,room:.08,htf:.05})
+    weights:Object.freeze({structure:.22,momentum:.16,trendSlope:.12,followThrough:.12,progression:.12,volume:.10,flow:.08,room:.05,htf:.03})
   }),
   COMPRESSION:Object.freeze({
     name:'Compression pressure',
@@ -44,7 +44,7 @@ const PROFILE_SPECS=Object.freeze({
   }),
   PULLBACK:Object.freeze({
     name:'Pullback continuation',
-    weights:Object.freeze({structure:.25,valueLocation:.20,reclaimProxy:.20,baseQuality:.15,renewedMomentum:.13,micro:.07})
+    weights:Object.freeze({structure:.22,valueLocation:.17,fib:.14,reclaimProxy:.19,baseQuality:.13,renewedMomentum:.09,micro:.06})
   }),
   EXHAUSTION:Object.freeze({
     name:'Exhaustion caution',
@@ -52,7 +52,7 @@ const PROFILE_SPECS=Object.freeze({
   }),
   REVERSAL_DEVELOPING:Object.freeze({
     name:'Reversal transfer',
-    weights:Object.freeze({structureBreak:.25,rejection:.20,flowFlip:.15,oldTrendExhaustion:.15,location:.15,htf:.10})
+    weights:Object.freeze({structureBreak:.23,rejection:.17,flowFlip:.13,oldTrendExhaustion:.13,location:.12,fib:.12,htf:.10})
   }),
   TRANSITION:Object.freeze({
     name:'Transition / regime transfer',
@@ -75,11 +75,18 @@ function rangeEdgeEvidence(f){
 }
 
 function rejectionEvidence(f){
-  return clip((f.seq.rejectionUp||0)-(f.seq.rejectionDown||0));
+  const closed=clip((f.seq.rejectionUp||0)-(f.seq.rejectionDown||0));
+  if(!f.live?.available)return closed;
+  const liveUp=f.live.lower>=.30&&f.live.closeLoc>=.48?Math.min(1,f.live.lower+Math.max(0,f.live.closeLoc-.48)):0;
+  const liveDown=f.live.upper>=.30&&f.live.closeLoc<=.52?Math.min(1,f.live.upper+Math.max(0,.52-f.live.closeLoc)):0;
+  return clip(closed*.70+(liveUp-liveDown)*.30);
 }
 
 function followEvidence(f){
-  return clip((f.seq.followUp||0)-(f.seq.followDown||0));
+  const closed=clip((f.seq.followUp||0)-(f.seq.followDown||0));
+  if(!f.live?.available)return closed;
+  const liveDir=f.live.d*(f.live.bodyAtr*.55+(f.live.d>0?f.live.closeLoc:1-f.live.closeLoc)*.45);
+  return clip(closed*.75+liveDir*.25);
 }
 
 function pressureEvidence(f){
@@ -88,6 +95,18 @@ function pressureEvidence(f){
 
 function flowEvidence(f){
   return clip((f.flow||0)/.12);
+}
+
+function volumeEvidence(f,d){
+  if(!d)return 0;
+  const closed=clip((Math.max(f.vol?.rel||0,f.vol?.ratio3||0)-.85)/1.20,0,1);
+  const live=finite(f.live?.volumePace)?clip((f.live.volumePace-.75)/1.25,0,1):null;
+  const participation=live==null?closed:closed*.65+live*.35;
+  return d*participation;
+}
+
+function progressionEvidence(f){
+  return clip((f.seq.progressionUp||0)-(f.seq.progressionDown||0));
 }
 
 function bookEvidence(f){
@@ -116,10 +135,14 @@ function failedBreakDirection(f){
 }
 
 function roomEvidence(f,d){
-  if(!f.range||!d)return .25*d;
-  const p=f.rangePosition;
-  const room=d>0?1-p:p;
-  return d*clip(room/.65,0,1);
+  if(!d)return 0;
+  const zoneRoom=d>0?f.zones?.roomUpAtr:f.zones?.roomDownAtr;
+  if(finite(zoneRoom))return d*clip(zoneRoom/1.50,0,1);
+  if(f.range){
+    const p=f.rangePosition,room=d>0?1-p:p;
+    return d*clip(room/.65,0,1);
+  }
+  return d*.25;
 }
 
 function valueLocationForTrend(f,d){
@@ -128,6 +151,30 @@ function valueLocationForTrend(f,d){
   const dist21=Math.abs(f.price-f.ema21)/f.atr;
   const near=1-clip(Math.min(dist8,dist21)/1.1,0,1);
   return d*near;
+}
+
+function fibPullbackEvidence(f,d){
+  const fib=f.fib;
+  if(!d||!fib?.valid||fib.d!==d)return 0;
+  let q=0;
+  if(fib.healthy)q=.90;
+  else if(fib.retracement>=.236&&fib.retracement<.382)q=.58;
+  else if(fib.deep)q=.52;
+  else if(fib.overRetraced)q=.12;
+  else q=.30;
+  if(fib.confluence)q=Math.min(1,q+.10);
+  return d*q;
+}
+
+function fibReversalEvidence(f,d){
+  const fib=f.fib;
+  if(!d||!fib?.valid)return 0;
+  const old=fib.d;
+  if(d===-old){
+    const stretched=fib.extension>=1.272?1:fib.overRetraced?.70:fib.deep?.48:0;
+    return d*clip(stretched+(fib.confluence?.10:0),0,1);
+  }
+  return 0;
 }
 
 function reclaimProxy(f,d){
@@ -215,6 +262,8 @@ function modelTrend(f,s){
   const mom=momentumEvidence(f);
   const slope=trendSlopeEvidence(f);
   const follow=followEvidence(f);
+  const progression=progressionEvidence(f);
+  const volume=volumeEvidence(f,d);
   const flow=flowEvidence(f);
   const room=roomEvidence(f,d);
   const htf=dirFromHTF(f);
@@ -223,8 +272,10 @@ function modelTrend(f,s){
     component('momentum',mom,w.momentum,'Momentum persistence'),
     component('trend_slope',slope,w.trendSlope,'EMA trend/slope'),
     component('follow_through',follow,w.followThrough,'แท่งถัดไปยังยก/กดต่อ'),
+    component('progression',progression,w.progression,'High/Low/Close เดินหน้าเป็นลำดับ'),
+    component('volume',volume,w.volume,'Volume participation ตามเทรนด์'),
     component('flow',flow,w.flow,'Flow participation'),
-    component('room',room,w.room,'พื้นที่ให้แนวโน้มเดินต่อ'),
+    component('room',room,w.room,'พื้นที่ก่อนชนแนวรับ/ต้านถัดไป'),
     component('htf',htf,w.htf,'บริบท 5m/15m')
   ];
   const notes=[];
@@ -292,6 +343,7 @@ function modelPullback(f,s){
   const p=PROFILE_SPECS.PULLBACK,w=p.weights,d=s.swingDir||s.trendDir||sign(f.momentum16,.08);
   const structure=d?d*clip(.45+(s.strength||0)*.55):0;
   const value=valueLocationForTrend(f,d);
+  const fib=fibPullbackEvidence(f,d);
   const reclaim=reclaimProxy(f,d);
   const base=d*d*0+d*clip((1-f.eff6)*.55+(1-Math.min(1,f.seq.recentRange/Math.max(f.seq.priorRange,.01)))*.45,0,1);
   const renewed=d?d*clip(d*momentumEvidence(f),0,1):0;
@@ -299,6 +351,7 @@ function modelPullback(f,s){
   const comps=[
     component('structure',structure,w.structure,'โครงสร้างเดิมยังอยู่'),
     component('value_location',value,w.valueLocation,'ตำแหน่งกลับเข้า value/EMA'),
+    component('fib',fib,w.fib,'Fibonacci ของขาสวิงที่ยืนยันแล้ว'),
     component('reclaim_proxy',reclaim,w.reclaimProxy,'การเริ่ม reclaim'),
     component('base_quality',base,w.baseQuality,'ฐาน/การชะลอของ pullback'),
     component('renewed_momentum',renewed,w.renewedMomentum,'Momentum กลับตามเทรนด์'),
@@ -334,14 +387,18 @@ function modelReversal(f,s){
   const old=s.swingDir||s.trendDir||-d;
   const exhaust=d?d*clip((old?old*f.extensionAtr:0)/2.8,0,1):0;
   const edge=rangeEdgeEvidence(f);
-  const location=d?d*clip((edge.dir===d?edge.strength:0)+Math.min(1,Math.abs(f.extensionAtr)/3)*.35,0,1):0;
+  const zoneNear=d>0?f.zones?.nearestSupport:f.zones?.nearestResistance;
+  const zoneSupport=zoneNear&&Math.abs(zoneNear.distanceAtr)<=Base.CFG.zoneNearAtr?zoneNear.strength||.4:0;
+  const location=d?d*clip((edge.dir===d?edge.strength:0)+Math.min(1,Math.abs(f.extensionAtr)/3)*.30+zoneSupport*.30,0,1):0;
+  const fib=fibReversalEvidence(f,d);
   const htf=dirFromHTF(f);
   const comps=[
     component('structure_break',structureBreak,w.structureBreak,'Protected swing break'),
     component('rejection',rejection,w.rejection,'Rejection/failed expansion ฝั่งใหม่'),
     component('flow_flip',flow,w.flowFlip,'Flow ตามฝั่งใหม่'),
     component('old_trend_exhaustion',exhaust,w.oldTrendExhaustion,'เทรนด์เดิมหมดแรง'),
-    component('location',location,w.location,'ตำแหน่งที่รองรับ reversal'),
+    component('location',location,w.location,'ตำแหน่งแนวรับ/ต้านหรือขอบกรอบที่รองรับ reversal'),
+    component('fib',fib,w.fib,'Fibonacci extension/retracement ของขาเดิม'),
     component('htf',htf,w.htf,'5m/15m context')
   ];
   return finishModel('REVERSAL_DEVELOPING',p,comps,d?[]:['ยังไม่มี transfer direction ที่ชัด']);
@@ -384,7 +441,15 @@ function modelFor(stage,f,s){
 
 function adaptiveDirection(snapshot){
   if(!snapshot?.ready||!snapshot.stage?.ready)return {ready:false,reason:'stage_snapshot_not_ready'};
-  const f=snapshot.features,s=snapshot.structure,conf=snapshot.stage.confidence;
+  const f=snapshot.features,s=snapshot.structure;
+  const conf={...(snapshot.stage.confidence||{})};
+  const ba=conf.BREAKOUT_ACCEPTED||0,fb=conf.FAILED_BREAKOUT||0;
+  if(ba>0&&fb>0){
+    if(ba>=fb)conf.FAILED_BREAKOUT=0;
+    else conf.BREAKOUT_ACCEPTED=0;
+    const ct=Object.values(conf).reduce((a,b)=>a+b,0)||1;
+    for(const k of Object.keys(conf))conf[k]/=ct;
+  }
   const models={};
   for(const stage of Object.keys(PROFILE_SPECS))models[stage]=modelFor(stage,f,s);
 
@@ -395,7 +460,7 @@ function adaptiveDirection(snapshot){
     if(!model||c<.005)continue;
     signed+=c*model.score;
     weightSum+=c;
-    blended.push({stage,stageConfidence:c,stageScore:model.score,contribution:c*model.score});
+    blended.push({stage,stageConfidence:c,stageScore:model.score,contribution:c*model.score,profile:model.profile,components:model.components});
   }
   signed=weightSum?clip(signed/weightSum):0;
 
