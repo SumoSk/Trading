@@ -4428,6 +4428,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   const DRAW_STORE=marketStorageKey('btc-chart-drawings-v1');
   let drawings=[];try{const d=JSON.parse(localStorage.getItem(DRAW_STORE)||'[]');if(Array.isArray(d))drawings=d.filter(x=>x&&['trend','horizontal'].includes(x.type)&&x.p1&&Number.isFinite(x.p1.time)&&Number.isFinite(x.p1.price));}catch{}
   let drawingMode=null,drawingScopeAll=false,drawingDraft=null,selectedDrawingId=null,drawingDrag=null,drawingRenderFrame=0;
+  const autoFibCache=new Map();
   const saveDrawings=()=>{try{localStorage.setItem(DRAW_STORE,JSON.stringify(drawings.slice(-300)));}catch{}};
   const drawingVisible=d=>d.global||d.tf===state.selectedTf;
   const normalChartTime=t=>{
@@ -4484,11 +4485,16 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    if(!state.fibOverlayVisible)return;
    const activeVersion=globalThis.EventSignalV6?.CFG?.version;
    if(!['ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-3.2.0'].includes(activeVersion))return;
-   const fib=activeVersion==='ARIS-3.2.0'
+   const cacheKey=activeVersion+'|'+state.analysisTf+'|'+state.selectedTf;
+   const rawFib=activeVersion==='ARIS-3.2.0'
     ?(lastView?.v32Story?.fib||lastView?.phase?.v32Snapshot?.features?.fib)
     :['ARIS-3.0.0','ARIS-3.1.0'].includes(activeVersion)
      ?(lastView?.v3Story?.fib||lastView?.phase?.v3View?.story?.fib)
      :(lastView?.v2Story?.fib||lastView?.phase?.v2View?.story?.fib);
+   const rawValid=!!(rawFib?.valid&&Number.isFinite(rawFib.start)&&Number.isFinite(rawFib.end));
+   if(rawValid)autoFibCache.set(cacheKey,rawFib);
+   else if(rawFib&&rawFib.valid===false)autoFibCache.delete(cacheKey);
+   const fib=rawValid?rawFib:(!rawFib?autoFibCache.get(cacheKey):rawFib);
    if(!fib?.valid||!Number.isFinite(fib.start)||!Number.isFinite(fib.end)){
     const waiting=make('text',{x:8,y:13,class:'auto-fib-status'});
     waiting.textContent='AUTO FIB · รอ Swing ยืนยัน';svg.append(waiting);return;
@@ -4562,10 +4568,10 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    drawingRenderFrame=requestAnimationFrame(()=>{
     const svg=$('drawing-overlay');if(!svg||!state.chartReady)return;
     const rect=svg.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
-    while(svg.firstChild)svg.removeChild(svg.firstChild);
     const ns='http://www.w3.org/2000/svg';
     const make=(name,attrs={})=>{const el=document.createElementNS(ns,name);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,String(v));return el;};
-    renderAutoFibOverlay(svg,make,w,h);
+    const frame=document.createDocumentFragment();
+    renderAutoFibOverlay(frame,make,w,h);
     const visible=drawings.filter(drawingVisible);
     if(selectedDrawingId&&!visible.some(d=>d.id===selectedDrawingId)){selectedDrawingId=null;$('drawing-delete')&&( $('drawing-delete').disabled=true );}
     for(const d of visible){
@@ -4584,24 +4590,25 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
       hit.setPointerCapture?.(ev.pointerId);
       renderDrawingOverlay();
      });
-     svg.append(hit);
-     svg.append(make('line',{x1,y1,x2,y2,class:'drawing-line'+(d.global?' global':'')+(selected?' selected':'')}));
+     frame.append(hit);
+     frame.append(make('line',{x1,y1,x2,y2,class:'drawing-line'+(d.global?' global':'')+(selected?' selected':'')}));
      if(selected){
       const pts=d.type==='horizontal'?[{key:'p1',p:{x:Math.min(w-12,Math.max(12,w*.82)),y:p1.y}}]:[{key:'p1',p:p1},{key:'p2',p:p2}];
       for(const hp of pts){
        const c=make('circle',{cx:hp.p.x,cy:hp.p.y,r:5,class:'drawing-handle'+(d.global?' global':'')});
        c.addEventListener('pointerdown',ev=>{if(drawingMode)return;ev.stopPropagation();drawingDrag={id:d.id,endpoint:hp.key,pointerId:ev.pointerId};c.setPointerCapture?.(ev.pointerId);});
-       svg.append(c);
+       frame.append(c);
       }
       const tagX=clip((x1+x2)/2-25,2,w-54),tagY=clip((y1+y2)/2-17,2,h-16);
-      svg.append(make('rect',{x:tagX,y:tagY,width:52,height:14,rx:4,class:'drawing-tag'}));
-      const tx=make('text',{x:tagX+5,y:tagY+10,class:'drawing-tag-text'});tx.textContent=d.global?'ทุก TF':state.selectedTf;svg.append(tx);
+      frame.append(make('rect',{x:tagX,y:tagY,width:52,height:14,rx:4,class:'drawing-tag'}));
+      const tx=make('text',{x:tagX+5,y:tagY+10,class:'drawing-tag-text'});tx.textContent=d.global?'ทุก TF':state.selectedTf;frame.append(tx);
      }
     }
     if(drawingDraft){
      const a=drawingScreenPoint(drawingDraft.p1),b=drawingDraft.p2?drawingScreenPoint(drawingDraft.p2):null;
-     if(a&&b)svg.append(make('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'drawing-preview'}));
+     if(a&&b)frame.append(make('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'drawing-preview'}));
     }
+    svg.replaceChildren(frame);
    });
   }
   function createDrawing(type,p1,p2=null){
