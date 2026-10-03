@@ -4335,6 +4335,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     emaVisible: true,
     indicatorsExpanded: false,
     fibOverlayVisible: true,
+    stableLowerUiReady: false,
     chartReady: false,
     booted: false,
   };
@@ -5345,7 +5346,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
    const h=setupFeedHealth();
    const age=state.quote?(Date.now()-state.quote.ts*1000)/1000:Infinity;
    const unsafe=analysisUsesSpot(state.analysisTf)||!state.quote||state.socket?.readyState!==1||age>4||Date.now()-state.lastMessageAt>4500;
-   if(unsafe&&$('setup-similar-rate')?.textContent!=='—'){
+   if(unsafe&&!state.stableLowerUiReady&&$('setup-similar-rate')?.textContent!=='—'){
     renderSetupProfile(null,null,{});renderCompactSetupProfile();
    }
    for(const id of ['setup-data-health','setup-compact-health']){
@@ -6767,13 +6768,15 @@ function openReport(){
     directionView.analysisTf=tf;
     directionView.reason=tfHumanText(directionView.reason);
    }
-   renderDirection(directionView);
+   state.continuousView=directionView;
+   const refreshLowerUi=fresh||!state.stableLowerUiReady;
+   if(refreshLowerUi)renderDirection(directionView);
    if(force||now-state.lastCandleAt>=500){
     state.lastCandleAt=now;
     const candleView=candleBehaviorAssess(fresh,tf);
     state.candleView=candleView;
     if(candleView.available)candleMaybeIssue(candleView,q.ts*1000,q.price,tf);
-    renderCandleBehavior(candleView);
+    if(refreshLowerUi)renderCandleBehavior(candleView);
    }
    if(tf==='1m'){
     const exp=expediteHandle(v,directionView,state.candleView,{flow,coverage,book,bookValid:valid});
@@ -6786,18 +6789,21 @@ function openReport(){
    if(tf==='1m'&&v.signal?.dataset?.entry){
     v.signal.dataset.entry.microstructure={...micro,continuousHigh:directionView.high,continuousLow:directionView.low,continuousRisk:directionView.risk,continuousReason:directionView.reason};
    }
-   setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
-   renderCandleFibSummary(v);
-   renderEvent(v);
+   if(refreshLowerUi){
+    setComponent('analysis-flow',flow);setComponent('analysis-book',valid?book:NaN);
+    renderCandleFibSummary(v);
+    renderEvent(v);
+   }
    renderDrawingOverlay();
    const profileNow=performance.now();
-   if(v.signal||profileNow-state.lastProfileAt>=750){
+   if(refreshLowerUi&&(v.signal||profileNow-state.lastProfileAt>=750)){
     state.lastProfileAt=profileNow;
     renderSetupProfile(v,directionView,{flow,book,bookValid:valid});
     renderCandleBehavior(state.candleView);
     renderCompactSetupProfile(v,directionView,{flow,book,bookValid:valid});
-    updateSetupHealth();
+    state.stableLowerUiReady=true;
    }
+   updateSetupHealth();
    // Only the original 1m engine is persisted/training data. Other TF engines are read-only session context.
    if(tf==='1m'){
     if(v.signal){persist(true);drawHistory();}else if(engine.audit.length!==before)persist(true);
@@ -7138,9 +7144,9 @@ function openReport(){
     };
     ws.onmessage=(evt)=>{if(state.socket!==ws)return;state.lastMessageAt=Date.now();try{const w=JSON.parse(evt.data);ingest(w.data||w);}catch(e){console.error(e);}};
     ws.onerror=()=>statusView('stale','WebSocket มีปัญหา กำลังเชื่อมต่อใหม่');
-    ws.onclose=()=>{if(state.socket!==ws)return;state.booted=false;engine.reset('การเชื่อมต่อขาด',Date.now());$('strong-banner').hidden=true;$('signal-title').textContent='พักสัญญาณ';statusView('offline','การเชื่อมต่อขาด กำลังลองใหม่');const delay=Math.min(30000,1500*2**Math.min(state.reconnectCount++,4));state.reconnectTimer=setTimeout(connect,delay);};
+    ws.onclose=()=>{if(state.socket!==ws)return;state.booted=false;engine.reset('การเชื่อมต่อขาด',Date.now());if(!state.stableLowerUiReady){$('strong-banner').hidden=true;$('signal-title').textContent='พักสัญญาณ';}statusView('offline','การเชื่อมต่อขาด กำลังลองใหม่');const delay=Math.min(30000,1500*2**Math.min(state.reconnectCount++,4));state.reconnectTimer=setTimeout(connect,delay);};
   }
-  function statusView(s,msg=''){if(s!=='live'){renderDirection({available:false,reason:msg||'กำลังเชื่อมต่อข้อมูลสด'});state.candleView={available:false,direction:'WAIT',reason:msg||'รอข้อมูล Futures สด'};renderCandleBehavior(state.candleView);}document.body.dataset.feed=s;$('mode').textContent=s==='live'?'● ข้อมูลจริง':'ข้อมูลจริง · '+({connecting:'กำลังเชื่อม',syncing:'กำลังโหลด',stale:'ข้อมูลล่าช้า',offline:'ขาดการเชื่อมต่อ'}[s]||s);$('connection-text').textContent=s==='live'?'เชื่อมต่อ Binance แล้ว':({connecting:'กำลังเชื่อม Binance',syncing:'กำลังโหลดแท่งเทียน',stale:'ข้อมูลล่าช้า',offline:'การเชื่อมต่อขาด'}[s]||s);$('feed-banner').hidden=s==='live';$('feed-banner').textContent=msg||'กำลังเชื่อมต่อข้อมูลตลาด';}
+  function statusView(s,msg=''){if(s!=='live'){const unavailableDirection={available:false,reason:msg||'กำลังเชื่อมต่อข้อมูลสด'};state.continuousView=unavailableDirection;state.candleView={available:false,direction:'WAIT',reason:msg||'รอข้อมูล Futures สด'};if(!state.stableLowerUiReady){renderDirection(unavailableDirection);renderCandleBehavior(state.candleView);}}document.body.dataset.feed=s;$('mode').textContent=s==='live'?'● ข้อมูลจริง':'ข้อมูลจริง · '+({connecting:'กำลังเชื่อม',syncing:'กำลังโหลด',stale:'ข้อมูลล่าช้า',offline:'ขาดการเชื่อมต่อ'}[s]||s);$('connection-text').textContent=s==='live'?'เชื่อมต่อ Binance แล้ว':({connecting:'กำลังเชื่อม Binance',syncing:'กำลังโหลดแท่งเทียน',stale:'ข้อมูลล่าช้า',offline:'การเชื่อมต่อขาด'}[s]||s);$('feed-banner').hidden=s==='live';$('feed-banner').textContent=(msg||'กำลังเชื่อมต่อข้อมูลตลาด')+(s!=='live'&&state.stableLowerUiReady?' · คงข้อมูลล่าสุดด้านล่างไว้จนข้อมูลสดกลับมา':'');}
 
   function makeChart(){
     const L=window.LightweightCharts;if(!L)throw new Error('โหลดไลบรารีกราฟไม่สำเร็จ');
@@ -7398,7 +7404,7 @@ function openReport(){
      await ensureTimeframe(next,true);
      if(state.selectedTf===next)renderChart(false);
      if((state.bars[next]||[]).filter(b=>b.closed).length<35)throw new Error('ข้อมูล '+next+' ยังไม่พอสำหรับวิเคราะห์');
-     state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.marketOverviewState=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;
+     state.analysisTf=next;state.pendingAnalysisTf=next;state.shadowCache=null;state.marketOverviewState=null;state.lastAnalysisAt=0;state.lastProfileAt=0;state.lastCandleAt=0;state.stableLowerUiReady=false;
      resetContextEngine(next);
      refreshAnalysisLabels();
      setTimeout(()=>analyseNow(true),0);
