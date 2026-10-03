@@ -3,7 +3,7 @@
   const SCHEMA='ten-candle-challenge-v4',STORE='aris-ten-candle-challenge-v1',HISTORY_STORE='aris-ten-candle-challenge-history-v1',CONTEXT_BARS=100,FUTURE_BARS=10,ENGINE_WARMUP=360,MINUTE=60000;
   const REASONS=['ตามเทรนด์','แนวรับ','แนวต้าน','Breakout','Reject','Fib','ปลายขา','Sideway'];
   let dialog=null,chart=null,series=null,resizeObserver=null,revealTimer=null,onClose=null,session=null,bars=[],round=null,selectedReasons=new Set(),used=new Set(),engineVersion='ARIS-3.1.0',analysisBusy=false;
-  let stats=loadStats();
+  let stats={played:0,correct:0,wrong:0,skipped:0,streak:0,bestStreak:0,reasons:{}};
   const byId=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const money=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
@@ -20,6 +20,12 @@
     const d=h/24;return (Number.isInteger(d)?d:d.toFixed(1))+' วัน';
   }
   const horizonText=()=>durationText(intervalMs()*FUTURE_BARS);
+  function syncSessionUi(){
+    if(!session)return;
+    const mode=byId('tc-mode-pill');if(mode)mode.textContent=marketLabel(session.symbol||'BTCUSDT')+' · '+(session.interval||'1m')+' · 10 แท่ง = '+horizonText();
+    const sub=byId('tc-question-sub');if(sub)sub.textContent='โจทย์นี้ 10 แท่ง = '+horizonText()+(assistAvailable()?' · จะเลือกเองหรือให้ ARIS ช่วยอ่านก่อนตอบก็ได้':' · เล่นจากกราฟล้วน ไม่ใช้ ARIS Assist ข้าม TF');
+    setupEngineSelect();renderStats();
+  }
 
   const emptyStats=()=>({played:0,correct:0,wrong:0,skipped:0,streak:0,bestStreak:0,reasons:{}});
   const statsKey=s=>STORE+':'+String(s?.symbol||'BTCUSDT')+':'+String(s?.interval||'1m');
@@ -292,10 +298,7 @@
     bars=(await globalThis.HistoricalDataV1.getDatasetBars(session.datasetId)).filter(b=>Number.isFinite(Number(b.time))).sort((a,b)=>a.time-b.time);
     const need=(assistAvailable()?ENGINE_WARMUP:CONTEXT_BARS)+FUTURE_BARS+2;
     if(bars.length<need){showEmpty('ข้อมูลยังสั้นเกินไป','ชุด '+marketLabel(session.symbol)+' '+(session.interval||'1m')+' ต้องมีอย่างน้อย '+need+' แท่งสำหรับเกมนี้ค่ะ');return false;}
-    stats=loadStats(session);
-    const mode=byId('tc-mode-pill');if(mode)mode.textContent=marketLabel(session.symbol||'BTCUSDT')+' · '+(session.interval||'1m')+' · 10 แท่ง = '+horizonText();
-    const sub=byId('tc-question-sub');if(sub)sub.textContent='โจทย์นี้ 10 แท่ง = '+horizonText()+(assistAvailable()?' · จะเลือกเองหรือให้ ARIS ช่วยอ่านก่อนตอบก็ได้':' · เล่นจากกราฟล้วน ไม่ใช้ ARIS Assist ข้าม TF');
-    setupEngineSelect();renderStats();
+    stats=loadStats(session);syncSessionUi();
     return true;
   }
   function resetRoundUi(){
@@ -353,7 +356,7 @@
   }
   async function open(preferredSessionId,opts={}){
     ensureStyles();ensureDialog();onClose=typeof opts.onClose==='function'?opts.onClose:null;if(!dialog.open)dialog.showModal();
-    try{const ok=await loadSession(preferredSessionId);if(!ok)return;if(!byId('tc-chart'))restoreGameBody();setupEngineSelect();renderStats();initChart();newRound();}catch(err){console.error('10-Candle Challenge failed',err);showEmpty('เปิดเกมไม่สำเร็จ',String(err?.message||err));}
+    try{const ok=await loadSession(preferredSessionId);if(!ok)return;if(!byId('tc-chart'))restoreGameBody();syncSessionUi();initChart();newRound();}catch(err){console.error('10-Candle Challenge failed',err);showEmpty('เปิดเกมไม่สำเร็จ',String(err?.message||err));}
   }
   function close(){clearReveal();if(dialog?.open)dialog.close();const cb=onClose;onClose=null;if(cb)queueMicrotask(cb);}
   globalThis.TenCandleChallengeV1={schema:SCHEMA,open,close,stats:()=>JSON.parse(JSON.stringify(stats))};
