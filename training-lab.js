@@ -6,10 +6,17 @@
   const TRAINING_VERSION_STORE='btc-training-engine-version-v1';
   const TRAINING_DEFAULT_MIGRATION='aris-training-default-v31-20261002';
   const TRAINING_ENGINE_BUILD='training-registry-20261001-r2';
+  const TRAINING_MARKET_STORE='aris-training-market-v1',TRAINING_INTERVAL_STORE='aris-training-interval-v1';
+  const TRAINING_MARKETS=Object.freeze([
+    {value:'BTCUSDT',label:'BTC'},{value:'XAUUSDT',label:'XAU'},{value:'SKHYUSDT',label:'SKHY'},
+    {value:'AMDUSDT',label:'AMD'},{value:'INTCUSDT',label:'INTEL'},{value:'NVDAUSDT',label:'NVDA'},{value:'OPENAIUSDT',label:'OPENAI'}
+  ]);
+  const TRAINING_INTERVALS=Object.freeze(['1m','5m','10m','15m','1h','4h','1d','1w']);
   const STANDALONE=document.documentElement?.dataset?.trainingPage==='1';
   let activeController=null;
   let selectedPreset=30;
   let selectedTrainingVersion='ARIS-3.1.0';
+  let selectedMarket='BTCUSDT',selectedInterval='1m';
   let latestSession=null;
 
   const byId=id=>document.getElementById(id);
@@ -38,6 +45,15 @@
     return (v/1024**3).toFixed(2)+' GB';
   }
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  const marketLabel=symbol=>TRAINING_MARKETS.find(x=>x.value===symbol)?.label||String(symbol||'—').replace(/USDT$/,'');
+  const intervalMs=tf=>globalThis.HistoricalDataV1?.intervalMs?.(tf)||({'1m':MINUTE,'5m':5*MINUTE,'10m':10*MINUTE,'15m':15*MINUTE,'1h':60*MINUTE,'4h':240*MINUTE,'1d':DAY,'1w':7*DAY})[tf]||MINUTE;
+  function durationText(ms){
+    const min=Math.round(Number(ms)/MINUTE);
+    if(min<60)return min+' นาที';
+    const h=min/60;if(h<24)return (Number.isInteger(h)?h:h.toFixed(1))+' ชั่วโมง';
+    const d=h/24;return (Number.isInteger(d)?d:d.toFixed(1))+' วัน';
+  }
+  const challengeHorizonText=tf=>'10 แท่ง = '+durationText(intervalMs(tf)*10);
 
   function ensureStyles(){
     if(byId('training-lab-style'))return;
@@ -121,6 +137,7 @@
       .analytics-tags{display:flex;gap:4px;flex-wrap:wrap}.analytics-tags span{padding:3px 5px;border:1px solid #2b4141;border-radius:999px;background:#101d1e;color:#91aaaa;font-size:6px}
       .analytics-note{margin-top:7px!important;color:#748d8e!important}.analytics-empty{font-size:7px;color:#72878a}
       @media(max-width:760px){.train-grid{grid-template-columns:1fr}.train-fields{grid-template-columns:1fr 1fr}.train-fields .train-field:last-child{grid-column:1/-1}.train-preview{grid-template-columns:1fr 1fr}.feature-grid{grid-template-columns:1fr}.replay-kpis{grid-template-columns:repeat(3,1fr)}.analytics-grid{grid-template-columns:repeat(2,1fr)}.analytics-panels{grid-template-columns:1fr}}
+      @media(max-width:560px){.training-market-grid{grid-template-columns:1fr 1fr;gap:6px}.training-market-field select{min-height:38px;font-size:9px}}
       @media(max-width:560px){.training-lab-open{height:28px;padding:0 7px;font-size:8px}#training-lab-dialog{width:calc(100vw - 8px);max-height:96vh}.training-lab-shell{max-height:96vh}.training-lab-head{padding:11px}.training-lab-body{padding:9px}.train-card{padding:9px}.quality-stats{grid-template-columns:1fr 1fr}}
 
       /* 2026 Training Lab redesign: action-first, technical detail hidden by default */
@@ -140,6 +157,10 @@
       .train-status-badge{padding:4px 8px;font-size:7px;border-radius:999px}
       .training-start-card{background:linear-gradient(145deg,#11182a 0%,#0d1721 58%,#0d191d 100%);border-color:#343658}
       .training-engine-block{display:grid;gap:7px}
+      .training-market-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+      .training-market-field{display:grid;gap:5px}.training-market-field span{font-size:8px;color:#8394aa}
+      .training-market-field select{width:100%;min-height:40px;padding:0 10px;border:1px solid #34465d;border-radius:10px;background:#0b141f;color:#e2eaf4;font-size:10px;font-weight:650}
+      .training-horizon-note{margin-top:7px;padding:7px 9px;border:1px solid #293b50;border-radius:9px;background:#0b1621;color:#8397ad;font-size:8px}
       .training-engine-label{font-size:8px;color:#8394aa}
       .train-version-select-wrap{position:relative}
       .train-version-select{width:100%;min-height:44px;padding:0 38px 0 12px;border:1px solid #3a4560;border-radius:11px;background:#0b141f;color:#e3eaf4;font-size:10px;font-weight:650;appearance:auto}
@@ -259,7 +280,7 @@
 
         <div class="training-lab-body">
           <section class="challenge-launch">
-            <div class="challenge-launch-copy"><small>BLIND CHART GAME</small><b>10-Candle Challenge</b><span>สุ่มกราฟจริงย้อนหลัง · เดา HIGH / LOW · แล้วเปิดอนาคตทีละ 10 แท่ง</span></div>
+            <div class="challenge-launch-copy"><small>BLIND CHART GAME</small><b>10-Candle Challenge</b><span>เลือกชุดข้อมูลตลาด/ไทม์เฟรมจากด้านล่าง · เดา HIGH / LOW · แล้วเปิดอนาคต 10 แท่ง</span></div>
             <button type="button" id="train-challenge-open">เข้าเล่น</button>
           </section>
           <section class="train-card training-start-card">
@@ -274,6 +295,12 @@
                 <select class="train-version-select" id="train-engine-select" aria-label="เวอร์ชันที่ใช้เทรน"></select>
               </div>
             </div>
+
+            <div class="training-market-grid">
+              <label class="training-market-field"><span>ตลาด</span><select id="train-market-select" aria-label="เลือกตลาด"></select></label>
+              <label class="training-market-field"><span>ไทม์เฟรม</span><select id="train-interval-select" aria-label="เลือกไทม์เฟรม"></select></label>
+            </div>
+            <div class="training-horizon-note" id="train-horizon-note">BTC · 1m · เกม 10 แท่ง = 10 นาที</div>
 
             <div class="train-range-row">
               <div class="train-presets">
@@ -409,10 +436,10 @@
         </header>
         <div class="training-guide-body">
           <section class="training-guide-step"><h3>1 · เลือกเวอร์ชัน</h3><p>เลือก V6.6, V7.2, ARIS 1.2, ARIS 2.0 หรือ ARIS 3.0 ที่ด้านบนของหน้าเทรน เวอร์ชันนี้ใช้เฉพาะ Historical Training และไม่เปลี่ยนเวอร์ชัน Live</p></section>
-          <section class="training-guide-step"><h3>2 · โหลดข้อมูลย้อนหลัง</h3><p>เลือกช่วง <b>7 / 30 / 90 วัน</b> หรือกำหนดเอง แล้วกด <b>โหลดข้อมูล</b> ระบบใช้ BTCUSDT Futures 1 นาที และเพิ่ม Warm-up ก่อนช่วงทดสอบ</p></section>
+          <section class="training-guide-step"><h3>2 · โหลดข้อมูลย้อนหลัง</h3><p>เลือก <b>ตลาด + ไทม์เฟรม + ช่วง 7 / 30 / 90 วัน</b> หรือกำหนดเอง แล้วกด <b>โหลดข้อมูล</b> แต่ละชุดถูกเก็บแยกเป็น Session เช่น XAU 5m หรือ BTC 1m</p></section>
           <section class="training-guide-step"><h3>3 · ตรวจ Data Quality</h3><p>ระบบตรวจ Missing candle, Duplicate, OHLC ผิดรูป และ Coverage ของข้อมูลเสริม ถ้าข้อมูลขาดจริง ระบบจะไม่สร้าง Order Book, Tick flow หรือข้อมูลย้อนหลังที่ไม่มีอยู่ขึ้นมาเอง</p></section>
           <section class="training-guide-step"><h3>4 · เลือกชุดข้อมูล</h3><p>Session เก็บช่วงเวลา, Warm-up, Engine snapshot และ Data Quality แยกจาก Live Journal กด <b>ดู</b> ที่ Session ที่ต้องการก่อนทำ Replay</p></section>
-          <section class="training-guide-step"><h3>5 · Replay</h3><p>Replay เปิดข้อมูลตามลำดับเวลาแบบ <b>1m bar-close</b> ให้เครื่องยนต์วิเคราะห์ทีละแท่ง จุดเข้าจะถูก freeze ณ ตอนนั้น และตัดสินผลหลังครบ 10 แท่ง จึงไม่ส่งอนาคตย้อนกลับไปช่วยจุดเข้า สามารถ Pause, Resume และ Stop ได้</p></section>
+          <section class="training-guide-step"><h3>5 · Replay / เกม 10 แท่ง</h3><p><b>เกม 10 แท่งเล่นได้ทุกตลาดและไทม์เฟรมที่โหลดไว้</b> โดย 10 แท่งเท่ากับเวลาจริงตาม TF เช่น 5m = 50 นาที ส่วน Engine Replay และ ARIS Assist เดิมยังจำกัดที่ Dataset 1m เพื่อไม่เอาสูตร 1m ไปตีความ TF อื่นผิดค่ะ</p></section>
           <section class="training-guide-step"><h3>6 · วิเคราะห์ผล</h3><p>หลัง Replay มีไม้ที่ตัดสินแล้ว กด <b>วิเคราะห์ Phase 3</b> เพื่อดู Win rate, State / Playbook, รูปแบบแพ้ชนะ และ MFE / MAE จาก Compact Training records ส่วน Audit calibration ใช้เฉพาะ ARIS 2.0; ARIS 3.0 ใช้สถานะและเงื่อนไขทั้ง 4 หมวดของตัวเอง</p></section>
           <section class="training-guide-step"><h3>7 · Validation / Walk-forward</h3><p>Phase 4 แบ่งข้อมูลตามเวลาเป็น <b>Train 60% / Validation 20% / Holdout 20%</b> Candidate ถูกสร้างจาก Train เท่านั้น แล้วค่อยสอบกับข้อมูลที่ไม่เคยเห็น พร้อม Walk-forward หลายช่วงเพื่อจับ overfitting</p></section>
           <div class="training-guide-rule"><b>หลักสำคัญ:</b> ผล Historical Training เป็นหลักฐานสำหรับวิจัยและปรับ Candidate ไม่ใช่คำสั่งให้แก้ Live อัตโนมัติ แม้ผล Phase 4 ผ่าน ระบบก็ยังเก็บเป็นรุ่นทดลอง/Shadow ก่อนค่ะ</div>
@@ -443,9 +470,9 @@
     const details=byId('train-range-details');
     if(days==='custom'){if(details)details.open=true;return;}
     if(details)details.open=false;
-    const end=globalThis.HistoricalDataV1?.lastClosedOpenTime?.()??(Date.now()-MINUTE);
-    const bars=Number(days)*1440;
-    const start=end-(bars-1)*MINUTE;
+    const step=intervalMs(selectedInterval);
+    const end=globalThis.HistoricalDataV1?.lastClosedOpenTime?.(selectedInterval)??(Date.now()-step);
+    const start=end-Number(days)*DAY+step;
     byId('train-start').value=toLocalInput(start);
     byId('train-end').value=toLocalInput(end);
     updatePreview();
@@ -458,11 +485,13 @@
       for(const id of ['train-preview-bars','train-preview-total','train-preview-requests','train-preview-size'])byId(id).textContent='—';
       return;
     }
-    const bars=Math.floor((end-start)/MINUTE)+1,total=bars+warmup,requests=Math.ceil(total/1500);
+    const step=intervalMs(selectedInterval),bars=Math.floor((end-start)/step)+1,total=bars+warmup;
+    const sourceFactor=selectedInterval==='10m'?2:1,requests=Math.ceil(total*sourceFactor/1500);
     byId('train-preview-bars').textContent=fmtInt(bars);
     byId('train-preview-total').textContent=fmtInt(total);
     byId('train-preview-requests').textContent=fmtInt(requests);
     byId('train-preview-size').textContent='~'+fmtBytes(total*190);
+    const note=byId('train-horizon-note');if(note)note.textContent=marketLabel(selectedMarket)+' · '+selectedInterval+' · เกม '+challengeHorizonText(selectedInterval)+(selectedInterval==='1m'?' · ARIS Assist/Replay ใช้ได้':' · เกมใช้ได้ · Replay/ARIS Assist จำกัด 1m');
   }
 
   function status(text,type=''){
@@ -473,7 +502,7 @@
   function setBusy(busy){
     byId('train-load').disabled=busy;
     byId('train-cancel').hidden=!busy;
-    document.querySelectorAll('[data-train-days],#train-engine-select,#train-start,#train-end,#train-warmup').forEach(el=>el.disabled=busy);
+    document.querySelectorAll('[data-train-days],#train-engine-select,#train-market-select,#train-interval-select,#train-start,#train-end,#train-warmup').forEach(el=>el.disabled=busy);
     byId('train-progress-wrap').classList.toggle('active',busy||!!latestSession);
   }
 
@@ -516,9 +545,9 @@
       const rows=await globalThis.HistoricalDataV1.listSessions(8);
       if(!rows.length){list.innerHTML='<div class="session-row"><div><strong>ยังไม่มีชุดข้อมูล</strong></div></div>';return;}
       list.innerHTML=rows.map(s=>{
-        const q=s.quality,range=`${humanTime(s.analysisStart)} → ${humanTime(s.analysisEnd)}`;
+        const q=s.quality,range=`${humanTime(s.analysisStart)} → ${humanTime(s.analysisEnd)}`,market=marketLabel(s.symbol||'BTCUSDT'),tf=s.interval||'1m';
         return `<div class="session-row" data-session-id="${esc(s.id)}">
-          <div><strong>${esc(range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')}</small></div>
+          <div><strong>${esc(market+' · '+tf+' · '+range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')} · เกม ${s.gameReady===false?'ยังไม่พร้อม':'พร้อม'}${tf==='1m'?' · Replay 1m':' · เกมเท่านั้น'}</small></div>
           <div class="session-row-actions"><button type="button" data-train-view="${esc(s.id)}">เลือก</button><button type="button" class="train-danger" data-train-delete="${esc(s.id)}">ลบ</button></div>
         </div>`;
       }).join('');
@@ -569,7 +598,7 @@
     const warmup=Math.max(100,Math.min(5000,Number(byId('train-warmup').value)||500));
     if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start){status('ช่วงเวลาไม่ถูกต้อง','error');return;}
 
-    const latest=globalThis.HistoricalDataV1.lastClosedOpenTime();
+    const latest=globalThis.HistoricalDataV1.lastClosedOpenTime(selectedInterval);
     if(start>latest){status('เวลาเริ่มอยู่ในอนาคต','error');return;}
     const safeEnd=Math.min(end,latest);
     if(safeEnd!==end)byId('train-end').value=toLocalInput(safeEnd);
@@ -582,7 +611,7 @@
 
     try{
       const session=await globalThis.HistoricalDataV1.downloadDataset({
-        symbol:'BTCUSDT',interval:'1m',startTime:start,endTime:safeEnd,warmupBars:warmup,
+        symbol:selectedMarket,interval:selectedInterval,startTime:start,endTime:safeEnd,warmupBars:warmup,
         signal:activeController.signal,
         engineMeta:{
           engineVersion:selectedTrainingVersion,
@@ -593,11 +622,11 @@
       });
       latestSession=session;
       showQuality(session);
-      status(session.replayReady?'โหลดครบ · พร้อม Phase 2':'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.replayReady?'ready':'warn');
+      status(session.gameReady?(session.interval==='1m'?'โหลดครบ · พร้อมเกม + Replay':'โหลดครบ · พร้อมเกม 10 แท่ง'):'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.gameReady?'ready':'warn');
       const footStatus=byId('training-lab-foot-status');
-      if(footStatus)footStatus.textContent=session.replayReady
-        ?'Phase 1 พร้อม · เลือก Session นี้แล้วเริ่ม Phase 2 ได้'
-        :'Phase 1 โหลดแล้ว แต่ Data Quality ต้องตรวจ';
+      if(footStatus)footStatus.textContent=session.gameReady
+        ?(session.interval==='1m'?'ชุดนี้พร้อมเกมและ Replay 1m':'ชุดนี้พร้อมเกม 10 แท่ง · Replay engine เดิมใช้เฉพาะ 1m')
+        :'โหลดแล้ว แต่ Data Quality ต้องตรวจ';
       await updateReplayPanel(session);
     }catch(err){
       if(err?.name==='AbortError')status('ยกเลิกแล้ว · เก็บ Session partial ไว้','error');
@@ -650,7 +679,8 @@
 
   function setReplayButtons(mode='idle'){
     const start=byId('train-replay-start'),pause=byId('train-replay-pause'),resume=byId('train-replay-resume'),stop=byId('train-replay-stop');
-    const selected=!!latestSession,ready=!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status);
+    const selected=!!latestSession,isOneMinute=latestSession?.interval==='1m';
+    const ready=isOneMinute&&(!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status));
     start.disabled=!selected||!ready||mode==='running'||mode==='paused';
     const versionSelect=byId('train-engine-select');if(versionSelect)versionSelect.disabled=mode==='running'||mode==='paused';
     pause.disabled=mode!=='running';pause.hidden=mode!=='running';
@@ -665,22 +695,24 @@
       replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);await updateAnalyticsPanel(null);return;
     }
     latestSession=session;
-    const cp=await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id,selectedTrainingVersion);
+    const isOneMinute=(session.interval||'1m')==='1m';
+    const cp=isOneMinute?await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id,selectedTrainingVersion):false;
     const range=humanTime(session.analysisStart)+' → '+humanTime(session.analysisEnd);
-    box.innerHTML='<b>'+esc(globalThis.TrainingEngineRegistryV1?.label?.(selectedTrainingVersion)||selectedTrainingVersion)+'</b> · '+esc(range)+
-      ' · '+fmtInt(session.loadedBars)+' แท่ง'+(cp?' · มี Checkpoint':'');
+    box.innerHTML='<b>'+esc(marketLabel(session.symbol||'BTCUSDT')+' · '+(session.interval||'1m'))+'</b> · '+esc(range)+
+      ' · '+fmtInt(session.loadedBars)+' แท่ง'+(cp?' · มี Checkpoint':'')+
+      (isOneMinute?'':' · เกม 10 แท่งพร้อม · Replay engine ไม่ใช้กับ TF นี้');
     const sameVersion=session.engineVersion===selectedTrainingVersion;
-    const report=sameVersion?await globalThis.HistoricalDataV1.getReport(session.id):null;
+    const report=isOneMinute&&sameVersion?await globalThis.HistoricalDataV1.getReport(session.id):null;
     showReplayReport(report);
     if(!sameVersion)renderReplayProgress({});
     const running=globalThis.HistoricalReplayV1?.current?.();
-    const same=running?.session?.id===session.id;
+    const same=isOneMinute&&running?.session?.id===session.id;
     if(same&&running.paused){replayStatus('Paused · มี Checkpoint','warn');setReplayButtons('paused');}
     else if(same&&running.running){replayStatus('กำลัง Replay','warn');setReplayButtons('running');}
     else{
-      const can=!!session.replayReady||['paused','stopped','replay_complete','replaying'].includes(session.status);
-      const completedSame=session.status==='replay_complete'&&session.engineVersion===selectedTrainingVersion;
-      replayStatus(completedSame?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม':'Dataset ยังไม่พร้อม',completedSame||can?'ready':'warn');
+      const can=isOneMinute&&(!!session.replayReady||['paused','stopped','replay_complete','replaying'].includes(session.status));
+      const completedSame=isOneMinute&&session.status==='replay_complete'&&session.engineVersion===selectedTrainingVersion;
+      replayStatus(!isOneMinute?'เกมพร้อม · Replay เฉพาะ 1m':completedSame?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม':'Dataset ยังไม่พร้อม',!isOneMinute||completedSame||can?'ready':'warn');
       byId('train-replay-start').textContent=cp?'ทำต่อ':completedSame?'Replay ใหม่':'เริ่ม Replay';
       setReplayButtons('idle');
       if(sameVersion&&session.replayProcessedBars&&session.loadedBars)renderReplayProgress({
@@ -693,6 +725,7 @@
 
   async function startReplay(){
     if(!latestSession||!globalThis.HistoricalReplayV1)return;
+    if((latestSession.interval||'1m')!=='1m'){replayStatus('Session นี้ใช้เล่นเกม 10 แท่งได้ แต่ Replay engine รองรับ 1m เท่านั้น','warn');return;}
     const running=globalThis.HistoricalReplayV1.current();
     if(running?.running){
       if(running.paused){globalThis.HistoricalReplayV1.resume();setReplayButtons('running');replayStatus('ทำต่อแล้ว','warn');}
@@ -833,6 +866,9 @@
     const s=await globalThis.HistoricalDataV1.getSession(id);
     if(!s)return;
     latestSession=s;
+    selectedMarket=s.symbol||'BTCUSDT';selectedInterval=s.interval||'1m';
+    if(byId('train-market-select'))byId('train-market-select').value=selectedMarket;
+    if(byId('train-interval-select'))byId('train-interval-select').value=selectedInterval;
     byId('train-start').value=toLocalInput(s.analysisStart);
     byId('train-end').value=toLocalInput(s.analysisEnd);
     byId('train-warmup').value=s.warmupBars||500;
@@ -881,6 +917,23 @@
     byId('training-guide-open').addEventListener('click',()=>{if(!guide.open)guide.showModal();});
     byId('training-guide-close').addEventListener('click',()=>guide.close());
     guide.addEventListener('click',e=>{if(e.target===guide)guide.close();});
+
+    const marketSelect=byId('train-market-select'),intervalSelect=byId('train-interval-select');
+    try{
+      const savedMarket=localStorage.getItem(TRAINING_MARKET_STORE),savedInterval=localStorage.getItem(TRAINING_INTERVAL_STORE);
+      if(TRAINING_MARKETS.some(x=>x.value===savedMarket))selectedMarket=savedMarket;
+      if(TRAINING_INTERVALS.includes(savedInterval))selectedInterval=savedInterval;
+    }catch{}
+    if(marketSelect){
+      marketSelect.innerHTML=TRAINING_MARKETS.map(x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>').join('');
+      marketSelect.value=selectedMarket;
+      marketSelect.addEventListener('change',()=>{selectedMarket=marketSelect.value;try{localStorage.setItem(TRAINING_MARKET_STORE,selectedMarket);}catch{}updatePreview();});
+    }
+    if(intervalSelect){
+      intervalSelect.innerHTML=TRAINING_INTERVALS.map(tf=>'<option value="'+esc(tf)+'">'+esc(tf)+'</option>').join('');
+      intervalSelect.value=selectedInterval;
+      intervalSelect.addEventListener('change',()=>{selectedInterval=intervalSelect.value;try{localStorage.setItem(TRAINING_INTERVAL_STORE,selectedInterval);}catch{}setPreset(selectedPreset==='custom'?'custom':selectedPreset);updatePreview();});
+    }
 
     const versionSelect=byId('train-engine-select');
     if(versionSelect){
