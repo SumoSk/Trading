@@ -2,7 +2,7 @@
   'use strict';
   const SCHEMA='ten-candle-challenge-v4',STORE='aris-ten-candle-challenge-v1',HISTORY_STORE='aris-ten-candle-challenge-history-v1',CONTEXT_BARS=100,FUTURE_BARS=10,ENGINE_WARMUP=360,MINUTE=60000;
   const REASONS=['ตามเทรนด์','แนวรับ','แนวต้าน','Breakout','Reject','Fib','ปลายขา','Sideway'];
-  let dialog=null,chart=null,series=null,resizeObserver=null,revealTimer=null,onClose=null,session=null,bars=[],round=null,selectedReasons=new Set(),used=new Set(),engineVersion='ARIS-3.1.0',analysisBusy=false;
+  let dialog=null,chart=null,series=null,emaFastSeries=null,emaSlowSeries=null,rsiSeries=null,rsiUpper=null,rsiLower=null,macdHistSeries=null,macdSeries=null,macdSignalSeries=null,entryPriceLine=null,entryMarkerApi=null,resizeObserver=null,revealTimer=null,onClose=null,session=null,bars=[],round=null,selectedReasons=new Set(),used=new Set(),engineVersion='ARIS-3.1.0',analysisBusy=false;
   let stats={played:0,correct:0,wrong:0,skipped:0,streak:0,bestStreak:0,reasons:{}};
   const byId=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -21,6 +21,71 @@
     const d=h/24;return (Number.isInteger(d)?d:d.toFixed(1))+' วัน';
   }
   const horizonText=()=>durationText(intervalMs()*FUTURE_BARS);
+  function emaValues(values,period){
+    if(!values.length)return [];
+    const k=2/(period+1),out=[Number(values[0])];
+    for(let i=1;i<values.length;i++)out.push(Number(values[i])*k+out[i-1]*(1-k));
+    return out;
+  }
+  function emaPoints(src,period){
+    const vals=emaValues(src.map(b=>Number(b.close)),period);
+    return src.map((b,i)=>({time:Math.floor(Number(b.time)/1000),value:vals[i]}));
+  }
+  function rsiPoints(src,period=14){
+    if(src.length<=period)return [];
+    const out=[];let gain=0,loss=0;
+    for(let i=1;i<=period;i++){const d=Number(src[i].close)-Number(src[i-1].close);gain+=Math.max(0,d);loss+=Math.max(0,-d);}
+    gain/=period;loss/=period;
+    const value=()=>loss?100-100/(1+gain/loss):gain?100:50;
+    out.push({time:Math.floor(Number(src[period].time)/1000),value:value()});
+    for(let i=period+1;i<src.length;i++){
+      const d=Number(src[i].close)-Number(src[i-1].close);
+      gain=(gain*(period-1)+Math.max(0,d))/period;loss=(loss*(period-1)+Math.max(0,-d))/period;
+      out.push({time:Math.floor(Number(src[i].time)/1000),value:value()});
+    }
+    return out;
+  }
+  function macdPoints(src){
+    if(src.length<26)return {macd:[],signal:[],hist:[]};
+    const closes=src.map(b=>Number(b.close)),fast=emaValues(closes,12),slow=emaValues(closes,26),m=closes.map((_,i)=>fast[i]-slow[i]),sig=emaValues(m,9);
+    const macd=[],signal=[],hist=[];
+    for(let i=25;i<src.length;i++){
+      const time=Math.floor(Number(src[i].time)/1000),v=m[i],sg=sig[i],h=v-sg;
+      macd.push({time,value:v});signal.push({time,value:sg});hist.push({time,value:h,color:h>=0?'#22524a':'#543143'});
+    }
+    return {macd,signal,hist};
+  }
+  function setChallengeIndicators(src){
+    if(!emaFastSeries||!emaSlowSeries||!rsiSeries||!rsiUpper||!rsiLower||!macdHistSeries||!macdSeries||!macdSignalSeries)return;
+    emaFastSeries.setData(emaPoints(src,8));emaSlowSeries.setData(emaPoints(src,21));
+    const r=rsiPoints(src),m=macdPoints(src);
+    rsiSeries.setData(r);rsiUpper.setData(r.map(x=>({time:x.time,value:70})));rsiLower.setData(r.map(x=>({time:x.time,value:30})));
+    macdHistSeries.setData(m.hist);macdSeries.setData(m.macd);macdSignalSeries.setData(m.signal);
+  }
+  function visibleRoundBars(){
+    if(!round)return [];
+    return bars.slice(round.index-CONTEXT_BARS+1,round.index+1+round.revealed);
+  }
+  function clearEntryCue(){
+    if(entryPriceLine&&series){try{series.removePriceLine(entryPriceLine);}catch{}}
+    entryPriceLine=null;
+    if(entryMarkerApi)entryMarkerApi.setMarkers([]);
+  }
+  function showEntryCue(){
+    if(!round||!series)return;
+    clearEntryCue();
+    const L=globalThis.LightweightCharts,price=Number(round.entry.close);
+    entryPriceLine=series.createPriceLine({price,color:'#a899ff',lineWidth:1,lineStyle:L?.LineStyle?.Dashed??2,axisLabelVisible:true,title:''});
+    if(L?.createSeriesMarkers){
+      entryMarkerApi=L.createSeriesMarkers(series,[{
+        time:Math.floor(Number(round.entry.time)/1000),
+        position:round.answer==='LOW'?'aboveBar':'belowBar',
+        color:'#a899ff',
+        shape:'circle',
+        text:''
+      }]);
+    }
+  }
   function syncSessionUi(){
     if(!session)return;
     const mode=byId('tc-mode-pill');if(mode)mode.textContent=marketLabel(session.symbol||'BTCUSDT')+' · '+(session.interval||'1m')+' · 10 แท่ง = '+horizonText();
@@ -286,13 +351,26 @@
   function pickIndex(){let c=eligibleIndexes().filter(i=>!used.has(i));if(!c.length){used.clear();c=eligibleIndexes();}if(!c.length)return null;const i=c[Math.floor(Math.random()*c.length)];used.add(i);return i;}
   function initChart(){
     const host=byId('tc-chart');if(!host||!globalThis.LightweightCharts)return false;
-    if(chart){try{chart.remove();}catch{}chart=null;series=null;}
-    const L=globalThis.LightweightCharts;
-    const mobileTouch=window.matchMedia?.('(max-width: 600px)')?.matches===true;chart=L.createChart(host,{width:Math.max(300,host.clientWidth),height:Math.max(280,host.clientHeight),layout:{background:{type:'solid',color:'#09131e'},textColor:'#8297ad'},grid:{vertLines:{color:'#122231'},horzLines:{color:'#122231'}},rightPriceScale:{borderColor:'#25384c'},timeScale:{visible:false,borderColor:'#25384c',timeVisible:false,secondsVisible:false,rightOffset:4,barSpacing:7},handleScroll:mobileTouch?{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false}:undefined,handleScale:mobileTouch?{axisPressedMouseMove:true,mouseWheel:true,pinch:true}:undefined,crosshair:{mode:L.CrosshairMode?.Normal??0}});
+    if(chart){try{chart.remove();}catch{}chart=null;}
+    series=emaFastSeries=emaSlowSeries=rsiSeries=rsiUpper=rsiLower=macdHistSeries=macdSeries=macdSignalSeries=entryPriceLine=entryMarkerApi=null;
+    const L=globalThis.LightweightCharts,opt={lineWidth:1,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false};
+    const mobileTouch=window.matchMedia?.('(max-width: 600px)')?.matches===true;chart=L.createChart(host,{width:Math.max(300,host.clientWidth),height:Math.max(280,host.clientHeight),layout:{background:{type:'solid',color:'#09131e'},textColor:'#8297ad',panes:{separatorColor:'#243043',separatorHoverColor:'#3a4b63',enableResize:true}},grid:{vertLines:{color:'#122231'},horzLines:{color:'#122231'}},rightPriceScale:{borderColor:'#25384c'},timeScale:{visible:false,borderColor:'#25384c',timeVisible:false,secondsVisible:false,rightOffset:4,barSpacing:7},handleScroll:mobileTouch?{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false}:undefined,handleScale:mobileTouch?{axisPressedMouseMove:true,mouseWheel:true,pinch:true}:undefined,crosshair:{mode:L.CrosshairMode?.Normal??0}});
     series=chart.addSeries(L.CandlestickSeries,{upColor:'#43d8ad',downColor:'#ff6f8c',borderVisible:false,wickUpColor:'#43d8ad',wickDownColor:'#ff6f8c',priceFormat:{type:'price',precision:2,minMove:.01}});
+    emaFastSeries=chart.addSeries(L.LineSeries,{...opt,color:'#a899ff'});
+    emaSlowSeries=chart.addSeries(L.LineSeries,{...opt,color:'#dfb875'});
+    rsiSeries=chart.addSeries(L.LineSeries,{...opt,color:'#a899ff',priceFormat:{type:'price',precision:1,minMove:.1}},1);
+    rsiUpper=chart.addSeries(L.LineSeries,{...opt,color:'#5f6c80',lineStyle:L.LineStyle.Dashed},1);
+    rsiLower=chart.addSeries(L.LineSeries,{...opt,color:'#5f6c80',lineStyle:L.LineStyle.Dashed},1);
+    rsiSeries.priceScale().applyOptions({scaleMargins:{top:.12,bottom:.12}});
+    macdHistSeries=chart.addSeries(L.HistogramSeries,{lastValueVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:2,minMove:.01}},2);
+    macdSeries=chart.addSeries(L.LineSeries,{...opt,color:'#72b7ff',priceFormat:{type:'price',precision:2,minMove:.01}},2);
+    macdSignalSeries=chart.addSeries(L.LineSeries,{...opt,color:'#dfb875',priceFormat:{type:'price',precision:2,minMove:.01}},2);
+    macdHistSeries.createPriceLine({price:0,color:'#536176',lineWidth:1,lineStyle:L.LineStyle.Dashed,axisLabelVisible:false,title:''});
+    macdHistSeries.priceScale().applyOptions({scaleMargins:{top:.15,bottom:.15}});
+    const panes=chart.panes();if(panes[0])panes[0].setStretchFactor(5);if(panes[1])panes[1].setStretchFactor(1.35);if(panes[2])panes[2].setStretchFactor(1.55);
     if(resizeObserver)resizeObserver.disconnect();resizeObserver=new ResizeObserver(entries=>{const r=entries[0]?.contentRect;if(chart&&r?.width>0&&r.height>0)chart.resize(r.width,r.height);});resizeObserver.observe(host);return true;
   }
-  function restoreGameBody(){if(byId('tc-chart'))return;dialog.remove();dialog=null;chart=null;series=null;ensureDialog();if(!dialog.open)dialog.showModal();}
+  function restoreGameBody(){if(byId('tc-chart'))return;dialog.remove();dialog=null;chart=null;series=emaFastSeries=emaSlowSeries=rsiSeries=rsiUpper=rsiLower=macdHistSeries=macdSeries=macdSignalSeries=entryPriceLine=entryMarkerApi=null;ensureDialog();if(!dialog.open)dialog.showModal();}
   async function loadSession(preferredId){
     session=await resolveSession(preferredId);
     if(!session){showEmpty('ยังไม่มีกราฟย้อนหลังสำหรับเล่น','โหลดข้อมูลย้อนหลังอย่างน้อย 1 ชุดในหน้า Train ก่อน แล้วกดเข้าเกมใหม่ค่ะ');return false;}
@@ -311,7 +389,7 @@
   function newRound(){
     clearReveal();const idx=pickIndex();if(idx===null){showEmpty('หาโจทย์ที่ต่อเนื่องไม่พอ','ชุดข้อมูลนี้มีช่วงขาดของแท่งมากเกินไป ลองโหลด Session ใหม่ค่ะ');return;}
     round={index:idx,entry:bars[idx],future:bars.slice(idx+1,idx+1+FUTURE_BARS),answer:null,revealed:0,finished:false,engineAnalysis:null,engineVersionAtRound:engineVersion,enginePrime:null};resetRoundUi();byId('tc-entry-price').textContent=money(round.entry.close);byId('tc-round-label').textContent='ซ่อนอนาคต 10 แท่ง · '+horizonText();
-    if(!chart||!series)initChart();series.setData(bars.slice(idx-CONTEXT_BARS+1,idx+1).map(chartBar));chart.timeScale().fitContent();
+    if(!chart||!series)initChart();clearEntryCue();const visible=bars.slice(idx-CONTEXT_BARS+1,idx+1);series.setData(visible.map(chartBar));setChallengeIndicators(visible);chart.timeScale().fitContent();
     if(assistAvailable()){
       const targetRound=round;
       targetRound.enginePrime=engineAnalysisAt(idx,targetRound.engineVersionAtRound).then(a=>{if(round===targetRound&&!targetRound.engineAnalysis)targetRound.engineAnalysis=a;return a;}).catch(err=>{console.error('Challenge pre-answer engine snapshot failed',err);return null;});
@@ -324,7 +402,7 @@
   function clearReveal(){if(revealTimer){clearInterval(revealTimer);revealTimer=null;}}
   function revealOne(){
     if(!round||!round.answer||round.finished)return;if(round.revealed>=FUTURE_BARS){finishRound();return;}
-    series.update(chartBar(round.future[round.revealed]));round.revealed++;byId('tc-progress-bar').style.width=(round.revealed/FUTURE_BARS*100)+'%';byId('tc-progress-text').textContent=round.revealed+' / '+FUTURE_BARS;byId('tc-reveal-count').textContent='เปิดแล้ว '+round.revealed+' / '+FUTURE_BARS;byId('tc-round-label').textContent='กำลังเปิดอนาคต · '+round.revealed+'/10';chart.timeScale().scrollToRealTime();if(round.revealed>=FUTURE_BARS)finishRound();
+    series.update(chartBar(round.future[round.revealed]));round.revealed++;setChallengeIndicators(visibleRoundBars());byId('tc-progress-bar').style.width=(round.revealed/FUTURE_BARS*100)+'%';byId('tc-progress-text').textContent=round.revealed+' / '+FUTURE_BARS;byId('tc-reveal-count').textContent='เปิดแล้ว '+round.revealed+' / '+FUTURE_BARS;byId('tc-round-label').textContent='กำลังเปิดอนาคต · '+round.revealed+'/10';chart.timeScale().scrollToRealTime();if(round.revealed>=FUTURE_BARS)finishRound();
   }
   function startReveal(){if(revealTimer||!round?.answer)return;byId('tc-reveal-start').disabled=true;revealTimer=setInterval(()=>{revealOne();if(round?.finished){clearReveal();byId('tc-reveal-start').disabled=false;}},520);}
   function revealAll(){if(!round?.answer)return;clearReveal();while(round&&!round.finished&&round.revealed<FUTURE_BARS)revealOne();byId('tc-reveal-start').disabled=false;}
@@ -348,7 +426,7 @@
   }
 
   function finishRound(){
-    if(!round||round.finished)return;clearReveal();round.finished=true;
+    if(!round||round.finished)return;clearReveal();round.finished=true;showEntryCue();
     const finish=round.future[FUTURE_BARS-1],actual=outcome(Number(round.entry.close),Number(finish.close)),scored=actual!=='EQUAL',correct=scored&&round.answer===actual;
     if(scored){stats.played++;if(correct){stats.correct++;stats.streak++;stats.bestStreak=Math.max(stats.bestStreak,stats.streak);}else{stats.wrong++;stats.streak=0;}updateReasonStats(correct);}saveStats();renderStats();
     const delta=Number(finish.close)-Number(round.entry.close),result=byId('tc-result');result.hidden=false;result.className=actual==='EQUAL'?'tc-result equal':'tc-result'+(correct?'':' wrong');
