@@ -679,8 +679,8 @@
 
   function setReplayButtons(mode='idle'){
     const start=byId('train-replay-start'),pause=byId('train-replay-pause'),resume=byId('train-replay-resume'),stop=byId('train-replay-stop');
-    const selected=!!latestSession,isOneMinute=latestSession?.interval==='1m';
-    const ready=isOneMinute&&(!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status));
+    const selected=!!latestSession,isTraining=latestSession?.trainingEligible===true;
+    const ready=isTraining&&(!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status));
     start.disabled=!selected||!ready||mode==='running'||mode==='paused';
     const versionSelect=byId('train-engine-select');if(versionSelect)versionSelect.disabled=mode==='running'||mode==='paused';
     pause.disabled=mode!=='running';pause.hidden=mode!=='running';
@@ -695,24 +695,24 @@
       replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);await updateAnalyticsPanel(null);return;
     }
     latestSession=session;
-    const isOneMinute=(session.interval||'1m')==='1m';
-    const cp=isOneMinute?await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id,selectedTrainingVersion):false;
+    const isTraining=session.trainingEligible===true;
+    const cp=isTraining?await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id,selectedTrainingVersion):false;
     const range=humanTime(session.analysisStart)+' → '+humanTime(session.analysisEnd);
     box.innerHTML='<b>'+esc(marketLabel(session.symbol||'BTCUSDT')+' · '+(session.interval||'1m'))+'</b> · '+esc(range)+
       ' · '+fmtInt(session.loadedBars)+' แท่ง'+(cp?' · มี Checkpoint':'')+
-      (isOneMinute?'':' · เกม 10 แท่งพร้อม · Replay engine ไม่ใช้กับ TF นี้');
+      (isTraining?' · Training BTC 1m':' · เกม 10 แท่งอย่างเดียว · ไม่นับ Training');
     const sameVersion=session.engineVersion===selectedTrainingVersion;
-    const report=isOneMinute&&sameVersion?await globalThis.HistoricalDataV1.getReport(session.id):null;
+    const report=isTraining&&sameVersion?await globalThis.HistoricalDataV1.getReport(session.id):null;
     showReplayReport(report);
     if(!sameVersion)renderReplayProgress({});
     const running=globalThis.HistoricalReplayV1?.current?.();
-    const same=isOneMinute&&running?.session?.id===session.id;
+    const same=isTraining&&running?.session?.id===session.id;
     if(same&&running.paused){replayStatus('Paused · มี Checkpoint','warn');setReplayButtons('paused');}
     else if(same&&running.running){replayStatus('กำลัง Replay','warn');setReplayButtons('running');}
     else{
-      const can=isOneMinute&&(!!session.replayReady||['paused','stopped','replay_complete','replaying'].includes(session.status));
-      const completedSame=isOneMinute&&session.status==='replay_complete'&&session.engineVersion===selectedTrainingVersion;
-      replayStatus(!isOneMinute?'เกมพร้อม · Replay เฉพาะ 1m':completedSame?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม':'Dataset ยังไม่พร้อม',!isOneMinute||completedSame||can?'ready':'warn');
+      const can=isTraining&&(!!session.replayReady||['paused','stopped','replay_complete','replaying'].includes(session.status));
+      const completedSame=isTraining&&session.status==='replay_complete'&&session.engineVersion===selectedTrainingVersion;
+      replayStatus(!isTraining?'เกมอย่างเดียว · ไม่นับ Training':completedSame?'Replay เสร็จ':cp?'พร้อม Resume':can?'พร้อม':'Dataset ยังไม่พร้อม',!isTraining||completedSame||can?'ready':'warn');
       byId('train-replay-start').textContent=cp?'ทำต่อ':completedSame?'Replay ใหม่':'เริ่ม Replay';
       setReplayButtons('idle');
       if(sameVersion&&session.replayProcessedBars&&session.loadedBars)renderReplayProgress({
@@ -725,7 +725,7 @@
 
   async function startReplay(){
     if(!latestSession||!globalThis.HistoricalReplayV1)return;
-    if((latestSession.interval||'1m')!=='1m'){replayStatus('Session นี้ใช้เล่นเกม 10 แท่งได้ แต่ Replay engine รองรับ 1m เท่านั้น','warn');return;}
+    if(latestSession.trainingEligible!==true){replayStatus('Session นี้เอาไว้เล่นเกมอย่างเดียว · ไม่นับ Training และไม่เข้า Replay','warn');return;}
     const running=globalThis.HistoricalReplayV1.current();
     if(running?.running){
       if(running.paused){globalThis.HistoricalReplayV1.resume();setReplayButtons('running');replayStatus('ทำต่อแล้ว','warn');}
