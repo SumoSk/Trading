@@ -522,7 +522,7 @@
     byId('train-quality-result').hidden=false;
     const grade=byId('train-quality-grade');
     grade.textContent=q.grade||'—';grade.className='quality-grade '+(q.grade||'');
-    byId('train-quality-title').textContent='Data Quality '+(q.grade||'—')+(session.gameReady?(session.interval==='1m'?' · พร้อมเกม + Replay 1m':' · พร้อมเกม 10 แท่ง'):' · ต้องตรวจข้อมูล');
+    byId('train-quality-title').textContent='Data Quality '+(q.grade||'—')+(session.gameReady?(session.trainingEligible?' · พร้อมเกม + Training BTC 1m':' · พร้อมเกมอย่างเดียว'):' · ต้องตรวจข้อมูล');
     byId('train-quality-note').textContent=q.note||'';
     byId('train-quality-loaded').textContent=fmtInt(q.loadedBars);
     byId('train-quality-missing').textContent=fmtInt(q.missing);
