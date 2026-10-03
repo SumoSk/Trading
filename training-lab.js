@@ -622,10 +622,10 @@
       });
       latestSession=session;
       showQuality(session);
-      status(session.gameReady?(session.interval==='1m'?'โหลดครบ · พร้อมเกม + Replay':'โหลดครบ · พร้อมเกม 10 แท่ง'):'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.gameReady?'ready':'warn');
+      status(session.gameReady?(session.trainingEligible?'โหลดครบ · พร้อมเกม + Training':'โหลดครบ · พร้อมเล่นเกมอย่างเดียว'):'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.gameReady?'ready':'warn');
       const footStatus=byId('training-lab-foot-status');
       if(footStatus)footStatus.textContent=session.gameReady
-        ?(session.interval==='1m'?'ชุดนี้พร้อมเกมและ Replay 1m':'ชุดนี้พร้อมเกม 10 แท่ง · Replay engine เดิมใช้เฉพาะ 1m')
+        ?(session.trainingEligible?'BTC 1m ชุดนี้นับเป็น Training และใช้ Replay/ARIS Assist ได้':'ชุดนี้ใช้เล่นเกม 10 แท่งอย่างเดียว · ไม่เข้า Training/Replay')
         :'โหลดแล้ว แต่ Data Quality ต้องตรวจ';
       await updateReplayPanel(session);
     }catch(err){
