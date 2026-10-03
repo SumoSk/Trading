@@ -3,7 +3,17 @@
 
   const DB_NAME='btc-training-lab-v1';
   const DB_VERSION=1;
-  const MINUTE=60_000;
+  const MINUTE=60_000,DAY=86_400_000,WEEK=7*DAY;
+  const INTERVAL_MS=Object.freeze({'1m':MINUTE,'5m':5*MINUTE,'10m':10*MINUTE,'15m':15*MINUTE,'1h':60*MINUTE,'4h':4*60*MINUTE,'1d':DAY,'1w':WEEK});
+  const SUPPORTED_INTERVALS=Object.freeze(Object.keys(INTERVAL_MS));
+  const intervalMs=interval=>INTERVAL_MS[interval]||null;
+  const sourceInterval=interval=>interval==='10m'?'5m':interval;
+  const sourceIntervalMs=interval=>intervalMs(sourceInterval(interval));
+  const alignInterval=(ms,interval='1m')=>{
+    const size=intervalMs(interval);if(!size)return NaN;
+    if(interval==='1w'){const mondayOffset=4*DAY;return Math.floor((Number(ms)-mondayOffset)/size)*size+mondayOffset;}
+    return Math.floor(Number(ms)/size)*size;
+  };
   const BINANCE_FUTURES_KLINES='https://fapi.binance.com/fapi/v1/klines';
   const DEFAULT_LIMIT=1500;
   let dbPromise=null;
@@ -13,8 +23,11 @@
     return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
   };
   const suffix=()=>globalThis.crypto?.randomUUID?.().slice(0,8)||Math.random().toString(36).slice(2,10);
-  const alignMinute=ms=>Math.floor(Number(ms)/MINUTE)*MINUTE;
-  const lastClosedOpenTime=()=>alignMinute(Date.now())-MINUTE;
+  const alignMinute=ms=>alignInterval(ms,'1m');
+  const lastClosedOpenTime=(interval='1m')=>{
+    const size=intervalMs(interval);if(!size)return NaN;
+    return alignInterval(Date.now(),interval)-size;
+  };
 
   function openDb(){
     if(dbPromise)return dbPromise;
@@ -149,18 +162,18 @@
     return raw.map(normalizeKline).filter(Boolean);
   }
 
-  function featureAvailability(nativeCoverage=1){
+  function featureAvailability(nativeCoverage=1,interval='1m'){
     return {
-      ohlcv:{status:'native',label:'OHLCV Futures 1m',coverage:1},
+      ohlcv:{status:'native',label:'OHLCV Futures '+interval,coverage:1},
       quoteVolume:{status:'native',label:'Quote volume',coverage:nativeCoverage},
-      tradeCount:{status:'native',label:'จำนวน trades ต่อ 1m',coverage:nativeCoverage},
-      takerBuyVolume:{status:'native',label:'Taker buy volume ต่อ 1m',coverage:nativeCoverage},
-      minuteFlowProxy:{status:'derived',label:'Flow proxy จาก Taker Buy/Sell 1m',coverage:nativeCoverage},
+      tradeCount:{status:'native',label:'จำนวน trades ต่อ '+interval,coverage:nativeCoverage},
+      takerBuyVolume:{status:'native',label:'Taker buy volume ต่อ '+interval,coverage:nativeCoverage},
+      minuteFlowProxy:{status:'derived',label:'Flow proxy จาก Taker Buy/Sell '+interval,coverage:nativeCoverage},
       atrEmaFibStructure:{status:'derived',label:'ATR / EMA / Fib / Structure',coverage:1},
       orderBook:{status:'unavailable',label:'Historical order book ไม่มีในชุด Kline',coverage:0},
       liquidationStream:{status:'unavailable',label:'Historical liquidation stream ไม่มีในชุด Kline',coverage:0},
       tickFlow:{status:'unavailable',label:'Tick-by-tick flow ไม่มีในชุด Kline',coverage:0},
-      subMinutePace:{status:'unavailable',label:'ความเร็วภายในแท่ง 1m ไม่สามารถสร้างจาก Kline',coverage:0}
+      subMinutePace:{status:'unavailable',label:'ไม่มีข้อมูล intrabar ที่ละเอียดกว่า '+interval+' ในชุดนี้',coverage:0}
     };
   }
 
@@ -175,57 +188,105 @@
   function datasetId(){return 'DATA-'+nowId()+'-'+suffix().slice(0,6).toUpperCase();}
 
   async function downloadDataset(options={}){
-    const symbol=options.symbol||'BTCUSDT',interval=options.interval||'1m';
-    if(interval!=='1m')throw new Error('Phase 1 รองรับ Historical 1m เท่านั้น');
+    const symbol=String(options.symbol||'BTCUSDT').toUpperCase(),interval=options.interval||'1m';
+    const barMs=intervalMs(interval);
+    if(!barMs||!SUPPORTED_INTERVALS.includes(interval))throw new Error('ไทม์เฟรม '+interval+' ยังไม่รองรับ');
+    const fetchInterval=sourceInterval(interval),fetchMs=sourceIntervalMs(interval);
+    if(!fetchMs)throw new Error('หา source interval สำหรับ '+interval+' ไม่ได้');
 
-    const analysisEnd=Math.min(alignMinute(options.endTime??lastClosedOpenTime()),lastClosedOpenTime());
-    const analysisStart=alignMinute(options.startTime);
+    const latestClosed=lastClosedOpenTime(interval);
+    const analysisEnd=Math.min(alignInterval(options.endTime??latestClosed,interval),latestClosed);
+    const analysisStart=alignInterval(options.startTime,interval);
     const warmupBars=Math.max(0,Math.min(5000,Math.floor(Number(options.warmupBars)||500)));
     if(!Number.isFinite(analysisStart)||analysisStart>=analysisEnd)throw new Error('ช่วงเวลาย้อนหลังไม่ถูกต้อง');
 
-    const downloadStart=analysisStart-warmupBars*MINUTE;
+    const downloadStart=analysisStart-warmupBars*barMs;
     const downloadEnd=analysisEnd;
-    const expectedBars=Math.floor((downloadEnd-downloadStart)/MINUTE)+1;
-    const requestedAnalysisBars=Math.floor((analysisEnd-analysisStart)/MINUTE)+1;
+    const sourceEnd=downloadEnd+barMs-fetchMs;
+    const expectedBars=Math.floor((downloadEnd-downloadStart)/barMs)+1;
+    const requestedAnalysisBars=Math.floor((analysisEnd-analysisStart)/barMs)+1;
 
     const sid=sessionId(),did=datasetId(),createdAt=Date.now();
     const engineMeta=options.engineMeta||{};
     const baseSession={
       id:sid,datasetId:did,createdAt,updatedAt:createdAt,status:'downloading',phase:1,
-      symbol,interval,analysisStart,analysisEnd,downloadStart,downloadEnd,warmupBars,
+      symbol,interval,sourceInterval:fetchInterval,barMs,analysisStart,analysisEnd,downloadStart,downloadEnd,warmupBars,
       requestedAnalysisBars,expectedBars,loadedBars:0,
       engineVersion:engineMeta.engineVersion||globalThis.EventSignalV6?.CFG?.version||null,
       engineBlobSha:engineMeta.engineBlobSha||null,
       auditSchema:Object.prototype.hasOwnProperty.call(engineMeta,'auditSchema')?engineMeta.auditSchema:(globalThis.AuditEngineV2?.schema||null),
       source:'binance_futures_rest',sourceEndpoint:BINANCE_FUTURES_KLINES,
-      replayReady:false
+      replayReady:false,gameReady:false
     };
     const dataset={
       id:did,sessionId:sid,createdAt,updatedAt:createdAt,status:'downloading',
-      symbol,interval,analysisStart,analysisEnd,downloadStart,downloadEnd,warmupBars,
+      symbol,interval,sourceInterval:fetchInterval,barMs,analysisStart,analysisEnd,downloadStart,downloadEnd,warmupBars,
       expectedBars,loadedBars:0,chunkCount:0,quality:null,
-      source:{provider:'Binance Futures',endpoint:BINANCE_FUTURES_KLINES,type:'kline',interval:'1m'}
+      source:{provider:'Binance Futures',endpoint:BINANCE_FUTURES_KLINES,type:'kline',interval:fetchInterval,targetInterval:interval,aggregated:fetchInterval!==interval}
     };
     await txPut('sessions',baseSession);
     await txPut('datasets',dataset);
 
     let cursor=downloadStart,lastTime=null,loadedBars=0,chunkNo=0,duplicates=0,missing=0,invalid=0;
-    let nativeExtended=0,finishedNaturally=false;
+    let nativeExtended=0,finishedNaturally=false,aggregateCarry=null;
     const startedAt=Date.now();
+    const ratio=Math.max(1,Math.round(barMs/fetchMs));
+
+    const aggregatePage=(page,flush=false)=>{
+      if(fetchInterval===interval)return page;
+      const out=[];
+      const emit=()=>{
+        if(!aggregateCarry)return;
+        if(aggregateCarry.count===ratio){
+          const a=aggregateCarry;
+          out.push({
+            time:a.bucketStart,open:a.open,high:a.high,low:a.low,close:a.close,volume:a.volume,
+            closeTime:a.bucketStart+barMs-1,quoteVolume:a.quoteVolume,trades:a.trades,
+            takerBuyBase:a.takerBuyBase,takerBuyQuote:a.takerBuyQuote
+          });
+        }
+        aggregateCarry=null;
+      };
+      for(const b of page){
+        const bucketStart=alignInterval(b.time,interval);
+        if(!aggregateCarry||aggregateCarry.bucketStart!==bucketStart){
+          emit();
+          aggregateCarry={bucketStart,count:0,open:b.open,high:b.high,low:b.low,close:b.close,volume:0,quoteVolume:0,trades:0,takerBuyBase:0,takerBuyQuote:0};
+        }
+        const a=aggregateCarry;
+        a.count++;a.high=Math.max(a.high,b.high);a.low=Math.min(a.low,b.low);a.close=b.close;
+        a.volume+=Number(b.volume)||0;a.quoteVolume+=Number(b.quoteVolume)||0;a.trades+=Number(b.trades)||0;
+        a.takerBuyBase+=Number(b.takerBuyBase)||0;a.takerBuyQuote+=Number(b.takerBuyQuote)||0;
+        if(b.time+fetchMs>=bucketStart+barMs)emit();
+      }
+      if(flush)emit();
+      return out;
+    };
+
+    const acceptBars=async clean=>{
+      if(!clean.length)return;
+      const chunk={
+        id:did+':'+String(chunkNo).padStart(4,'0'),datasetId:did,sessionId:sid,
+        chunkNo,startTime:clean[0].time,endTime:clean.at(-1).time,count:clean.length,bars:clean
+      };
+      await txPut('barChunks',chunk);
+      chunkNo++;loadedBars+=clean.length;
+    };
 
     try{
-      while(cursor<=downloadEnd){
+      while(cursor<=sourceEnd){
         if(options.signal?.aborted)throw new DOMException('ยกเลิกการโหลด','AbortError');
-        const page=await fetchPage({symbol,interval,startTime:cursor,endTime:downloadEnd+MINUTE-1,limit:DEFAULT_LIMIT,signal:options.signal});
+        const page=await fetchPage({symbol,interval:fetchInterval,startTime:cursor,endTime:sourceEnd+fetchMs-1,limit:DEFAULT_LIMIT,signal:options.signal});
         if(!page.length)break;
 
+        const targetBars=aggregatePage(page,false);
         const clean=[];
-        for(const b of page){
+        for(const b of targetBars){
           if(b.time<downloadStart||b.time>downloadEnd)continue;
-          if(lastTime===null&&b.time>downloadStart)missing+=Math.floor((b.time-downloadStart)/MINUTE);
+          if(lastTime===null&&b.time>downloadStart)missing+=Math.floor((b.time-downloadStart)/barMs);
           if(lastTime!==null){
             if(b.time<=lastTime){duplicates++;continue;}
-            if(b.time>lastTime+MINUTE)missing+=Math.floor((b.time-lastTime)/MINUTE)-1;
+            if(b.time>lastTime+barMs)missing+=Math.floor((b.time-lastTime)/barMs)-1;
           }
           if(b.high<Math.max(b.open,b.close)||b.low>Math.min(b.open,b.close)||b.high<b.low){
             invalid++;continue;
@@ -234,19 +295,11 @@
           lastTime=b.time;
           if([b.quoteVolume,b.trades,b.takerBuyBase,b.takerBuyQuote].every(Number.isFinite))nativeExtended++;
         }
-
-        if(clean.length){
-          const chunk={
-            id:did+':'+String(chunkNo).padStart(4,'0'),datasetId:did,sessionId:sid,
-            chunkNo,startTime:clean[0].time,endTime:clean.at(-1).time,count:clean.length,bars:clean
-          };
-          await txPut('barChunks',chunk);
-          chunkNo++;loadedBars+=clean.length;
-        }
+        await acceptBars(clean);
 
         const fetchedLast=page.at(-1)?.time;
         if(!Number.isFinite(fetchedLast))break;
-        const next=fetchedLast+MINUTE;
+        const next=fetchedLast+fetchMs;
         if(next<=cursor)throw new Error('Historical cursor ไม่เดินต่อ');
         cursor=next;
 
@@ -257,11 +310,27 @@
           requests:chunkNo,elapsedMs:elapsed,barsPerSecond:loadedBars/(elapsed/1000)
         });
 
-        if(page.length<DEFAULT_LIMIT||cursor>downloadEnd){finishedNaturally=true;break;}
+        if(page.length<DEFAULT_LIMIT||cursor>sourceEnd){finishedNaturally=true;break;}
         await new Promise(r=>setTimeout(r,80));
       }
 
-      if(lastTime!==null&&lastTime<downloadEnd)missing+=Math.floor((downloadEnd-lastTime)/MINUTE);
+      if(fetchInterval!==interval&&aggregateCarry){
+        const tail=aggregatePage([],true),clean=[];
+        for(const b of tail){
+          if(b.time<downloadStart||b.time>downloadEnd)continue;
+          if(lastTime===null&&b.time>downloadStart)missing+=Math.floor((b.time-downloadStart)/barMs);
+          if(lastTime!==null){
+            if(b.time<=lastTime){duplicates++;continue;}
+            if(b.time>lastTime+barMs)missing+=Math.floor((b.time-lastTime)/barMs)-1;
+          }
+          if(b.high<Math.max(b.open,b.close)||b.low>Math.min(b.open,b.close)||b.high<b.low){invalid++;continue;}
+          clean.push(b);lastTime=b.time;
+          if([b.quoteVolume,b.trades,b.takerBuyBase,b.takerBuyQuote].every(Number.isFinite))nativeExtended++;
+        }
+        await acceptBars(clean);
+      }
+
+      if(lastTime!==null&&lastTime<downloadEnd)missing+=Math.floor((downloadEnd-lastTime)/barMs);
       if(lastTime===null)missing=expectedBars;
 
       const extendedCoverage=loadedBars?nativeExtended/loadedBars:0;
@@ -272,10 +341,11 @@
         extendedCoverage,
         complete:loadedBars+missing>=expectedBars&&loadedBars>0,
         firstOpenTime:downloadStart,lastOpenTime:lastTime,
-        features:featureAvailability(extendedCoverage),
-        note:'Phase 1 quality ตรวจระดับแท่ง 1 นาที; ไม่สร้างข้อมูล Order Book/Tick ที่ไม่มีจริง'
+        features:featureAvailability(extendedCoverage,interval),
+        note:'Quality ตรวจระดับแท่ง '+interval+(fetchInterval!==interval?' · รวมจาก '+fetchInterval:'')+'; ไม่สร้าง Order Book/Tick ที่ไม่มีจริง'
       };
       const ready=loadedBars>0&&quality.grade!=='C'&&missing===0;
+      const replayReady=ready&&interval==='1m';
       const completedAt=Date.now();
 
       await txPut('datasets',{
@@ -284,7 +354,7 @@
       });
       await txPut('sessions',{
         ...baseSession,updatedAt:completedAt,completedAt,status:ready?'ready':'quality_warning',
-        loadedBars,chunkCount:chunkNo,quality,replayReady:ready,
+        loadedBars,chunkCount:chunkNo,quality,replayReady,gameReady:ready,
         durationMs:completedAt-startedAt,
         finishedNaturally
       });
@@ -304,7 +374,7 @@
       });
       await txPut('sessions',{
         ...baseSession,updatedAt,status:aborted?'cancelled':'error',
-        loadedBars,chunkCount:chunkNo,replayReady:false,error:String(err?.message||err)
+        loadedBars,chunkCount:chunkNo,replayReady:false,gameReady:false,error:String(err?.message||err)
       });
       throw err;
     }
@@ -395,7 +465,7 @@
     dbVersion:DB_VERSION,
     stores:['sessions','datasets','barChunks','signals','audit','reports','checkpoints'],
     endpoint:BINANCE_FUTURES_KLINES,
-    alignMinute,lastClosedOpenTime,openDb,storageEstimate,listSessions,getSession,getDatasetSummary,getDatasetBars,
+    supportedIntervals:SUPPORTED_INTERVALS,intervalMs,sourceInterval,sourceIntervalMs,alignInterval,alignMinute,lastClosedOpenTime,openDb,storageEstimate,listSessions,getSession,getDatasetSummary,getDatasetBars,
     saveSession,putMany,getBySession,deleteBySession,saveReport,getReport,saveCheckpoint,getCheckpoint,clearCheckpoint,clearReplayArtifacts,
     deleteSession,downloadDataset
   };
