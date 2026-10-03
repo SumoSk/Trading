@@ -491,7 +491,7 @@
     byId('train-preview-total').textContent=fmtInt(total);
     byId('train-preview-requests').textContent=fmtInt(requests);
     byId('train-preview-size').textContent='~'+fmtBytes(total*190);
-    const note=byId('train-horizon-note');if(note)note.textContent=marketLabel(selectedMarket)+' · '+selectedInterval+' · เกม '+challengeHorizonText(selectedInterval)+(selectedInterval==='1m'?' · ARIS Assist/Replay ใช้ได้':' · เกมใช้ได้ · Replay/ARIS Assist จำกัด 1m');
+    const note=byId('train-horizon-note');if(note)note.textContent=marketLabel(selectedMarket)+' · '+selectedInterval+' · เกม '+challengeHorizonText(selectedInterval)+(selectedMarket==='BTCUSDT'&&selectedInterval==='1m'?' · นับเป็น Training + ARIS Assist/Replay':' · เล่นเกมอย่างเดียว · ไม่นับเป็น Training');
   }
 
   function status(text,type=''){
