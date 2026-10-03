@@ -547,7 +547,7 @@
       list.innerHTML=rows.map(s=>{
         const q=s.quality,range=`${humanTime(s.analysisStart)} → ${humanTime(s.analysisEnd)}`,market=marketLabel(s.symbol||'BTCUSDT'),tf=s.interval||'1m';
         return `<div class="session-row" data-session-id="${esc(s.id)}">
-          <div><strong>${esc(market+' · '+tf+' · '+range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')} · เกม ${s.gameReady===false?'ยังไม่พร้อม':'พร้อม'}${tf==='1m'?' · Replay 1m':' · เกมเท่านั้น'}</small></div>
+          <div><strong>${esc(market+' · '+tf+' · '+range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')} · เกม ${s.gameReady===false?'ยังไม่พร้อม':'พร้อม'}${s.trainingEligible?' · Training BTC 1m':' · เกมอย่างเดียว · ไม่นับ Training'}</small></div>
           <div class="session-row-actions"><button type="button" data-train-view="${esc(s.id)}">เลือก</button><button type="button" class="train-danger" data-train-delete="${esc(s.id)}">ลบ</button></div>
         </div>`;
       }).join('');
