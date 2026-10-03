@@ -12,7 +12,8 @@
   const outcome=(entry,finish)=>finish>entry?'HIGH':finish<entry?'LOW':'EQUAL';
   const marketLabel=symbol=>({BTCUSDT:'BTC',XAUUSDT:'XAU',SKHYUSDT:'SKHY',AMDUSDT:'AMD',INTCUSDT:'INTEL',NVDAUSDT:'NVDA',OPENAIUSDT:'OPENAI'})[symbol]||String(symbol||'—').replace(/USDT$/,'');
   const intervalMs=()=>globalThis.HistoricalDataV1?.intervalMs?.(session?.interval||'1m')||MINUTE;
-  const assistAvailable=()=>String(session?.interval||'1m')==='1m';
+  const trainingEligible=()=>String(session?.symbol||'BTCUSDT')==='BTCUSDT'&&String(session?.interval||'1m')==='1m';
+  const assistAvailable=()=>trainingEligible();
   function durationText(ms){
     const min=Math.round(Number(ms)/MINUTE);
     if(min<60)return min+' นาที';
@@ -329,6 +330,7 @@
   function revealAll(){if(!round?.answer)return;clearReveal();while(round&&!round.finished&&round.revealed<FUTURE_BARS)revealOne();byId('tc-reveal-start').disabled=false;}
   function updateReasonStats(correct){for(const r of round.reasons||[]){const row=stats.reasons[r]||{played:0,correct:0};row.played++;if(correct)row.correct++;stats.reasons[r]=row;}}
   function saveRoundHistory(target=round){
+    if(!trainingEligible())return;
     if(!target?.finished||target.historySaved)return;
     const future=target.future||[],entry=Number(target.entry.close),finish=Number(future.at(-1)?.close);
     if(!Number.isFinite(entry)||!Number.isFinite(finish)||future.length<FUTURE_BARS)return;
