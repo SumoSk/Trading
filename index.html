@@ -2043,6 +2043,17 @@ body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
   #chart-toolbar .toolbar-more,
   #chart-toolbar .toolbar-more>summary{width:20px!important}
 }
+#chart-toolbar .fib-overlay-toggle[aria-pressed=true]{color:#c9d8e8!important}
+#chart-toolbar .fib-overlay-toggle[aria-pressed=false]{
+  color:#8c9bad!important;
+  text-shadow:none!important;
+}
+@media(max-width:700px){
+  #chart-toolbar .fib-overlay-toggle{padding-inline:5px!important;font-size:7px!important}
+}
+@media(max-width:390px){
+  #chart-toolbar .fib-overlay-toggle{padding-inline:4px!important;font-size:6.7px!important}
+}
 @media(prefers-reduced-motion:reduce){
   #chart-toolbar::before,
   #chart-toolbar::after{animation:none!important}
@@ -2087,6 +2098,7 @@ body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
         
         <small id="analysis-tf-active">ใช้อยู่ 1m</small>
       </div>
+      <button id="fib-overlay-toggle" class="toolbar-main-button fib-overlay-toggle" type="button" aria-pressed="true" title="เปิดหรือปิดเส้น Fibonacci บนกราฟ">ปิดฟิโบ</button>
       <button id="indicator-toggle" class="toolbar-main-button indicator-toggle" type="button" aria-pressed="false" title="ย่อหรือขยาย Volume / RSI / MACD">อินดิเคเตอร์ ▸</button>
       <details class="drawing-tools" id="drawing-tools">
         <summary aria-label="เครื่องมือตีเส้น" title="เครื่องมือตีเส้น">✏ เส้น</summary>
@@ -4322,6 +4334,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     emaSlow: null,
     emaVisible: true,
     indicatorsExpanded: false,
+    fibOverlayVisible: true,
     chartReady: false,
     booted: false,
   };
@@ -4468,6 +4481,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   }
 
   function renderAutoFibOverlay(svg,make,w,h){
+   if(!state.fibOverlayVisible)return;
    const activeVersion=globalThis.EventSignalV6?.CFG?.version;
    if(!['ARIS-2.0.0','ARIS-3.0.0','ARIS-3.1.0','ARIS-3.2.0'].includes(activeVersion))return;
    const fib=activeVersion==='ARIS-3.2.0'
@@ -7230,6 +7244,16 @@ function openReport(){
    if(state.indicatorsExpanded)createIndicatorPanes();
    else removeIndicatorPanes();
   }
+  function setFibOverlayVisible(visible){
+   state.fibOverlayVisible=!!visible;
+   const btn=$('fib-overlay-toggle');
+   if(btn){
+    btn.setAttribute('aria-pressed',String(state.fibOverlayVisible));
+    btn.textContent=state.fibOverlayVisible?'ปิดฟิโบ':'เปิดฟิโบ';
+    btn.title=state.fibOverlayVisible?'ปิดเส้น Fibonacci บนกราฟ':'เปิดเส้น Fibonacci บนกราฟ';
+   }
+   renderDrawingOverlay();
+  }
 
   const chartToolbar=$('chart-toolbar'),chartToolbarSlot=$('chart-toolbar-slot'),toolbarMore=$('toolbar-more'),drawingTools=$('drawing-tools');
   document.body.classList.add('toolbar-floating');
@@ -7381,6 +7405,7 @@ function openReport(){
   expediteRender();
   $('ema-toggle').addEventListener('click',()=>{state.emaVisible=!state.emaVisible;state.emaFast.applyOptions({visible:state.emaVisible});state.emaSlow.applyOptions({visible:state.emaVisible});$('ema-toggle').setAttribute('aria-pressed',String(state.emaVisible));});
   $('indicator-toggle').addEventListener('click',()=>setIndicatorsExpanded(!state.indicatorsExpanded));
+  $('fib-overlay-toggle')?.addEventListener('click',()=>setFibOverlayVisible(!state.fibOverlayVisible));
   $('engine-guide')?.addEventListener('click',()=>{const d=$('engine-guide-dialog');if(d&&!d.open)d.showModal();$('toolbar-more')?.removeAttribute('open');});
   const engineVersionSelect=$('engine-version-select');
   if(engineVersionSelect){
