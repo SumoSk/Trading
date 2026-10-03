@@ -54,6 +54,7 @@
     const d=h/24;return (Number.isInteger(d)?d:d.toFixed(1))+' วัน';
   }
   const challengeHorizonText=tf=>'10 แท่ง = '+durationText(intervalMs(tf)*10);
+  const sessionTrainingEligible=x=>x?.trainingEligible===true||(x?.trainingEligible==null&&(x?.symbol||'BTCUSDT')==='BTCUSDT'&&(x?.interval||'1m')==='1m');
 
   function ensureStyles(){
     if(byId('training-lab-style'))return;
@@ -522,7 +523,7 @@
     byId('train-quality-result').hidden=false;
     const grade=byId('train-quality-grade');
     grade.textContent=q.grade||'—';grade.className='quality-grade '+(q.grade||'');
-    byId('train-quality-title').textContent='Data Quality '+(q.grade||'—')+(session.gameReady?(session.trainingEligible?' · พร้อมเกม + Training BTC 1m':' · พร้อมเกมอย่างเดียว'):' · ต้องตรวจข้อมูล');
+    byId('train-quality-title').textContent='Data Quality '+(q.grade||'—')+(session.gameReady?(sessionTrainingEligible(session)?' · พร้อมเกม + Training BTC 1m':' · พร้อมเกมอย่างเดียว'):' · ต้องตรวจข้อมูล');
     byId('train-quality-note').textContent=q.note||'';
     byId('train-quality-loaded').textContent=fmtInt(q.loadedBars);
     byId('train-quality-missing').textContent=fmtInt(q.missing);
@@ -547,7 +548,7 @@
       list.innerHTML=rows.map(s=>{
         const q=s.quality,range=`${humanTime(s.analysisStart)} → ${humanTime(s.analysisEnd)}`,market=marketLabel(s.symbol||'BTCUSDT'),tf=s.interval||'1m';
         return `<div class="session-row" data-session-id="${esc(s.id)}">
-          <div><strong>${esc(market+' · '+tf+' · '+range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')} · เกม ${s.gameReady===false?'ยังไม่พร้อม':'พร้อม'}${s.trainingEligible?' · Training BTC 1m':' · เกมอย่างเดียว · ไม่นับ Training'}</small></div>
+          <div><strong>${esc(market+' · '+tf+' · '+range)}</strong><small>${fmtInt(s.loadedBars)} แท่ง · Quality ${esc(q?.grade||'—')} · เกม ${s.gameReady===false?'ยังไม่พร้อม':'พร้อม'}${sessionTrainingEligible(s)?' · Training BTC 1m':' · เกมอย่างเดียว · ไม่นับ Training'}</small></div>
           <div class="session-row-actions"><button type="button" data-train-view="${esc(s.id)}">เลือก</button><button type="button" class="train-danger" data-train-delete="${esc(s.id)}">ลบ</button></div>
         </div>`;
       }).join('');
@@ -622,10 +623,10 @@
       });
       latestSession=session;
       showQuality(session);
-      status(session.gameReady?(session.trainingEligible?'โหลดครบ · พร้อมเกม + Training':'โหลดครบ · พร้อมเล่นเกมอย่างเดียว'):'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.gameReady?'ready':'warn');
+      status(session.gameReady?(sessionTrainingEligible(session)?'โหลดครบ · พร้อมเกม + Training':'โหลดครบ · พร้อมเล่นเกมอย่างเดียว'):'โหลดเสร็จ · มีคำเตือนคุณภาพ',session.gameReady?'ready':'warn');
       const footStatus=byId('training-lab-foot-status');
       if(footStatus)footStatus.textContent=session.gameReady
-        ?(session.trainingEligible?'BTC 1m ชุดนี้นับเป็น Training และใช้ Replay/ARIS Assist ได้':'ชุดนี้ใช้เล่นเกม 10 แท่งอย่างเดียว · ไม่เข้า Training/Replay')
+        ?(sessionTrainingEligible(session)?'BTC 1m ชุดนี้นับเป็น Training และใช้ Replay/ARIS Assist ได้':'ชุดนี้ใช้เล่นเกม 10 แท่งอย่างเดียว · ไม่เข้า Training/Replay')
         :'โหลดแล้ว แต่ Data Quality ต้องตรวจ';
       await updateReplayPanel(session);
     }catch(err){
@@ -679,7 +680,7 @@
 
   function setReplayButtons(mode='idle'){
     const start=byId('train-replay-start'),pause=byId('train-replay-pause'),resume=byId('train-replay-resume'),stop=byId('train-replay-stop');
-    const selected=!!latestSession,isTraining=latestSession?.trainingEligible===true;
+    const selected=!!latestSession,isTraining=sessionTrainingEligible(latestSession);
     const ready=isTraining&&(!!latestSession?.replayReady||['paused','stopped','replay_complete','replaying'].includes(latestSession?.status));
     start.disabled=!selected||!ready||mode==='running'||mode==='paused';
     const versionSelect=byId('train-engine-select');if(versionSelect)versionSelect.disabled=mode==='running'||mode==='paused';
@@ -695,7 +696,7 @@
       replayStatus('รอ Session');setReplayButtons('idle');showReplayReport(null);await updateAnalyticsPanel(null);return;
     }
     latestSession=session;
-    const isTraining=session.trainingEligible===true;
+    const isTraining=sessionTrainingEligible(session);
     const cp=isTraining?await globalThis.HistoricalReplayV1?.hasCheckpoint?.(session.id,selectedTrainingVersion):false;
     const range=humanTime(session.analysisStart)+' → '+humanTime(session.analysisEnd);
     box.innerHTML='<b>'+esc(marketLabel(session.symbol||'BTCUSDT')+' · '+(session.interval||'1m'))+'</b> · '+esc(range)+
@@ -725,7 +726,7 @@
 
   async function startReplay(){
     if(!latestSession||!globalThis.HistoricalReplayV1)return;
-    if(latestSession.trainingEligible!==true){replayStatus('Session นี้เอาไว้เล่นเกมอย่างเดียว · ไม่นับ Training และไม่เข้า Replay','warn');return;}
+    if(!sessionTrainingEligible(latestSession)){replayStatus('Session นี้เอาไว้เล่นเกมอย่างเดียว · ไม่นับ Training และไม่เข้า Replay','warn');return;}
     const running=globalThis.HistoricalReplayV1.current();
     if(running?.running){
       if(running.paused){globalThis.HistoricalReplayV1.resume();setReplayButtons('running');replayStatus('ทำต่อแล้ว','warn');}
