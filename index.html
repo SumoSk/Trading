@@ -4247,7 +4247,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="audit-engine.js?v=20261001-r4"></script>\n<script src="historical-data.js?v=20261003-r4"></script>
 <script src="training-engine-registry.js?v=20261002-r13"></script>
 <script src="replay-engine.js?v=20261001-r7"></script>
-<script src="training-analytics.js?v=20261001-r1"></script>\n<script src="10-candle-challenge.js?v=20261003-r7"></script>\n<script src="training-lab.js?v=20261003-r17"></script>\n<script src="training-validation.js?v=20261001-r5"></script>
+<script src="training-analytics.js?v=20261001-r1"></script>\n<script src="10-candle-challenge.js?v=20261003-r8"></script>\n<script src="training-lab.js?v=20261003-r17"></script>\n<script src="training-validation.js?v=20261001-r5"></script>
 <script>
 'use strict';
 (() => {
@@ -6076,49 +6076,12 @@ function openReport(){
    return Math.round(Math.max(5,Math.min(95,prob)));
   }
   function renderLeftLineLabels(){
-   const host=$('left-line-labels');
-   if(!host||!state.chartReady||!state.candleSeries)return;
-   host.style.display='block';
-   host.replaceChildren();
-   const mapped=[...leftZoneLabels].map(item=>({
-    ...item,y:state.candleSeries.priceToCoordinate(item.price)
-   })).filter(item=>Number.isFinite(item.y)&&item.y>=0&&item.y<=host.clientHeight).sort((a,b)=>a.y-b.y);
-   let lastY=-999;
-   for(const item of mapped){
-    let y=item.y;
-    if(y-lastY<20)y=lastY+20;
-    if(y>host.clientHeight-10)y=host.clientHeight-10;
-    lastY=y;
-    const el=document.createElement('div');
-    el.className='left-line-label'+(item.kind==='signal'?' signal':'');
-    el.style.top=y+'px';
-    el.style.color=item.color||'#bdcbe0';
-    el.textContent=item.text;
-    host.append(el);
-   }
+   const host=$('left-line-labels');if(!host)return;
+   host.replaceChildren();host.style.display='none';
   }
   function renderRightOrderLabels(){
-   const host=$('right-order-labels');
-   if(!host||!state.chartReady||!state.candleSeries)return;
-   host.replaceChildren();
-   if(!showOrderLines){host.style.display='none';return;}
-   host.style.display='block';
-   const mapped=[...leftSignalLabels].map(item=>({
-    ...item,y:state.candleSeries.priceToCoordinate(item.price)
-   })).filter(item=>Number.isFinite(item.y)&&item.y>=0&&item.y<=host.clientHeight).sort((a,b)=>a.y-b.y);
-   let lastY=-999;
-   for(const item of mapped){
-    let y=item.y;
-    if(y-lastY<22)y=lastY+22;
-    if(y>host.clientHeight-10)y=host.clientHeight-10;
-    lastY=y;
-    const el=document.createElement('div');
-    el.className='right-order-label';
-    el.style.top=y+'px';
-    el.style.color=item.color||'#bdcbe0';
-    el.textContent=item.text;
-    host.append(el);
-   }
+   const host=$('right-order-labels');if(!host)return;
+   host.replaceChildren();host.style.display='none';
   }
   function syncSignalChart(rows){
    if(!state.chartReady)return;
@@ -6147,7 +6110,7 @@ function openReport(){
        position:isHigh?'belowBar':'aboveBar',
        color:isHigh?'#44dfb5':'#ff708a',
        shape:isHigh?'arrowUp':'arrowDown',
-       text:s.direction
+       text:''
       });
      }else if(showChartOutcomes&&(s.result==='correct'||s.result==='incorrect')){
       const win=s.result==='correct';
@@ -6156,7 +6119,7 @@ function openReport(){
        position:win?'belowBar':'aboveBar',
        color:win?'#44dfb5':'#ff708a',
        shape:'circle',
-       text:win?'W':'L'
+       text:''
       });
      }
     }
