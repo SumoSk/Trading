@@ -1232,58 +1232,6 @@ main{padding-top:10px}
 #storage-status{font-size:8px!important;color:#72daba!important;margin-top:3px!important}#storage-status.down{color:#e6b878!important}
 @media(max-width:560px){.summary-two-col{grid-template-columns:1fr}.diagnostic-grid{grid-template-columns:1fr 1fr}.trade-summary-hero h3,.report-summary-hero h3{font-size:13px}}
 </style>
-<style id="toolbar-green-final">
-/* Final visual authority for the floating toolbar */
-body.toolbar-floating #chart-toolbar{
- background:rgba(78,118,100,.82)!important;
- border:1px solid rgba(185,224,206,.28)!important;
- box-shadow:0 7px 22px rgba(0,0,0,.26),inset 0 1px 0 rgba(220,246,234,.08)!important;
-}
-body.toolbar-floating #chart-toolbar>*{
- position:relative!important;
-}
-body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
- content:''!important;
- display:block!important;
- position:absolute!important;
- right:-4px!important;
- top:7px!important;
- width:1px!important;
- height:18px!important;
- background:rgba(222,244,234,.42)!important;
- pointer-events:none!important;
-}
-body.toolbar-floating #chart-toolbar .analysis-tf-control>span{
- color:#d1e5dc!important;
-}
-body.toolbar-floating #chart-toolbar .analysis-tf-control select,
-body.toolbar-floating #chart-toolbar .toolbar-main-button,
-body.toolbar-floating #chart-toolbar .drawing-tools>summary,
-body.toolbar-floating #chart-toolbar .toolbar-more>summary{
- color:#eef8f3!important;
-}
-body.toolbar-floating #chart-toolbar .indicator-toggle[aria-pressed=true],
-body.toolbar-floating #chart-toolbar #situation-analysis-open{
- color:#d7fff0!important;
-}
-body.toolbar-floating #chart-toolbar #market-symbol-control select{
- color:#f2fbf7!important;
-}
-body.toolbar-floating #chart-toolbar .toolbar-more::after{display:none!important}
-@media(max-width:700px){
- body.toolbar-floating #chart-toolbar{
-  background:rgba(84,126,106,.86)!important;
-  border-color:rgba(196,229,213,.30)!important;
- }
- body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
-  right:-2px!important;
-  top:8px!important;
-  height:16px!important;
-  background:rgba(226,246,236,.38)!important;
- }
-}
-</style>
-
 <style id="v3-entry-checklist-ui">
 .v3-entry-checklist{
  margin-top:8px;
@@ -1779,619 +1727,325 @@ body{
 </style>
 
 
-<style id="cyber-toolbar-final-20261002">
-@property --aris-cy-angle{
- syntax:'<angle>';
- inherits:false;
- initial-value:0deg;
-}
-/* ARIS cyber toolbar skin — visual only.
-   Preserve current controls, order, behavior and compact dimensions. */
+
+<style id="toolbar-flat-final-20261003">
+/* FINAL toolbar authority — one flat row, small type, one outer cyber frame.
+   UI only: no trading engine, storage, signal or data-path changes. */
 #chart-toolbar{
- --cy-cyan:105,220,255;
- --cy-violet:169,140,255;
- --cy-green:99,240,189;
- --cy-ink:9,16,27;
- position:relative!important;
- isolation:isolate;
- overflow:visible!important;
- border-color:rgba(var(--cy-cyan),.26)!important;
- background:
-   linear-gradient(180deg,rgba(14,24,38,.96),rgba(8,15,26,.97))!important;
- box-shadow:
-   0 12px 30px rgba(0,0,0,.38),
-   0 0 0 1px rgba(var(--cy-violet),.035),
-   0 0 20px rgba(var(--cy-cyan),.045),
-   inset 0 1px 0 rgba(255,255,255,.035),
-   inset 0 -1px 0 rgba(var(--cy-violet),.045)!important;
-}
-
-/* Continuous cyber border: one lightweight animated layer for the whole bar. */
-#chart-toolbar::before{
- content:'';
- position:absolute;
- inset:-1px;
- z-index:0;
- pointer-events:none;
- border-radius:14px;
- padding:1px;
- background:
-   conic-gradient(
-     from var(--aris-cy-angle),
-     transparent 0deg 62deg,
-     rgba(var(--cy-cyan),.12) 72deg,
-     rgba(var(--cy-cyan),.98) 83deg,
-     rgba(var(--cy-violet),.92) 94deg,
-     rgba(var(--cy-violet),.10) 106deg,
-     transparent 118deg 360deg
-   );
- -webkit-mask:
-   linear-gradient(#000 0 0) content-box,
-   linear-gradient(#000 0 0);
- -webkit-mask-composite:xor;
- mask-composite:exclude;
- filter:drop-shadow(0 0 4px rgba(var(--cy-cyan),.42));
- animation:arisCyberBorderRun 5.8s linear infinite;
-}
-
-/* Small scanner streak across the top edge. */
-#chart-toolbar::after{
- content:'';
- position:absolute;
- z-index:2;
- pointer-events:none;
- top:-1px;
- left:0;
- width:54px;
- height:1px;
- border-radius:999px;
- background:linear-gradient(90deg,transparent,rgba(var(--cy-cyan),.95),rgba(var(--cy-violet),.92),transparent);
- box-shadow:0 0 7px rgba(var(--cy-cyan),.6),0 0 10px rgba(var(--cy-violet),.34);
- animation:arisCyberTopSweep 4.6s ease-in-out infinite;
-}
-
-#chart-toolbar>*{
- position:relative!important;
- z-index:1;
-}
-
-/* Keep the exact current sizing; only reskin the frames. */
-body.toolbar-floating #chart-toolbar{
- background:
-   linear-gradient(180deg,rgba(14,24,38,.965),rgba(8,15,26,.975))!important;
- border-color:rgba(var(--cy-cyan),.27)!important;
- box-shadow:
-   0 13px 34px rgba(0,0,0,.44),
-   0 0 18px rgba(var(--cy-cyan),.055),
-   0 0 24px rgba(var(--cy-violet),.03),
-   inset 0 1px 0 rgba(255,255,255,.035)!important;
-}
-
-/* Replace the old green separators with cool neutral-cyber separators. */
-body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
- background:linear-gradient(180deg,transparent,rgba(var(--cy-cyan),.22),rgba(var(--cy-violet),.18),transparent)!important;
- box-shadow:0 0 5px rgba(var(--cy-cyan),.10)!important;
-}
-
-/* Individual frames: subtle, not a Christmas tree. */
-#chart-toolbar .analysis-tf-control,
-#chart-toolbar .toolbar-main-button,
-#chart-toolbar .drawing-tools>summary,
-#chart-toolbar .toolbar-more>summary{
- border-color:rgba(93,126,166,.40)!important;
- background:
-   linear-gradient(180deg,rgba(18,29,46,.94),rgba(11,20,33,.94))!important;
- color:#c8d7e9!important;
- box-shadow:
-   inset 0 1px 0 rgba(255,255,255,.025),
-   inset 0 0 12px rgba(var(--cy-cyan),.012),
-   0 0 0 1px rgba(var(--cy-violet),.012)!important;
- transition:
-   border-color .18s ease,
-   color .18s ease,
-   background .18s ease,
-   box-shadow .18s ease,
-   transform .18s ease!important;
-}
-
-#chart-toolbar .analysis-tf-control:hover,
-#chart-toolbar .toolbar-main-button:hover,
-#chart-toolbar .drawing-tools>summary:hover,
-#chart-toolbar .toolbar-more>summary:hover{
- border-color:rgba(var(--cy-cyan),.48)!important;
- color:#ecf9ff!important;
- background:
-   linear-gradient(180deg,rgba(20,35,54,.98),rgba(12,23,38,.98))!important;
- box-shadow:
-   inset 0 1px 0 rgba(255,255,255,.04),
-   0 0 10px rgba(var(--cy-cyan),.08)!important;
-}
-
-/* TF controls keep their present dimensions; selected value gets a violet/cyan focus. */
-#chart-toolbar .analysis-tf-control>span{
- color:#8094ae!important;
-}
-#chart-toolbar .analysis-tf-control select{
- background:linear-gradient(180deg,#17253a,#111c2d)!important;
- color:#e0eaf6!important;
- box-shadow:inset 0 0 0 1px rgba(var(--cy-cyan),.025)!important;
-}
-#chart-toolbar .analysis-tf-control:focus-within{
- border-color:rgba(var(--cy-violet),.60)!important;
- box-shadow:
-   inset 0 0 13px rgba(var(--cy-violet),.035),
-   0 0 10px rgba(var(--cy-violet),.10)!important;
-}
-
-/* Indicator active: cyan/green only when it is actually on. */
-#chart-toolbar .indicator-toggle[aria-pressed=true]{
- border-color:rgba(var(--cy-green),.48)!important;
- background:linear-gradient(180deg,rgba(19,50,45,.94),rgba(12,34,32,.94))!important;
- color:#a4f6d8!important;
- text-shadow:0 0 8px rgba(var(--cy-green),.30);
- box-shadow:
-   inset 0 0 12px rgba(var(--cy-green),.035),
-   0 0 10px rgba(var(--cy-green),.08)!important;
-}
-
-/* Drawing active = violet. More-menu active = cyan. */
-#chart-toolbar .drawing-tools[open]>summary,
-#chart-toolbar .drawing-tools.active>summary{
- border-color:rgba(var(--cy-violet),.62)!important;
- background:linear-gradient(180deg,rgba(42,32,70,.96),rgba(25,22,49,.96))!important;
- color:#e6ddff!important;
- text-shadow:0 0 8px rgba(var(--cy-violet),.30);
- box-shadow:0 0 11px rgba(var(--cy-violet),.11),inset 0 0 12px rgba(var(--cy-violet),.035)!important;
-}
-#chart-toolbar .toolbar-more[open]>summary{
- border-color:rgba(var(--cy-cyan),.55)!important;
- background:linear-gradient(180deg,rgba(20,42,58,.96),rgba(13,28,43,.96))!important;
- color:#e8f9ff!important;
- box-shadow:0 0 10px rgba(var(--cy-cyan),.10),inset 0 0 12px rgba(var(--cy-cyan),.03)!important;
-}
-
-/* Popovers match the toolbar skin. */
-#chart-toolbar .toolbar-more-popover,
-#chart-toolbar .drawing-tools-popover{
- border-color:rgba(var(--cy-cyan),.24)!important;
- background:
-   linear-gradient(180deg,rgba(13,23,37,.985),rgba(8,15,26,.99))!important;
- box-shadow:
-   0 20px 54px rgba(0,0,0,.62),
-   0 0 18px rgba(var(--cy-violet),.035),
-   inset 0 1px 0 rgba(255,255,255,.025)!important;
-}
-
-/* Live dot gets a controlled pulse; no layout changes. */
-body[data-feed=live] #chart-toolbar .tiny-dot{
- background:rgb(var(--cy-green))!important;
- box-shadow:0 0 7px rgba(var(--cy-green),.86),0 0 13px rgba(var(--cy-green),.28)!important;
-}
-
-/* Phone: same layout rules already used by the app; lighter effects only. */
-@media(max-width:700px){
- #chart-toolbar{
-   box-shadow:
-     0 9px 24px rgba(0,0,0,.38),
-     0 0 12px rgba(var(--cy-cyan),.035),
-     inset 0 1px 0 rgba(255,255,255,.03)!important;
- }
- #chart-toolbar::before{
-   filter:drop-shadow(0 0 2px rgba(var(--cy-cyan),.34));
-   animation-duration:7.2s;
- }
- #chart-toolbar::after{
-   width:42px;
-   animation-duration:5.6s;
- }
- body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
-   background:linear-gradient(180deg,transparent,rgba(var(--cy-cyan),.17),rgba(var(--cy-violet),.12),transparent)!important;
- }
-}
-@media(max-width:430px){
- #chart-toolbar::after{width:34px}
-}
-
-/* Accessibility / battery: stop motion but retain the cyber frame. */
-@media(prefers-reduced-motion:reduce){
- #chart-toolbar::before,
- #chart-toolbar::after{
-   animation:none!important;
- }
- #chart-toolbar::before{
-   background:linear-gradient(90deg,rgba(var(--cy-cyan),.55),rgba(var(--cy-violet),.52))!important;
- }
-}
-
-@keyframes arisCyberBorderRun{
- to{--aris-cy-angle:360deg}
-}
-@keyframes arisCyberTopSweep{
- 0%{transform:translateX(-70px);opacity:0}
- 12%{opacity:.95}
- 50%{opacity:.72}
- 88%{opacity:.95}
- 100%{transform:translateX(calc(860px - 22px));opacity:0}
-}
-@media(max-width:700px){
- @keyframes arisCyberTopSweep{
-   0%{transform:translateX(-55px);opacity:0}
-   12%{opacity:.9}
-   88%{opacity:.82}
-   100%{transform:translateX(calc(100vw - 40px));opacity:0}
- }
-}
-</style>
-
-
-<style id="toolbar-responsive-final-20261002">
-/* Final responsive authority for the existing toolbar.
-   Keep every control and order; only make the current layout fit its real container. */
-.chart-toolbar-slot{
- width:100%!important;
- max-width:100%!important;
- min-width:0!important;
- box-sizing:border-box!important;
-}
-
-#chart-toolbar{
- width:min(860px,100%)!important;
- max-width:100%!important;
- min-width:0!important;
- box-sizing:border-box!important;
- margin-left:0!important;
- margin-right:0!important;
- display:grid!important;
- grid-template-columns:
-   minmax(0,96px)
-   minmax(0,96px)
-   minmax(0,96px)
-   minmax(0,96px)
-   minmax(34px,40px)!important;
- align-items:center!important;
- justify-content:start!important;
- column-gap:6px!important;
- row-gap:0!important;
-}
-
-/* The hidden legacy timeframe row must never consume a grid column. */
-#chart-toolbar>.timeframes{display:none!important}
-
-/* Kill old fixed flex-basis/width rules so the grid owns sizing. */
-#chart-toolbar>.analysis-tf-control,
-#chart-toolbar>.toolbar-main-button,
-#chart-toolbar>.drawing-tools,
-#chart-toolbar>.toolbar-more{
- width:auto!important;
- min-width:0!important;
- max-width:none!important;
- flex:none!important;
- margin:0!important;
- box-sizing:border-box!important;
-}
-
-#chart-toolbar>.analysis-tf-control,
-#chart-toolbar>.toolbar-main-button,
-#chart-toolbar>.drawing-tools>summary,
-#chart-toolbar>.toolbar-more>summary{
- width:100%!important;
- min-width:0!important;
- max-width:100%!important;
- box-sizing:border-box!important;
-}
-
-/* Selects must shrink inside their cell rather than forcing the cell wider. */
-#chart-toolbar .analysis-tf-control{
- overflow:hidden!important;
-}
-#chart-toolbar .analysis-tf-control select{
- width:min(54px,100%)!important;
- min-width:0!important;
- max-width:100%!important;
- box-sizing:border-box!important;
-}
-
-/* Text is allowed to compress cleanly instead of pushing outside the viewport. */
-#chart-toolbar .toolbar-main-button,
-#chart-toolbar .drawing-tools>summary{
- overflow:hidden!important;
- text-overflow:ellipsis!important;
- white-space:nowrap!important;
-}
-#chart-toolbar .toolbar-more>summary{
- display:grid!important;
- place-items:center!important;
-}
-
-/* Floating mode follows the viewport; embedded mode follows the chart container. */
-body.toolbar-floating #chart-toolbar{
- width:min(860px,calc(100vw - 12px))!important;
- max-width:calc(100vw - 12px)!important;
- left:50%!important;
- right:auto!important;
- transform:translateX(-50%)!important;
-}
-
-/* Scanner now travels using parent-relative left positions, never an 860px hard-coded trip. */
-#chart-toolbar::after{
- left:-46px!important;
- transform:none!important;
- animation:arisCyberTopSweepResponsive 4.8s ease-in-out infinite!important;
-}
-@keyframes arisCyberTopSweepResponsive{
- 0%{left:-46px;opacity:0}
- 12%{opacity:.95}
- 50%{opacity:.72}
- 88%{opacity:.92}
- 100%{left:calc(100% - 10px);opacity:0}
-}
-
-/* Tablet / phone: same bar, same controls, fluid cells. */
-@media(max-width:700px){
- #chart-toolbar{
-   width:100%!important;
-   max-width:100%!important;
-   grid-template-columns:
-     repeat(4,minmax(0,1fr))
-     34px!important;
-   column-gap:4px!important;
-   padding:5px!important;
- }
- body.toolbar-floating #chart-toolbar{
-   width:calc(100vw - 10px)!important;
-   max-width:calc(100vw - 10px)!important;
- }
- #chart-toolbar .analysis-tf-control,
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary,
- #chart-toolbar .toolbar-more>summary{
-   height:34px!important;
-   min-height:34px!important;
-   max-height:34px!important;
- }
- #chart-toolbar .analysis-tf-control{
-   padding:3px 3px!important;
-   justify-content:center!important;
- }
- #chart-toolbar .analysis-tf-control>span{
-   display:none!important;
- }
- #chart-toolbar .analysis-tf-control select{
-   width:100%!important;
-   padding:0 16px 0 5px!important;
-   text-align:center!important;
-   font-size:8.5px!important;
- }
- #chart-toolbar .toolbar-main-button{
-   padding:0 4px!important;
-   font-size:7.7px!important;
- }
- #chart-toolbar .drawing-tools>summary{
-   padding:0 4px!important;
-   font-size:7.7px!important;
- }
- #chart-toolbar .toolbar-more>summary{
-   width:100%!important;
-   font-size:13px!important;
- }
- #chart-toolbar::after{
-   width:38px!important;
-   animation-duration:5.8s!important;
- }
-}
-
-@media(max-width:430px){
- #chart-toolbar{
-   grid-template-columns:
-     repeat(4,minmax(0,1fr))
-     30px!important;
-   column-gap:3px!important;
-   padding:4px!important;
- }
- #chart-toolbar .analysis-tf-control,
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary,
- #chart-toolbar .toolbar-more>summary{
-   height:32px!important;
-   min-height:32px!important;
-   max-height:32px!important;
-   border-radius:8px!important;
- }
- #chart-toolbar .analysis-tf-control select{
-   font-size:8px!important;
-   padding-left:3px!important;
-   padding-right:14px!important;
- }
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary{
-   font-size:7px!important;
-   padding-left:2px!important;
-   padding-right:2px!important;
- }
- #chart-toolbar .toolbar-more>summary{
-   font-size:12px!important;
- }
-}
-
-/* Very narrow phones still keep everything in one row. */
-@media(max-width:360px){
- #chart-toolbar{
-   grid-template-columns:
-     repeat(4,minmax(0,1fr))
-     28px!important;
-   column-gap:2px!important;
-   padding:3px!important;
- }
- #chart-toolbar .toolbar-main-button,
- #chart-toolbar .drawing-tools>summary{
-   font-size:6.5px!important;
- }
- #chart-toolbar .analysis-tf-control select{
-   font-size:7.5px!important;
- }
-}
-
-/* Reduced motion remains respected. */
-@media(prefers-reduced-motion:reduce){
- #chart-toolbar::after{animation:none!important}
-}
-</style>
-
-
-<style id="toolbar-compact-clean-20261003">
-/* Compact toolbar pass — UI only. Keeps all controls/behavior and the cyber-light skin. */
-#chart-toolbar{
+  --tb-cyan:105,220,255;
+  --tb-violet:169,140,255;
+  --tb-green:99,240,189;
+  position:relative!important;
+  isolation:isolate!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:nowrap!important;
+  gap:0!important;
   width:max-content!important;
   max-width:calc(100vw - 10px)!important;
   min-width:0!important;
-  height:40px!important;
-  min-height:40px!important;
-  padding:4px!important;
-  display:grid!important;
-  grid-template-columns:66px 66px 98px 56px 30px!important;
-  gap:4px!important;
-  align-items:center!important;
-  justify-content:start!important;
-  border-radius:11px!important;
+  height:34px!important;
+  min-height:34px!important;
+  padding:3px 5px!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+  border:1px solid rgba(var(--tb-cyan),.25)!important;
+  border-radius:10px!important;
+  background:linear-gradient(180deg,rgba(14,24,38,.975),rgba(8,15,26,.985))!important;
+  box-shadow:
+    0 8px 22px rgba(0,0,0,.38),
+    0 0 13px rgba(var(--tb-cyan),.045),
+    inset 0 1px 0 rgba(255,255,255,.035)!important;
+  backdrop-filter:blur(12px) saturate(115%)!important;
 }
 body.toolbar-floating #chart-toolbar{
-  width:max-content!important;
-  max-width:calc(100vw - 10px)!important;
-  top:6px!important;
+  position:fixed!important;
+  top:5px!important;
   left:50%!important;
   right:auto!important;
   transform:translateX(-50%)!important;
+  width:max-content!important;
+  max-width:calc(100vw - 10px)!important;
+  height:34px!important;
+  min-height:34px!important;
+}
+
+/* One animated outer frame only — no card inside card. */
+#chart-toolbar::before{
+  content:''!important;
+  position:absolute!important;
+  inset:-1px!important;
+  z-index:0!important;
+  pointer-events:none!important;
+  border-radius:10px!important;
+  padding:1px!important;
+  background:conic-gradient(
+    from var(--aris-cy-angle),
+    transparent 0deg 64deg,
+    rgba(var(--tb-cyan),.12) 73deg,
+    rgba(var(--tb-cyan),.95) 84deg,
+    rgba(var(--tb-violet),.88) 96deg,
+    rgba(var(--tb-violet),.10) 108deg,
+    transparent 120deg 360deg
+  )!important;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0)!important;
+  -webkit-mask-composite:xor!important;
+  mask-composite:exclude!important;
+  filter:drop-shadow(0 0 3px rgba(var(--tb-cyan),.34))!important;
+  animation:arisCyberBorderRun 6.2s linear infinite!important;
+}
+#chart-toolbar::after{
+  content:''!important;
+  position:absolute!important;
+  z-index:2!important;
+  pointer-events:none!important;
+  top:-1px!important;
+  left:-32px!important;
+  width:36px!important;
+  height:1px!important;
+  border-radius:999px!important;
+  background:linear-gradient(90deg,transparent,rgba(var(--tb-cyan),.92),rgba(var(--tb-violet),.80),transparent)!important;
+  box-shadow:0 0 5px rgba(var(--tb-cyan),.5)!important;
+  animation:arisToolbarSweepFlat 5.4s ease-in-out infinite!important;
+}
+@keyframes arisCyberBorderRun{to{--aris-cy-angle:360deg}}
+@keyframes arisToolbarSweepFlat{
+  0%{left:-32px;opacity:0}
+  12%{opacity:.9}
+  88%{opacity:.8}
+  100%{left:calc(100% - 4px);opacity:0}
+}
+
+#chart-toolbar>*{
+  position:relative!important;
+  z-index:1!important;
+  box-sizing:border-box!important;
 }
 #chart-toolbar>.timeframes{display:none!important}
+
+/* Every visible control lives directly in the same bar. */
 #chart-toolbar>.analysis-tf-control,
 #chart-toolbar>.toolbar-main-button,
 #chart-toolbar>.drawing-tools,
 #chart-toolbar>.toolbar-more{
+  flex:0 0 auto!important;
   width:auto!important;
   min-width:0!important;
   max-width:none!important;
+  height:26px!important;
+  min-height:26px!important;
+  max-height:26px!important;
   margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
-#chart-toolbar>.analysis-tf-control,
-#chart-toolbar>.toolbar-main-button,
-#chart-toolbar>.drawing-tools>summary,
-#chart-toolbar>.toolbar-more>summary{
-  width:100%!important;
-  min-width:0!important;
-  height:30px!important;
-  min-height:30px!important;
-  max-height:30px!important;
-  border-radius:8px!important;
-  box-sizing:border-box!important;
+
+/* Simple separators, not nested boxes. */
+body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
+#chart-toolbar>*:not(.timeframes):not(:last-child)::after{
+  content:''!important;
+  display:block!important;
+  position:absolute!important;
+  right:0!important;
+  top:6px!important;
+  width:1px!important;
+  height:14px!important;
+  background:linear-gradient(180deg,transparent,rgba(var(--tb-cyan),.25),rgba(var(--tb-violet),.17),transparent)!important;
+  box-shadow:none!important;
+  pointer-events:none!important;
+  opacity:1!important;
 }
+
+/* TF controls: value only; remove the inner panel look. */
 #chart-toolbar .analysis-tf-control{
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
-  padding:2px 3px!important;
-  overflow:hidden!important;
+  gap:0!important;
+  padding:0 7px!important;
+  overflow:visible!important;
+  color:#91a5bd!important;
 }
 #chart-toolbar .analysis-tf-control>span,
 #chart-toolbar .analysis-tf-control>small{
   display:none!important;
 }
 #chart-toolbar .analysis-tf-control select{
-  width:100%!important;
-  min-width:0!important;
-  max-width:100%!important;
+  display:block!important;
+  width:40px!important;
+  min-width:40px!important;
+  max-width:40px!important;
+  height:24px!important;
+  min-height:24px!important;
+  max-height:24px!important;
+  margin:0!important;
+  padding:0 12px 0 2px!important;
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#d9e6f3!important;
+  font:650 8.5px/24px 'Segoe UI','IBM Plex Sans Thai',sans-serif!important;
+  text-align:center!important;
+}
+
+/* Main text controls are intentionally small and flat. */
+#chart-toolbar .toolbar-main-button,
+#chart-toolbar .drawing-tools>summary,
+#chart-toolbar .toolbar-more>summary{
   height:26px!important;
   min-height:26px!important;
-  padding:0 15px 0 5px!important;
+  max-height:26px!important;
+  margin:0!important;
   border:0!important;
-  border-radius:6px!important;
-  text-align:center!important;
-  font:700 10px/1 'Segoe UI','IBM Plex Sans Thai',sans-serif!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
+  color:#b8c8da!important;
 }
 #chart-toolbar .toolbar-main-button{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  padding:0 8px!important;
+  font:600 8px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
+}
+#chart-toolbar .drawing-tools{
+  display:flex!important;
+  align-items:center!important;
+}
+#chart-toolbar .drawing-tools>summary{
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
-  padding:0 5px!important;
-  overflow:hidden!important;
-  text-overflow:ellipsis!important;
-  white-space:nowrap!important;
-  font:650 9px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
+  width:auto!important;
+  padding:0 8px!important;
+  font:600 8px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
 }
-#chart-toolbar .drawing-tools>summary{
-  display:grid!important;
-  place-items:center!important;
-  padding:0 4px!important;
-  overflow:hidden!important;
-  text-overflow:ellipsis!important;
-  white-space:nowrap!important;
-  font:650 9px/1 'IBM Plex Sans Thai','Segoe UI',sans-serif!important;
+#chart-toolbar .toolbar-more{
+  display:flex!important;
+  align-items:center!important;
+  width:25px!important;
+  margin-left:0!important;
 }
 #chart-toolbar .toolbar-more>summary{
-  display:grid!important;
-  place-items:center!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:25px!important;
   padding:0!important;
-  font:800 13px/1 'Segoe UI',sans-serif!important;
-}
-#chart-toolbar .toolbar-more-popover,
-#chart-toolbar .drawing-tools-popover{
-  top:35px!important;
-}
-body.toolbar-floating #chart-toolbar>*:not(:last-child)::after{
-  right:-3px!important;
-  height:18px!important;
-  opacity:.72!important;
+  font:800 10.5px/1 'Segoe UI',sans-serif!important;
 }
 
+/* Active states use text/glow only, keeping the bar visually single-layer. */
+#chart-toolbar .indicator-toggle[aria-pressed=true]{
+  color:#98efd2!important;
+  background:transparent!important;
+  text-shadow:0 0 7px rgba(var(--tb-green),.28)!important;
+}
+#chart-toolbar .drawing-tools[open]>summary,
+#chart-toolbar .drawing-tools.active>summary{
+  color:#d8d0ff!important;
+  background:transparent!important;
+  text-shadow:0 0 7px rgba(var(--tb-violet),.25)!important;
+}
+#chart-toolbar .toolbar-more[open]>summary{
+  color:#e8f8ff!important;
+  background:transparent!important;
+  text-shadow:0 0 7px rgba(var(--tb-cyan),.22)!important;
+}
+
+/* Menus can still open below the flat bar. */
+#chart-toolbar .toolbar-more-popover,
+#chart-toolbar .drawing-tools-popover{
+  top:31px!important;
+  margin-top:0!important;
+  border:1px solid rgba(var(--tb-cyan),.23)!important;
+  border-radius:9px!important;
+  background:linear-gradient(180deg,rgba(13,23,37,.99),rgba(8,15,26,.995))!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.60)!important;
+}
+
+/* Tablet / phone: same single row, smaller type. */
 @media(max-width:700px){
-  #chart-toolbar{
-    grid-template-columns:58px 58px minmax(76px,88px) 48px 28px!important;
-    gap:3px!important;
-    height:38px!important;
-    min-height:38px!important;
-    padding:3px!important;
+  #chart-toolbar,
+  body.toolbar-floating #chart-toolbar{
+    width:max-content!important;
+    max-width:calc(100vw - 8px)!important;
+    height:32px!important;
+    min-height:32px!important;
+    padding:3px 4px!important;
   }
   #chart-toolbar>.analysis-tf-control,
   #chart-toolbar>.toolbar-main-button,
-  #chart-toolbar>.drawing-tools>summary,
-  #chart-toolbar>.toolbar-more>summary{
-    height:30px!important;
-    min-height:30px!important;
-    max-height:30px!important;
-  }
-  #chart-toolbar .analysis-tf-control select{font-size:9.5px!important;padding-right:13px!important}
-  #chart-toolbar .toolbar-main-button{font-size:8.5px!important;padding:0 3px!important}
-  #chart-toolbar .drawing-tools>summary{font-size:8.5px!important;padding:0 2px!important}
-  #chart-toolbar .toolbar-more>summary{font-size:12px!important}
-}
-@media(max-width:430px){
-  #chart-toolbar{
-    grid-template-columns:54px 54px minmax(72px,82px) 44px 26px!important;
-    gap:3px!important;
-    height:36px!important;
-    min-height:36px!important;
-    padding:3px!important;
-    border-radius:9px!important;
-  }
-  #chart-toolbar>.analysis-tf-control,
-  #chart-toolbar>.toolbar-main-button,
-  #chart-toolbar>.drawing-tools>summary,
-  #chart-toolbar>.toolbar-more>summary{
-    height:28px!important;
-    min-height:28px!important;
-    max-height:28px!important;
-    border-radius:7px!important;
-  }
-  #chart-toolbar .analysis-tf-control select{height:24px!important;min-height:24px!important;font-size:9px!important}
+  #chart-toolbar>.drawing-tools,
+  #chart-toolbar>.toolbar-more,
   #chart-toolbar .toolbar-main-button,
-  #chart-toolbar .drawing-tools>summary{font-size:8px!important}
-}
-@media(max-width:350px){
-  #chart-toolbar{
-    width:calc(100vw - 8px)!important;
-    grid-template-columns:52px 52px minmax(0,1fr) 40px 24px!important;
-    gap:2px!important;
-    padding:2px!important;
+  #chart-toolbar .drawing-tools>summary,
+  #chart-toolbar .toolbar-more>summary{
+    height:24px!important;
+    min-height:24px!important;
+    max-height:24px!important;
   }
+  #chart-toolbar .analysis-tf-control{padding:0 5px!important}
+  #chart-toolbar .analysis-tf-control select{
+    width:36px!important;
+    min-width:36px!important;
+    max-width:36px!important;
+    height:22px!important;
+    min-height:22px!important;
+    max-height:22px!important;
+    padding-right:10px!important;
+    font:650 7.6px/22px 'Segoe UI',sans-serif!important;
+  }
+  #chart-toolbar .toolbar-main-button{
+    padding:0 6px!important;
+    font-size:7.2px!important;
+  }
+  #chart-toolbar .drawing-tools>summary{
+    padding:0 6px!important;
+    font-size:7.2px!important;
+  }
+  #chart-toolbar .toolbar-more,
+  #chart-toolbar .toolbar-more>summary{
+    width:22px!important;
+  }
+  #chart-toolbar .toolbar-more>summary{font-size:9.5px!important}
+  body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
+  #chart-toolbar>*:not(.timeframes):not(:last-child)::after{
+    top:5px!important;
+    height:14px!important;
+  }
+  #chart-toolbar .toolbar-more-popover,
+  #chart-toolbar .drawing-tools-popover{
+    position:fixed!important;
+    top:37px!important;
+    right:5px!important;
+    left:auto!important;
+  }
+}
+@media(max-width:390px){
+  #chart-toolbar .analysis-tf-control{padding-inline:4px!important}
+  #chart-toolbar .analysis-tf-control select{
+    width:33px!important;
+    min-width:33px!important;
+    max-width:33px!important;
+    font-size:7.2px!important;
+  }
+  #chart-toolbar .toolbar-main-button{padding-inline:5px!important;font-size:6.9px!important}
+  #chart-toolbar .drawing-tools>summary{padding-inline:5px!important;font-size:6.9px!important}
+  #chart-toolbar .toolbar-more,
+  #chart-toolbar .toolbar-more>summary{width:20px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #chart-toolbar::before,
+  #chart-toolbar::after{animation:none!important}
 }
 </style>
 
