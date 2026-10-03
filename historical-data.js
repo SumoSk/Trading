@@ -216,7 +216,7 @@
       engineBlobSha:engineMeta.engineBlobSha||null,
       auditSchema:Object.prototype.hasOwnProperty.call(engineMeta,'auditSchema')?engineMeta.auditSchema:(globalThis.AuditEngineV2?.schema||null),
       source:'binance_futures_rest',sourceEndpoint:BINANCE_FUTURES_KLINES,
-      replayReady:false,gameReady:false
+      replayReady:false,gameReady:false,trainingEligible:symbol==='BTCUSDT'&&interval==='1m'
     };
     const dataset={
       id:did,sessionId:sid,createdAt,updatedAt:createdAt,status:'downloading',
@@ -345,7 +345,8 @@
         note:'Quality ตรวจระดับแท่ง '+interval+(fetchInterval!==interval?' · รวมจาก '+fetchInterval:'')+'; ไม่สร้าง Order Book/Tick ที่ไม่มีจริง'
       };
       const ready=loadedBars>0&&quality.grade!=='C'&&missing===0;
-      const replayReady=ready&&interval==='1m';
+      const trainingEligible=symbol==='BTCUSDT'&&interval==='1m';
+      const replayReady=ready&&trainingEligible;
       const gameReady=loadedBars>=120;
       const completedAt=Date.now();
 
@@ -355,7 +356,7 @@
       });
       await txPut('sessions',{
         ...baseSession,updatedAt:completedAt,completedAt,status:ready?'ready':'quality_warning',
-        loadedBars,chunkCount:chunkNo,quality,replayReady,gameReady,
+        loadedBars,chunkCount:chunkNo,quality,replayReady,gameReady,trainingEligible,
         durationMs:completedAt-startedAt,
         finishedNaturally
       });
@@ -375,7 +376,7 @@
       });
       await txPut('sessions',{
         ...baseSession,updatedAt,status:aborted?'cancelled':'error',
-        loadedBars,chunkCount:chunkNo,replayReady:false,gameReady:false,error:String(err?.message||err)
+        loadedBars,chunkCount:chunkNo,replayReady:false,gameReady:false,trainingEligible:symbol==='BTCUSDT'&&interval==='1m',error:String(err?.message||err)
       });
       throw err;
     }
