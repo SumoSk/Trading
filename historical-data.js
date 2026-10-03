@@ -346,6 +346,7 @@
       };
       const ready=loadedBars>0&&quality.grade!=='C'&&missing===0;
       const replayReady=ready&&interval==='1m';
+      const gameReady=loadedBars>=120;
       const completedAt=Date.now();
 
       await txPut('datasets',{
@@ -354,7 +355,7 @@
       });
       await txPut('sessions',{
         ...baseSession,updatedAt:completedAt,completedAt,status:ready?'ready':'quality_warning',
-        loadedBars,chunkCount:chunkNo,quality,replayReady,gameReady:ready,
+        loadedBars,chunkCount:chunkNo,quality,replayReady,gameReady,
         durationMs:completedAt-startedAt,
         finishedNaturally
       });
