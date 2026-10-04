@@ -207,3 +207,29 @@ This pass closes the remaining gaps against the original 23-section Training Lab
 - Holdout is explicitly treated as report-only evidence; repeated human tuning against the same Holdout invalidates its untouched status.
 
 The Training 2 system remains research-only and does not write to the Live Engine.
+
+
+## V4 Final Holdout protocol — 2026-10-04
+
+Training 2 now uses a strict three-stage research workflow:
+
+1. TRAIN searches Conditions and locks Direction.
+2. VALIDATION is used for Playability, Stability, ranking, feature usefulness, manual comparison, and Setup selection.
+3. HOLDOUT is excluded from all Setup selection and is hidden until an explicit Final Exam.
+
+Final Holdout rules:
+
+- Playability no longer reads Holdout.
+- Feature ranking no longer reads Holdout.
+- Combination Lab no longer displays Holdout outcomes.
+- Market Map and T+10 Outcome Explorer hide Holdout outcomes.
+- Sample Viewer is limited to Train + Validation samples, so Holdout candles/outcomes cannot be manually inspected before the Final Exam.
+- Historical preview avoids the final 20% analysis segment reserved for Holdout.
+- Auto Setup candidates are fingerprinted before Holdout is revealed.
+- Pressing Run Final Holdout evaluates the frozen Condition + Direction on Holdout once and stores the result.
+- Final PASS requires at least 20 Holdout matches and Holdout win rate >= max(55%, Validation win rate - 5 percentage points).
+- If a Setup fingerprint changes after Holdout has already been opened for that Dataset, its Holdout state becomes INVALIDATED and a new Dataset/time period is required for another legitimate Final Exam.
+- When the first Holdout result is revealed, the current set of auto candidates is frozen so other already-existing candidates may still be tested later without being redefined.
+- Export files include only explicitly tested Final Holdout results.
+
+This keeps Training 2 as a Setup Discovery Lab rather than a Live signal engine.
