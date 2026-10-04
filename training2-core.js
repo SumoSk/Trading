@@ -793,7 +793,7 @@
   }
 
   function discoverFeatureUsefulness(rows) {
-    const source = (rows || []).filter(x => x.split !== 'PURGE');
+    const source = (rows || []).filter(x => x.split === 'TRAIN' || x.split === 'VALIDATION');
     const train = source.filter(x => x.split === 'TRAIN');
     if (train.length < 45) return [];
 
