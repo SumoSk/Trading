@@ -243,6 +243,7 @@
     state.stage = stage || null;
     document.querySelectorAll('.stage-item').forEach(el=>el.classList.toggle('active', (el.dataset.stage || '') === (state.stage || '')));
     $('inspector-stage').textContent = stageLabel(state.stage);
+    syncStageSelects();
     renderMarketPanels();
     renderPlayability();
     renderFeatureExplorer();
@@ -251,7 +252,6 @@
     updateInspector(activeRows());
     chooseSampleRows(activeRows());
     renderSample();
-    syncStageSelects();
   }
 
   function renderAll() {
