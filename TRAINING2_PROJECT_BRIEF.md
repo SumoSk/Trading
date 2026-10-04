@@ -184,3 +184,26 @@ Training 2 now matches the original handoff brief more closely:
 - Integrity checks verify exact T+10, T0 feature cutoff, finite feature values and non-overlapping chronological split boundaries.
 
 The Live Engine is still not modified automatically by Training 2.
+
+
+## V3 completeness pass — 2026-10-04
+
+This pass closes the remaining gaps against the original 23-section Training Lab brief.
+
+- Playability categories are threshold-based, not rank-based:
+  - 70–100 = PLAYABLE / น่าเล่น
+  - 45–69 = SELECTIVE / เลือกจังหวะ
+  - 0–44 = AVOID / เดายาก-งด
+  - insufficient evidence = INSUFFICIENT
+- AVOID and INSUFFICIENT states display NO EDGE instead of exposing a tradable Direction.
+- Best/Avoid no longer forces a “best market” to exist. If no Stage reaches the threshold, the playable section is empty.
+- Best Condition and Playability rows include a “view on chart” action that filters the Sample Viewer to only samples matching that discovered condition.
+- Combination Lab updates as filters change and shows raw HIGH/LOW counts, Train/Validation/Holdout locked-direction win rates, matching sample size, and NO EDGE when appropriate.
+- Compare A/B shows matching sample counts, sample delta and retention so accuracy gains cannot hide severe coverage loss.
+- Feature Explorer now includes an automatic Feature Usefulness ranking. Each feature selects its threshold from Train only, then reports Validation/Holdout evidence.
+- Extension-from-EMA and candle-expansion features were added so the manual Combination Lab can directly test “extension < X ATR” style hypotheses.
+- Inspector again shows raw HIGH/LOW outcome proportions in addition to Playability, Stability and locked candidate performance.
+- Manual candidates store AVOID results as NO EDGE rather than preserving a misleading display Direction.
+- Holdout is explicitly treated as report-only evidence; repeated human tuning against the same Holdout invalidates its untouched status.
+
+The Training 2 system remains research-only and does not write to the Live Engine.
