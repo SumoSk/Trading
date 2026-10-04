@@ -420,6 +420,7 @@
   function bindTabs(){$('tabs').querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{$('tabs').querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+btn.dataset.tab));}));}
   function bind(){
     $('go-chart').addEventListener('click',()=>location.href='index.html');$('go-train1').addEventListener('click',()=>location.href='training.html');
+    const guide=$('guide-dialog');$('open-guide').addEventListener('click',()=>guide?.showModal?.());$('close-guide').addEventListener('click',()=>guide?.close?.());guide?.addEventListener('click',e=>{if(e.target===guide)guide.close();});
     $('market').innerHTML=MARKETS.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('');
     $('interval').addEventListener('change',async()=>{initTimeRange();await refreshSessions();});
     $('bar-count').addEventListener('change',syncStartFromBarCount);$('end-time').addEventListener('change',syncStartFromBarCount);
