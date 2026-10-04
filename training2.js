@@ -168,7 +168,7 @@
     try{
       const session=await HD().downloadDataset({
         symbol,interval,startTime,endTime,warmupBars:160,signal:state.controller.signal,
-        engineMeta:{engineVersion:'TRAINING-2-RESEARCH',engineBlobSha:'training2-core-v2',auditSchema:null},
+        engineMeta:{engineVersion:'TRAINING-2-RESEARCH',engineBlobSha:'training2-core-v3',auditSchema:null},
         onProgress:p=>{const pc=Math.max(0,Math.min(100,Number(p.progress||0)*100));$('progress-bar').style.width=pc.toFixed(1)+'%';$('progress-left').textContent=fmt(p.loadedBars)+' / '+fmt(p.expectedBars)+' bars';$('progress-right').textContent=pc.toFixed(1)+'%';}
       });
       await loadSession(session.id);await refreshSessions();setBadge($('data-status'),'ข้อมูลพร้อม','good');
