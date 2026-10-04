@@ -906,7 +906,7 @@
   }
 
   globalThis.Training2Core = {
-    schema:'aris-training2-core-v2',
+    schema:'aris-training2-core-v3',
     horizonMinutes:10,
     horizonMs:HORIZON_MS,
     minWarmup:MIN_WARMUP,
