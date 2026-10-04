@@ -10,7 +10,7 @@
     session:null,bars:[],samples:[],groups:[],allResearch:null,stage:null,
     sampleRows:[],sampleCursor:0,reveal:false,overlay:false,
     chart:null,series:null,priceLine:null,controller:null,compareA:null,
-    candidates:loadCandidates()
+    candidates:loadCandidates(),featureRankCache:new Map(),comboTimer:null
   };
 
   const $=id=>document.getElementById(id);
@@ -44,6 +44,32 @@
     if(v>=.6)return 'B';
     if(v>=.4)return 'C';
     return 'D';
+  }
+
+  function decisionFor(playability){return CORE().researchDecision(playability);}
+  function visibleDirection(direction,playability){
+    const d=decisionFor(playability);
+    return d.showDirection?(direction||'—'):'NO EDGE';
+  }
+  function candidateRowsFor(group){
+    const c=group?.research?.candidate;
+    if(!c)return [];
+    return CORE().applyConditions(group.rows,c.conditions||[]);
+  }
+  function openAutoCandidate(stage){
+    const group=state.groups.find(x=>x.stage===stage);
+    if(!group?.research?.candidate)return;
+    setStage(stage);
+    const rows=candidateRowsFor(group),c=group.research.candidate;
+    chooseSampleRows(rows);
+    renderSample();
+    updateInspector(rows,{rows,direction:c.direction,evaluation:c.evaluation,playability:group.playability,conditions:c.conditions});
+    $('chart')?.scrollIntoView?.({behavior:'smooth',block:'center'});
+  }
+  function scheduleCombo(){
+    if(!state.samples.length)return;
+    clearTimeout(state.comboTimer);
+    state.comboTimer=setTimeout(()=>runCombo(),120);
   }
 
   function initTimeRange(){
@@ -102,7 +128,7 @@
     const session=await HD().getSession(id);if(!session)throw new Error('ไม่พบ Session');
     if(!CORE().supportedIntervals.includes(session.interval))throw new Error('Training 2 รองรับ 1m / 5m / 10m เท่านั้น');
     const bars=await HD().getDatasetBars(session.datasetId);
-    state.session=session;state.bars=bars;state.samples=[];state.groups=[];state.allResearch=null;state.stage=null;state.sampleRows=[];state.sampleCursor=0;state.reveal=false;
+    state.session=session;state.bars=bars;state.samples=[];state.groups=[];state.allResearch=null;state.stage=null;state.sampleRows=[];state.sampleCursor=0;state.reveal=false;state.featureRankCache=new Map();state.compareA=null;
     $('market').value=session.symbol||'BTCUSDT';$('interval').value=session.interval||'1m';
     $('start-time').value=dtLocal(session.analysisStart);$('end-time').value=dtLocal(session.analysisEnd);
     $('mini-market').textContent=marketLabel(session.symbol)+' · '+session.interval;$('mini-bars').textContent=fmt(bars.length);$('mini-samples').textContent='—';$('mini-integrity').textContent='—';
@@ -121,7 +147,7 @@
         analysisStart:state.session?.analysisStart,analysisEnd:state.session?.analysisEnd,
         onProgress:p=>{const max=Math.max(1,p.total||state.bars.length),pc=Math.max(0,Math.min(100,(p.scanned||0)/max*100));$('progress-bar').style.width=pc.toFixed(1)+'%';$('progress-left').textContent='Samples '+fmt(p.built||0);$('progress-right').textContent=pc.toFixed(1)+'%';}
       });
-      state.bars=result.bars;state.samples=result.samples;
+      state.bars=result.bars;state.samples=result.samples;state.featureRankCache=new Map();state.compareA=null;
       setBadge($('data-status'),'กำลังค้น Best Conditions','warn');
       await new Promise(r=>setTimeout(r,0));
       state.groups=CORE().groupByStage(state.samples);
@@ -161,14 +187,15 @@
   }
   function candidateTable(research){
     const c=research?.candidate;if(!c||!c.evaluation)return '<div class="empty">ข้อมูลของ Stage นี้ยังไม่พอค้น Candidate</div>';
-    const e=c.evaluation;
-    return `<div class="method-note"><b>Auto Candidate:</b> ${esc(c.direction)} · ${esc(conditionText(c.conditions))}</div><div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th class="num">n</th><th class="num">Win rate ของทิศที่ล็อกจาก Train</th></tr></thead><tbody><tr><td>TRAIN</td><td class="num">${fmt(e.train.n)}</td><td class="num">${p1(e.train.winRate)}</td></tr><tr><td>VALIDATION</td><td class="num">${fmt(e.validation.n)}</td><td class="num">${p1(e.validation.winRate)}</td></tr><tr><td>HOLDOUT</td><td class="num">${fmt(e.holdout.n)}</td><td class="num">${p1(e.holdout.winRate)}</td></tr></tbody></table></div>`;
+    const e=c.evaluation,p=research.playability,d=research.decision||decisionFor(p),dir=d.showDirection?c.direction:'NO EDGE';
+    return `<div class="method-note"><b>Status:</b> ${esc(d.label)} · <b>Best tested condition:</b> ${esc(conditionText(c.conditions))} · <b>Direction:</b> ${esc(dir)} <button type="button" class="btn secondary" data-view-current-candidate style="min-height:26px;margin-left:6px">ดูสูตรบนกราฟ</button></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th class="num">n</th><th class="num">Win rate ของทิศที่ล็อกจาก Train</th></tr></thead><tbody><tr><td>TRAIN</td><td class="num">${fmt(e.train.n)}</td><td class="num">${p1(e.train.winRate)}</td></tr><tr><td>VALIDATION</td><td class="num">${fmt(e.validation.n)}</td><td class="num">${p1(e.validation.winRate)}</td></tr><tr><td>HOLDOUT</td><td class="num">${fmt(e.holdout.n)}</td><td class="num">${p1(e.holdout.winRate)}</td></tr></tbody></table></div>`;
   }
 
   function renderMarketPanel(){
     const rows=activeRows();
     if(state.stage){
       $('panel-market').innerHTML=`<div class="card-head"><div><h3>${esc(stageLabel(state.stage))}</h3><small>Outcome ดิบของ Stage + Candidate ที่ค้นจาก Train</small></div><span class="badge">${fmt(rows.length)} samples</span></div>${summaryTable(rows)}${candidateTable(activeResearch())}`;
+      $('panel-market').querySelector('[data-view-current-candidate]')?.addEventListener('click',()=>openAutoCandidate(state.stage));
       return;
     }
     $('panel-market').innerHTML=`<div class="card-head"><div><h3>Market Map</h3><small>Stage ของ 10,000 แท่งและผล T+10 ดิบ</small></div><span class="badge">${fmt(rows.length)} samples</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th class="num">Samples</th><th class="num">%</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Playability</th></tr></thead><tbody>${state.groups.map(g=>`<tr class="clickable" data-stage-row="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td class="num">${fmt(g.rows.length)}</td><td class="num">${(g.rows.length/rows.length*100).toFixed(1)}%</td><td class="num">${p1(g.summary.all.highRate)}</td><td class="num">${p1(g.summary.all.lowRate)}</td><td class="num">${g.playability.score==null?'—':g.playability.score}</td></tr>`).join('')}</tbody></table></div>`;
@@ -176,8 +203,8 @@
   }
 
   function renderPlayability(){
-    $('panel-playability').innerHTML=`<div class="card-head"><div><h3>Playability Map</h3><small>แต่ละ Stage ค้น Condition จาก Train เท่านั้น แล้วเอา Condition + Direction เดิมไปสอบ Validation/Holdout</small></div><span class="badge purple">NO OOS DIRECTION LEAK</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th>Auto Candidate</th><th>ทิศ</th><th class="num">Score</th><th class="num">Stability</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>${state.groups.map(g=>{const c=g.research.candidate,e=c?.evaluation,p=g.playability,cls=p.level==='good'?'play-good':p.level==='watch'?'play-watch':'play-hard';return `<tr class="clickable" data-play-stage="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td>${esc(conditionText(c?.conditions||[]))}</td><td>${esc(c?.direction||'—')}</td><td class="num ${cls}">${p.score==null?'—':p.score}</td><td class="num">${stabilityLabel(p.stability)}</td><td class="num">${p1(e?.validation?.winRate)}</td><td class="num">${p1(e?.holdout?.winRate)}</td></tr>`;}).join('')}</tbody></table></div><div class="method-note">ตัวอย่างสำคัญ: Sideway ทั้งก้อนอาจ HIGH/LOW 50/50 แต่ถ้าภายในมี “ขอบกรอบ + Feature” ที่ค้นจาก Train แล้วรอดข้อมูลใหม่ Stage นั้นยังสามารถมี Playability สูงได้ค่ะ</div>`;
-    $('panel-playability').querySelectorAll('[data-play-stage]').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.playStage)));
+    $('panel-playability').innerHTML=`<div class="card-head"><div><h3>Playability Map</h3><small>ค้น Condition จาก Train เท่านั้น แล้วล็อก Condition + Direction เดิมไปสอบ Validation/Holdout</small></div><span class="badge purple">PLAYABILITY ≠ DIRECTION</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th>Status</th><th>Best tested condition</th><th>Direction</th><th class="num">Score</th><th class="num">Stability</th><th class="num">Validation</th><th class="num">Holdout</th><th></th></tr></thead><tbody>${state.groups.map(g=>{const c=g.research.candidate,e=c?.evaluation,p=g.playability,d=g.decision||decisionFor(p),cls=p.level==='good'?'play-good':p.level==='watch'?'play-watch':p.level==='hard'?'play-hard':'';return `<tr><td>${esc(stageLabel(g.stage))}</td><td class="${cls}">${esc(d.label)}</td><td>${esc(conditionText(c?.conditions||[]))}</td><td>${esc(d.showDirection?(c?.direction||'—'):'NO EDGE')}</td><td class="num ${cls}">${p.score==null?'—':p.score}</td><td class="num">${stabilityLabel(p.stability)}</td><td class="num">${p1(e?.validation?.winRate)}</td><td class="num">${p1(e?.holdout?.winRate)}</td><td><button type="button" class="btn secondary" data-view-candidate="${esc(g.stage)}" style="min-height:25px">ดูบนกราฟ</button></td></tr>`;}).join('')}</tbody></table></div><div class="method-note">โซนแดงจะแสดง <b>NO EDGE</b> แม้ Train จะหา Direction ที่ดีที่สุดได้ เพราะข้อมูลใหม่ยังไม่พิสูจน์ว่าควรเล่นค่ะ</div>`;
+    $('panel-playability').querySelectorAll('[data-view-candidate]').forEach(btn=>btn.addEventListener('click',()=>openAutoCandidate(btn.dataset.viewCandidate)));
   }
 
   function populateFeatureControls(){
@@ -189,9 +216,14 @@
 
   function renderFeatureExplorer(){
     if(!state.samples.length)return;
-    const stage=$('feature-stage')?.value||state.stage||'',key=$('feature-key')?.value||CORE().featureMeta[0].key;
+    const stage=$('feature-stage')?$('feature-stage').value:(state.stage||''),key=$('feature-key')?.value||CORE().featureMeta[0].key;
     const rows=stage?state.samples.filter(x=>x.stage===stage):state.samples,bins=CORE().featureBins(rows,key,5),meta=CORE().featureMeta.find(x=>x.key===key);
-    $('feature-results').innerHTML=`<div class="card-head"><div><h3>${esc(meta?.label||key)}</h3><small>${stage?stageLabel(stage):'ALL MARKET'} · แบ่งค่าจริง 5 ช่วงเพื่อดูความสัมพันธ์กับ T+10</small></div><span class="badge">${fmt(rows.length)} samples</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ช่วงค่า</th><th class="num">n</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Validation HIGH</th><th class="num">Holdout HIGH</th></tr></thead><tbody>${bins.map(b=>`<tr><td>${n2(b.lo)} → ${n2(b.hi)}</td><td class="num">${fmt(b.rows.length)}</td><td class="num">${p1(b.stats.all.highRate)}</td><td class="num">${p1(b.stats.all.lowRate)}</td><td class="num">${p1(b.stats.validation.highRate)}</td><td class="num">${p1(b.stats.holdout.highRate)}</td></tr>`).join('')}</tbody></table></div><div class="method-note">Explorer เป็นเครื่องมือดูข้อมูล ไม่ใช่ตัวอนุมัติสูตร ส่วน Best Conditions จะค้น threshold จาก Train แยกต่างหากค่ะ</div>`;
+    const cacheKey=stage||'__ALL__';
+    let ranking=state.featureRankCache.get(cacheKey);
+    if(!ranking){ranking=CORE().discoverFeatureUsefulness(rows);state.featureRankCache.set(cacheKey,ranking);}
+    const top=ranking.slice(0,10);
+    $('feature-results').innerHTML=`<div class="card-head"><div><h3>Feature Usefulness · ${stage?esc(stageLabel(stage)):'ALL MARKET'}</h3><small>แต่ละ Feature เลือก threshold จาก Train ของตัวเอง แล้วสอบบน Validation/Holdout</small></div><span class="badge">${fmt(rows.length)} samples</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Feature</th><th>Best Train rule</th><th>Direction</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th><th></th></tr></thead><tbody>${top.map((x,i)=>`<tr><td>${esc(CORE().featureMeta.find(f=>f.key===x.featureKey)?.label||x.featureKey)}</td><td>${esc(conditionText([x.rule]))}</td><td>${esc(x.decision.showDirection?x.direction:'NO EDGE')}</td><td class="num">${x.playability.score??'—'}</td><td class="num">${p1(x.evaluation.validation.winRate)}</td><td class="num">${p1(x.evaluation.holdout.winRate)}</td><td><button type="button" class="btn secondary" data-feature-view="${i}" style="min-height:25px">ดูบนกราฟ</button></td></tr>`).join('')}</tbody></table></div><div class="card-head" style="margin-top:12px"><div><h3>${esc(meta?.label||key)}</h3><small>Distribution ของ Feature ที่เลือก · ใช้สำรวจข้อมูล ไม่ใช่อนุมัติสูตร</small></div></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ช่วงค่า</th><th class="num">n</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Validation HIGH</th><th class="num">Holdout HIGH</th></tr></thead><tbody>${bins.map(b=>`<tr><td>${n2(b.lo)} → ${n2(b.hi)}</td><td class="num">${fmt(b.rows.length)}</td><td class="num">${p1(b.stats.all.highRate)}</td><td class="num">${p1(b.stats.all.lowRate)}</td><td class="num">${p1(b.stats.validation.highRate)}</td><td class="num">${p1(b.stats.holdout.highRate)}</td></tr>`).join('')}</tbody></table></div><div class="method-note">Feature ranking ช่วยตอบว่า Feature ไหน “มีประโยชน์จริง” มากกว่าการให้ผู้ใช้เดาจากตารางเอง โดย threshold ถูกเลือกจาก Train เท่านั้นค่ะ</div>`;
+    $('feature-results').querySelectorAll('[data-feature-view]').forEach(btn=>btn.addEventListener('click',()=>{const item=top[Number(btn.dataset.featureView)];if(!item)return;const matched=CORE().applyConditions(rows,[item.rule]);chooseSampleRows(matched);renderSample();updateInspector(matched,{rows:matched,direction:item.direction,evaluation:item.evaluation,playability:item.playability,conditions:[item.rule]});$('chart')?.scrollIntoView?.({behavior:'smooth',block:'center'});}));
   }
 
   function renderComboFilters(){if(!state.samples.length||$('combo-filters').children.length)return;addComboFilter();}
@@ -199,8 +231,14 @@
     const wrap=document.createElement('div');wrap.className='filter-row';
     const opts=CORE().featureMeta.map(f=>`<option value="${esc(f.key)}" ${prefill.field===f.key?'selected':''}>${esc(f.label)}</option>`).join('');
     wrap.innerHTML=`<select class="combo-field">${opts}</select><select class="combo-op"><option>&gt;</option><option>&gt;=</option><option>&lt;</option><option>&lt;=</option></select><input class="combo-value" inputmode="decimal" placeholder="ค่า" value="${esc(prefill.value??'')}"><button type="button">×</button>`;
-    if(prefill.op)wrap.querySelector('.combo-op').value=prefill.op;wrap.querySelector('button').addEventListener('click',()=>wrap.remove());$('combo-filters').append(wrap);
+    if(prefill.op)wrap.querySelector('.combo-op').value=prefill.op;
+    wrap.querySelectorAll('select').forEach(el=>el.addEventListener('change',scheduleCombo));
+    wrap.querySelector('.combo-value').addEventListener('input',scheduleCombo);
+    wrap.querySelector('button').addEventListener('click',()=>{wrap.remove();scheduleCombo();});
+    $('combo-filters').append(wrap);
+    if(prefill.value!==undefined)scheduleCombo();
   }
+
   function currentConditions(){
     const c=[],stage=$('combo-stage').value;if(stage)c.push({field:'stage',op:'=',value:stage});
     $('combo-filters').querySelectorAll('.filter-row').forEach(row=>{const value=row.querySelector('.combo-value').value.trim();if(value!=='')c.push({field:row.querySelector('.combo-field').value,op:row.querySelector('.combo-op').value,value:Number(value)});});
@@ -208,18 +246,21 @@
   }
   function renderComboResults(result){
     if(!state.samples.length)return;
-    const r=result||CORE().evaluateConditionSet(state.samples,currentConditions()),e=r.evaluation,p=r.playability;
-    $('combo-results').innerHTML=`<div class="method-note">${esc(conditionText(r.conditions))}</div><div class="combo-result"><div class="kpi"><span>MATCHING</span><b>${fmt(r.rows.length)}</b><em>samples</em></div><div class="kpi"><span>DIRECTION</span><b>${esc(r.direction||'—')}</b><em>ล็อกจาก Train</em></div><div class="kpi"><span>TRAIN</span><b>${p1(e?.train?.winRate)}</b><em>${fmt(e?.train?.n||0)}</em></div><div class="kpi"><span>VALIDATION</span><b>${p1(e?.validation?.winRate)}</b><em>${fmt(e?.validation?.n||0)}</em></div><div class="kpi"><span>HOLDOUT</span><b>${p1(e?.holdout?.winRate)}</b><em>${fmt(e?.holdout?.n||0)}</em></div></div>`;
+    const r=result||CORE().evaluateConditionSet(state.samples,currentConditions()),e=r.evaluation,p=r.playability,raw=CORE().stats(r.rows),decision=decisionFor(p);
+    const shownDirection=decision.showDirection?(r.direction||'—'):'NO EDGE';
+    $('combo-results').innerHTML=`<div class="method-note">${esc(conditionText(r.conditions))} · <b>Status:</b> ${esc(decision.label)}</div><div class="combo-result"><div class="kpi"><span>MATCHING</span><b>${fmt(r.rows.length)}</b><em>samples</em></div><div class="kpi"><span>RAW HIGH</span><b>${p1(raw.highRate)}</b><em>${fmt(raw.high)} cases</em></div><div class="kpi"><span>RAW LOW</span><b>${p1(raw.lowRate)}</b><em>${fmt(raw.low)} cases</em></div><div class="kpi"><span>DIRECTION</span><b>${esc(shownDirection)}</b><em>${decision.showDirection?'ล็อกจาก Train':'ไม่มี Edge ที่ควรใช้'}</em></div><div class="kpi"><span>TRAIN</span><b>${p1(e?.train?.winRate)}</b><em>${fmt(e?.train?.n||0)}</em></div><div class="kpi"><span>VALIDATION</span><b>${p1(e?.validation?.winRate)}</b><em>${fmt(e?.validation?.n||0)}</em></div><div class="kpi"><span>HOLDOUT</span><b>${p1(e?.holdout?.winRate)}</b><em>${fmt(e?.holdout?.n||0)}</em></div></div>`;
     if(state.compareA&&e){
-      const a=state.compareA.evaluation;
-      $('combo-compare').innerHTML=`<div class="card-head" style="margin-top:10px"><div><h3>Compare A vs B</h3><small>ทั้ง A/B ล็อก Direction จาก Train ของตัวเอง</small></div></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th>Direction</th><th class="num">Train</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody><tr><td>A</td><td>${esc(state.compareA.direction)}</td><td class="num">${p1(a.train.winRate)}</td><td class="num">${p1(a.validation.winRate)}</td><td class="num">${p1(a.holdout.winRate)}</td></tr><tr><td>B</td><td>${esc(r.direction)}</td><td class="num">${p1(e.train.winRate)}</td><td class="num">${p1(e.validation.winRate)}</td><td class="num">${p1(e.holdout.winRate)}</td></tr></tbody></table></div>`;
+      const a=state.compareA.evaluation,aN=state.compareA.rows.length,bN=r.rows.length,retention=aN?bN/aN:null,delta=bN-aN;
+      $('combo-compare').innerHTML=`<div class="card-head" style="margin-top:10px"><div><h3>Compare A vs B</h3><small>ดูทั้ง Accuracy และจำนวน Sample ที่หายไปเมื่อเพิ่มเงื่อนไข</small></div></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th>Direction</th><th class="num">Matching n</th><th class="num">Train</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody><tr><td>A</td><td>${esc(visibleDirection(state.compareA.direction,state.compareA.playability))}</td><td class="num">${fmt(aN)}</td><td class="num">${p1(a.train.winRate)}</td><td class="num">${p1(a.validation.winRate)}</td><td class="num">${p1(a.holdout.winRate)}</td></tr><tr><td>B</td><td>${esc(shownDirection)}</td><td class="num">${fmt(bN)}</td><td class="num">${p1(e.train.winRate)}</td><td class="num">${p1(e.validation.winRate)}</td><td class="num">${p1(e.holdout.winRate)}</td></tr></tbody></table></div><div class="method-note"><b>Coverage change A→B:</b> ${delta>=0?'+':''}${fmt(delta)} samples · Retention ${p1(retention)} ${retention!=null&&retention<.5?'⚠️ เงื่อนไขใหม่ตัด Sample เกินครึ่ง':''}</div>`;
     }else $('combo-compare').innerHTML='';
   }
+
   function runCombo(){const r=CORE().evaluateConditionSet(state.samples,currentConditions());renderComboResults(r);chooseSampleRows(r.rows);renderSample();updateInspector(r.rows,r);}
   function saveCompareA(){const r=CORE().evaluateConditionSet(state.samples,currentConditions());if(!r.evaluation)return;state.compareA=r;renderComboResults(r);}
   function saveCandidate(){
     const r=CORE().evaluateConditionSet(state.samples,currentConditions());if(!r.evaluation)return;
-    const c={id:'CAND-'+Date.now(),createdAt:Date.now(),symbol:state.session?.symbol,interval:state.session?.interval,conditions:r.conditions,n:r.rows.length,direction:r.direction,train:r.evaluation.train.winRate,validation:r.evaluation.validation.winRate,holdout:r.evaluation.holdout.winRate,playability:r.playability?.score};
+    const d=decisionFor(r.playability);
+    const c={id:'CAND-'+Date.now(),createdAt:Date.now(),symbol:state.session?.symbol,interval:state.session?.interval,conditions:r.conditions,n:r.rows.length,status:d.status,direction:d.showDirection?r.direction:null,internalTrainDirection:r.direction,train:r.evaluation.train.winRate,validation:r.evaluation.validation.winRate,holdout:r.evaluation.holdout.winRate,playability:r.playability?.score};
     state.candidates.unshift(c);saveCandidates();renderBest();
   }
 
@@ -230,26 +271,37 @@
 
   function renderSplit(){
     const s=CORE().bySplit(state.samples),purge=state.samples.filter(x=>x.split==='PURGE').length,audit=CORE().auditDataset(state.samples);
-    $('panel-split').innerHTML=`<div class="card-head"><div><h3>Chronological Split</h3><small>60 / 20 / 20 ตามเวลา + Purge ทุก Sample ที่ Settlement อาจซ้อนข้ามรอยต่อ</small></div><span class="badge ${audit.ok?'good':'bad'}">${audit.ok?'Integrity PASS':'Integrity FAIL'}</span></div><div class="timeline"><div class="train">TRAIN</div><div class="purge"></div><div class="val">VALIDATION</div><div class="purge"></div><div class="hold">HOLDOUT</div></div><div class="split-grid"><div class="split-box"><span>TRAIN</span><b>${fmt(s.train.n)}</b><small>ใช้ค้น Condition</small></div><div class="split-box"><span>VALIDATION</span><b>${fmt(s.validation.n)}</b><small>ไม่ใช้ค้น threshold</small></div><div class="split-box"><span>HOLDOUT</span><b>${fmt(s.holdout.n)}</b><small>สอบรอบท้าย</small></div></div><div class="method-note">Purge ${fmt(purge)} samples · Candidate ภายในแต่ละ Stage ถูกเลือกจาก Train เท่านั้นค่ะ</div><div class="integrity">${audit.issues.length?audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join(''):'<div class="integrity-row"><span>Exact T+10 / T0 cutoff / finite features / no split overlap</span><b class="ok">PASS</b></div>'}</div>`;
+    $('panel-split').innerHTML=`<div class="card-head"><div><h3>Chronological Split</h3><small>60 / 20 / 20 ตามเวลา + Purge ทุก Sample ที่ Settlement อาจซ้อนข้ามรอยต่อ</small></div><span class="badge ${audit.ok?'good':'bad'}">${audit.ok?'Integrity PASS':'Integrity FAIL'}</span></div><div class="timeline"><div class="train">TRAIN</div><div class="purge"></div><div class="val">VALIDATION</div><div class="purge"></div><div class="hold">HOLDOUT</div></div><div class="split-grid"><div class="split-box"><span>TRAIN</span><b>${fmt(s.train.n)}</b><small>ใช้ค้น Condition</small></div><div class="split-box"><span>VALIDATION</span><b>${fmt(s.validation.n)}</b><small>ไม่ใช้ค้น threshold</small></div><div class="split-box"><span>HOLDOUT</span><b>${fmt(s.holdout.n)}</b><small>สอบรอบท้าย</small></div></div><div class="method-note">Purge ${fmt(purge)} samples · Candidate ภายในแต่ละ Stage ถูกเลือกจาก Train เท่านั้น · Validation/Holdout ใช้ตรวจ ไม่ใช้เลือก threshold และถ้าปรับสูตรตาม Holdout ซ้ำ ๆ ต้องถือว่า Holdout นั้นไม่ untouched แล้วค่ะ</div><div class="integrity">${audit.issues.length?audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join(''):'<div class="integrity-row"><span>Exact T+10 / T0 cutoff / finite features / no split overlap</span><b class="ok">PASS</b></div>'}</div>`;
   }
 
   function renderBest(){
-    const valid=state.groups.filter(x=>x.playability.score!=null).slice().sort((a,b)=>b.playability.score-a.playability.score);
-    const best=valid.slice(0,7),avoid=state.groups.slice().sort((a,b)=>(a.playability.score??-1)-(b.playability.score??-1)).slice(0,7);
+    const playable=state.groups.filter(g=>(g.decision||decisionFor(g.playability)).status==='PLAYABLE').sort((a,b)=>b.playability.score-a.playability.score);
+    const selective=state.groups.filter(g=>(g.decision||decisionFor(g.playability)).status==='SELECTIVE').sort((a,b)=>b.playability.score-a.playability.score);
+    const avoid=state.groups.filter(g=>(g.decision||decisionFor(g.playability)).status==='AVOID').sort((a,b)=>(a.playability.score??999)-(b.playability.score??999));
+    const insufficient=state.groups.filter(g=>(g.decision||decisionFor(g.playability)).status==='INSUFFICIENT');
     const saved=state.candidates.filter(c=>(!state.session?.symbol||c.symbol===state.session.symbol)&&(!state.session?.interval||c.interval===state.session.interval)).slice(0,8);
-    const row=g=>{const c=g.research.candidate,e=c?.evaluation;return `<tr class="clickable" data-best-stage="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td>${esc(conditionText(c?.conditions||[]))}</td><td>${esc(c?.direction||'—')}</td><td class="num">${g.playability.score??'—'}</td><td class="num">${p1(e?.validation?.winRate)}</td><td class="num">${p1(e?.holdout?.winRate)}</td></tr>`;};
-    $('panel-best').innerHTML=`<div class="card-head"><div><h3>Best Conditions / Avoid Zones</h3><small>นี่คือการค้น Condition อัตโนมัติภายในแต่ละ Stage ไม่ใช่แค่จัดอันดับ Stage ดิบ</small></div><span class="badge purple">Train-search → OOS-check</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>สนามน่าเล่น</th><th>Best Condition</th><th>ทิศ</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>${best.map(row).join('')}</tbody></table></div><div class="table-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>สนามยาก / ควรระวัง</th><th>Condition ที่ดีที่สุดที่ Train หาได้</th><th>ทิศ</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>${avoid.map(row).join('')}</tbody></table></div><div class="candidate-list">${saved.length?saved.map(c=>`<div class="candidate"><b>${esc(c.direction||'—')} · Validation ${p1(c.validation)} · Holdout ${p1(c.holdout)} · Playability ${c.playability??'—'}</b><span>${fmt(c.n)} samples · ${esc(conditionText(c.conditions))}</span></div>`).join(''):'<div class="empty">ยังไม่มี Manual Candidate ที่บันทึกไว้</div>'}</div>`;
-    $('panel-best').querySelectorAll('[data-best-stage]').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.bestStage)));
+    const rowsHtml=(arr,status)=>arr.length?arr.map(g=>{const c=g.research.candidate,e=c?.evaluation,d=g.decision||decisionFor(g.playability);return `<tr><td>${esc(stageLabel(g.stage))}</td><td>${esc(conditionText(c?.conditions||[]))}</td><td>${esc(d.showDirection?(c?.direction||'—'):'NO EDGE')}</td><td class="num">${g.playability.score??'—'}</td><td class="num">${p1(e?.validation?.winRate)}</td><td class="num">${p1(e?.holdout?.winRate)}</td><td><button type="button" class="btn secondary" data-best-view="${esc(g.stage)}" style="min-height:25px">ดูสูตรบนกราฟ</button></td></tr>`;}).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted)">ไม่มี Stage ในกลุ่ม ${esc(status)}</td></tr>`;
+    const table=(title,arr,status)=>`<div class="card-head" style="margin-top:10px"><div><h3>${title}</h3><small>${status}</small></div><span class="badge">${arr.length} stages</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th>Best tested condition</th><th>Direction</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th><th></th></tr></thead><tbody>${rowsHtml(arr,status)}</tbody></table></div>`;
+    $('panel-best').innerHTML=`<div class="card-head"><div><h3>Best Conditions / Avoid Zones</h3><small>จัดกลุ่มตามเกณฑ์จริง ไม่บังคับให้ต้องมี “สนามน่าเล่น” ถ้าข้อมูลไม่ถึง</small></div><span class="badge purple">≥70 PLAYABLE · 45–69 SELECTIVE · &lt;45 AVOID</span></div>${table('🟢 ตลาดน่าเล่น',playable,'Playability 70–100')}${table('🟡 ตลาดต้องเลือกจังหวะ',selective,'Playability 45–69')}${table('🔴 ตลาดควรหลีกเลี่ยง',avoid,'Playability 0–44 · Direction = NO EDGE')}${table('⚪ ข้อมูลยังไม่พอ',insufficient,'ยังไม่ควรสรุป')}<div class="candidate-list">${saved.length?saved.map(c=>`<div class="candidate"><b>${esc(c.status||'RESEARCH')} · ${esc(c.direction||'NO EDGE')} · Validation ${p1(c.validation)} · Holdout ${p1(c.holdout)} · Playability ${c.playability??'—'}</b><span>${fmt(c.n)} samples · ${esc(conditionText(c.conditions))}</span></div>`).join(''):'<div class="empty">ยังไม่มี Manual Candidate ที่บันทึกไว้</div>'}</div>`;
+    $('panel-best').querySelectorAll('[data-best-view]').forEach(btn=>btn.addEventListener('click',()=>openAutoCandidate(btn.dataset.bestView)));
   }
 
   function updateInspector(rows,manualResult=null){
     $('sample-count-badge').textContent=fmt(rows?.length||0)+' samples';
-    if(!rows?.length){$('play-hero').className='play-hero';$('play-hero').innerHTML='<small>PLAYABILITY</small><strong>—</strong><span>รอ Dataset</span>';for(const id of ['kpi-side','kpi-hold','kpi-stability','kpi-matching','split-train','split-val','split-hold'])$(id).textContent='—';$('integrity-box').innerHTML='';return;}
-    const research=manualResult||activeResearch(),c=manualResult||research?.candidate,p=manualResult?.playability||research?.playability,e=manualResult?.evaluation||research?.candidate?.evaluation;
-    $('play-hero').className='play-hero '+(p?.level||'');$('play-hero').innerHTML=`<small>PLAYABILITY</small><strong>${p?.score==null?'—':p.score+'/100'}</strong><span>${esc(p?.label||'ข้อมูลยังไม่พอ')}</span>`;
-    $('kpi-side').textContent=c?.direction||'—';$('kpi-hold').textContent=p1(e?.holdout?.winRate);$('kpi-hold-n').textContent=fmt(e?.holdout?.n||0)+' samples';$('kpi-stability').textContent=stabilityLabel(p?.stability);$('kpi-matching').textContent=fmt((e?.train?.n||0)+(e?.validation?.n||0)+(e?.holdout?.n||0));
+    if(!rows?.length){
+      $('play-hero').className='play-hero';$('play-hero').innerHTML='<small>PLAYABILITY</small><strong>—</strong><span>รอ Dataset</span>';
+      for(const id of ['kpi-high','kpi-low','kpi-side','kpi-hold','kpi-stability','kpi-matching','split-train','split-val','split-hold'])$(id).textContent='—';
+      $('kpi-high-n').textContent='—';$('kpi-low-n').textContent='—';$('kpi-side-note').textContent='—';$('integrity-box').innerHTML='';return;
+    }
+    const raw=CORE().stats(rows);
+    const research=manualResult||activeResearch(),c=manualResult||research?.candidate,p=manualResult?.playability||research?.playability,e=manualResult?.evaluation||research?.candidate?.evaluation,d=decisionFor(p);
+    $('play-hero').className='play-hero '+(p?.level||'');$('play-hero').innerHTML=`<small>PLAYABILITY</small><strong>${p?.score==null?'—':p.score+'/100'}</strong><span>${esc(d.label)}</span>`;
+    $('kpi-high').textContent=p1(raw.highRate);$('kpi-high-n').textContent=fmt(raw.high)+' cases';
+    $('kpi-low').textContent=p1(raw.lowRate);$('kpi-low-n').textContent=fmt(raw.low)+' cases';
+    $('kpi-side').textContent=d.showDirection?(c?.direction||'—'):'NO EDGE';$('kpi-side-note').textContent=d.showDirection?'Direction จาก Train':'งดใช้ Direction';
+    $('kpi-hold').textContent=p1(e?.holdout?.winRate);$('kpi-hold-n').textContent=fmt(e?.holdout?.n||0)+' samples';$('kpi-stability').textContent=stabilityLabel(p?.stability);$('kpi-matching').textContent=fmt((e?.train?.n||0)+(e?.validation?.n||0)+(e?.holdout?.n||0));
     $('split-train').textContent=p1(e?.train?.winRate);$('split-train-n').textContent=fmt(e?.train?.n||0)+' matches';$('split-val').textContent=p1(e?.validation?.winRate);$('split-val-n').textContent=fmt(e?.validation?.n||0)+' matches';$('split-hold').textContent=p1(e?.holdout?.winRate);$('split-hold-n').textContent=fmt(e?.holdout?.n||0)+' matches';
-    $('candidate-rule').innerHTML='<b>Candidate:</b> '+esc(conditionText(c?.conditions||[]))+'<br><b>Direction:</b> '+esc(c?.direction||'—')+' · ถูกเลือกจาก Train เท่านั้น';
+    $('candidate-rule').innerHTML='<b>Status:</b> '+esc(d.label)+'<br><b>Best tested condition:</b> '+esc(conditionText(c?.conditions||[]))+'<br><b>Direction:</b> '+esc(d.showDirection?(c?.direction||'—'):'NO EDGE')+(d.showDirection?' · ถูกเลือกจาก Train เท่านั้น':' · ยังไม่มี Edge ที่ควรนำไปเล่น');
     const audit=CORE().auditDataset(state.samples);$('integrity-box').innerHTML=audit.issues.length?audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join(''):'<div class="integrity-row"><span>Dataset integrity</span><b class="ok">PASS</b></div>';
   }
 
