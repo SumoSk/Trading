@@ -607,11 +607,32 @@
     }));
   }
 
-  function lockedDirectionEvaluation(rows, direction) {
+  function developmentEvaluation(rows, direction) {
     const train = directionalStats(rows.filter(x => x.split === 'TRAIN'), direction);
     const validation = directionalStats(rows.filter(x => x.split === 'VALIDATION'), direction);
+    return { train, validation };
+  }
+
+  function finalHoldoutVerdict(validation, holdout) {
+    if (!holdout || holdout.n < 20 || !Number.isFinite(holdout.winRate)) {
+      return { status:'INSUFFICIENT', label:'ข้อมูล Holdout ยังไม่พอ', pass:false, minRequired:null };
+    }
+    const validationRate = Number.isFinite(validation?.winRate) ? validation.winRate : 0.55;
+    const minRequired = Math.max(0.55, validationRate - 0.05);
+    const pass = holdout.winRate >= minRequired;
+    return {
+      status: pass ? 'PASS' : 'FAIL',
+      label: pass ? 'FINAL PASS' : 'FINAL FAIL',
+      pass,
+      minRequired
+    };
+  }
+
+  function runFinalHoldout(samples, conditions = [], direction, validation = null) {
+    if (!direction) return { holdout:null, verdict:{status:'INSUFFICIENT',label:'ไม่มี Direction ที่ล็อกจาก Train',pass:false,minRequired:null} };
+    const rows = applyConditions(samples, conditions);
     const holdout = directionalStats(rows.filter(x => x.split === 'HOLDOUT'), direction);
-    return { train, validation, holdout };
+    return { holdout, verdict:finalHoldoutVerdict(validation, holdout) };
   }
 
   function evaluateConditionSet(samples, conditions = []) {
@@ -620,7 +641,7 @@
     const trainDesc = stats(trainRows);
     const direction = trainDesc.bestSide;
     if (!direction) return { conditions, rows, direction:null, evaluation:null, playability:null };
-    const evaluation = lockedDirectionEvaluation(rows, direction);
+    const evaluation = developmentEvaluation(rows, direction);
     const playabilityResult = playabilityFromEvaluation(evaluation, conditions.length);
     return { conditions, rows, direction, evaluation, playability:playabilityResult };
   }
@@ -663,7 +684,7 @@
     const baselineDirection = base.bestSide;
     let candidates = [];
     if (baselineDirection) {
-      const evalBase = lockedDirectionEvaluation(stageRows, baselineDirection);
+      const evalBase = developmentEvaluation(stageRows, baselineDirection);
       candidates.push({
         conditions:[], direction:baselineDirection, complexity:0, trainRows:train,
         score:candidateScore(train, baselineDirection, 0, train.length), evaluation:evalBase
@@ -687,7 +708,7 @@
       candidates.push({
         conditions:[s.rule], direction:s.direction, complexity:1,
         score:s.score, trainRows:applyConditions(train,[s.rule]),
-        evaluation:lockedDirectionEvaluation(keptAll,s.direction)
+        evaluation:developmentEvaluation(keptAll,s.direction)
       });
     }
 
@@ -705,7 +726,7 @@
         const keptAll = applyConditions(stageRows,cond);
         candidates.push({
           conditions:cond,direction:desc.bestSide,complexity:2,score,
-          trainRows:kept,evaluation:lockedDirectionEvaluation(keptAll,desc.bestSide)
+          trainRows:kept,evaluation:developmentEvaluation(keptAll,desc.bestSide)
         });
       }
     }
@@ -724,7 +745,6 @@
       score:c.score,
       train:c.evaluation.train,
       validation:c.evaluation.validation,
-      holdout:c.evaluation.holdout,
       playability:playabilityFromEvaluation(c.evaluation,c.complexity)
     }));
 
@@ -743,20 +763,19 @@
 
   function playabilityFromEvaluation(evaluation, complexity = 0) {
     if (!evaluation) return { score:null,label:'ข้อมูลยังไม่พอ',level:'insufficient',stability:null };
-    const tr = evaluation.train, va = evaluation.validation, ho = evaluation.holdout;
-    if (va.n < 12 || ho.n < 12 || !Number.isFinite(va.winRate) || !Number.isFinite(ho.winRate)) {
-      return { score:null,label:'ข้อมูลยังไม่พอ',level:'insufficient',stability:null,evaluation };
+    const tr = evaluation.train, va = evaluation.validation;
+    if (va.n < 12 || !Number.isFinite(va.winRate)) {
+      return { score:null,label:'ข้อมูล Validation ยังไม่พอ',level:'insufficient',stability:null,evaluation };
     }
-    const oos = va.winRate * .4 + ho.winRate * .6;
-    const edge = clamp((oos - .5) * 500,0,100);
-    const sampleFactor = clamp(Math.sqrt(Math.min(va.n,ho.n)/60),.35,1);
-    const gap = Math.abs(va.winRate-ho.winRate) + (Number.isFinite(tr.winRate)?Math.abs(tr.winRate-ho.winRate)*.35:0);
+    const edge = clamp((va.winRate - 0.5) * 500,0,100);
+    const sampleFactor = clamp(Math.sqrt(va.n / 60),0.35,1);
+    const gap = Number.isFinite(tr?.winRate) ? Math.abs(tr.winRate - va.winRate) : 0;
     const stability = clamp(1-gap*4,0,1);
     const complexityPenalty = complexity * 2;
-    const score = Math.round(clamp(edge*sampleFactor*(.45+.55*stability)-complexityPenalty,0,100));
+    const score = Math.round(clamp(edge*sampleFactor*(0.45+0.55*stability)-complexityPenalty,0,100));
     const level = score >= 70 ? 'good' : score >= 45 ? 'watch' : 'hard';
     const label = level === 'good' ? 'น่าเล่น' : level === 'watch' ? 'เลือกจังหวะ' : 'เดายาก / งด';
-    return { score,label,level,stability,oosRate:oos,evaluation };
+    return { score,label,level,stability,validationRate:va.winRate,evaluation };
   }
 
   function researchDecision(playability) {
@@ -789,7 +808,7 @@
         if (!Number.isFinite(score)) continue;
         if (!best || score > best.trainSelectionScore) {
           const keptAll = applyConditions(source, [rule]);
-          const evaluation = lockedDirectionEvaluation(keptAll, desc.bestSide);
+          const evaluation = developmentEvaluation(keptAll, desc.bestSide);
           best = {
             featureKey,
             rule,
@@ -809,7 +828,7 @@
     return out.sort((a,b) => {
       const pa = a.playability?.score ?? -1, pb = b.playability?.score ?? -1;
       if (pb !== pa) return pb - pa;
-      return (b.evaluation?.holdout?.n || 0) - (a.evaluation?.holdout?.n || 0);
+      return (b.evaluation?.validation?.n || 0) - (a.evaluation?.validation?.n || 0);
     });
   }
 
@@ -900,6 +919,8 @@
     bySplit,
     directionalStats,
     playabilityFromEvaluation,
+    finalHoldoutVerdict,
+    runFinalHoldout,
     researchStage,
     groupByStage,
     discoverBestCondition,
