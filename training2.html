@@ -16,6 +16,7 @@
     .top-actions{display:flex;gap:6px}.top-actions button{height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;background:#0d1925;color:#b9c8d9;font-size:9px;font-weight:700}.top-actions .primary-link{border-color:#6653ba;background:#211a3c;color:#e8e1ff}
     .page{width:min(1500px,100%);margin:0 auto;padding:12px 12px 42px}
     .notice{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid #3a3a62;border-radius:11px;background:linear-gradient(100deg,#15142a,#0d1a20);margin-bottom:10px}.notice b{font-size:9px;color:#d8d0ff}.notice span,.notice code{font-size:8px;color:#8498ae}
+    .quick-guide{margin-bottom:10px;padding:11px 12px;border:1px solid #34445c;border-radius:13px;background:linear-gradient(135deg,#0d1825,#0a151f)}.quick-guide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}.quick-guide-head h2{margin:0;font-size:11px;color:#edf4fb}.quick-guide-head p{margin:3px 0 0;color:var(--muted);font-size:7px;line-height:1.55}.quick-guide-tag{flex:0 0 auto;padding:4px 7px;border:1px solid #5b4d9c;border-radius:999px;background:#19152c;color:#c9bfff;font-size:7px;font-weight:750}.quick-guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.quick-step{min-width:0;padding:8px;border:1px solid #20364a;border-radius:9px;background:#08141f}.quick-step strong{display:block;font-size:8px;color:#dbe7f2}.quick-step span{display:block;margin-top:3px;font-size:7px;line-height:1.45;color:#8196ac}.quick-step em{display:inline-grid;place-items:center;width:17px;height:17px;margin-right:5px;border:1px solid #4d4383;border-radius:50%;background:#17152b;color:#c9bfff;font-size:7px;font-style:normal}.quick-guide-key{margin-top:7px;padding:7px 9px;border:1px solid #2c634f;border-radius:8px;background:#0d211b;color:#8fdcbe;font-size:7px;line-height:1.5}.quick-guide-key b{color:#baf0da}.quick-guide-warn{margin-top:5px;color:#9aabc0;font-size:6.5px;line-height:1.45}
     .dataset-bar{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:10px;margin-bottom:10px}
     .card{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:12px}.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;margin-bottom:9px}.card-head h2,.card-head h3{margin:0;font-size:11px}.card-head small{display:block;margin-top:2px;color:var(--muted);font-size:7px}
     .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid #344a63;border-radius:999px;color:#93a8be;font-size:7px;white-space:nowrap}.badge.good{border-color:#2d7059;color:var(--green);background:#0e251f}.badge.warn{border-color:#6e5b2f;color:var(--yellow);background:#221d11}.badge.bad{border-color:#74394d;color:var(--red);background:#26141c}.badge.purple{border-color:#5c4ea0;color:#c5b9ff;background:#19152c}
@@ -40,8 +41,8 @@
     .candidate-list{display:grid;gap:5px;margin-top:8px}.candidate{padding:7px;border:1px solid #283b50;border-radius:8px;background:#09151f}.candidate b{font-size:8px}.candidate span{display:block;margin-top:2px;font-size:6px;color:var(--muted)}
     .method-note{padding:8px 9px;border:1px solid #51492d;border-radius:8px;background:#1c1910;color:#bdad7f;font-size:7px;line-height:1.5;margin-top:8px}.integrity{display:grid;gap:5px;margin-top:7px}.integrity-row{display:flex;justify-content:space-between;gap:8px;padding:6px;border:1px solid #203449;border-radius:7px;background:#08131d;font-size:7px}.integrity-row b.ok{color:var(--green)}.integrity-row b.fail{color:var(--red)}.empty{padding:20px;text-align:center;color:#61768d;font-size:8px;border:1px dashed #263a4e;border-radius:9px}
     @media(max-width:1100px){.workspace{grid-template-columns:220px minmax(0,1fr)}.inspector{position:static;grid-column:1/-1;max-height:none}.inspector-kpis{grid-template-columns:repeat(4,1fr)}}
-    @media(max-width:820px){.dataset-bar{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}.sidebar,.inspector{position:static;max-height:none}.stage-list{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-wrap{height:380px}.dataset-grid{grid-template-columns:1fr 1fr}.inspector-kpis{grid-template-columns:1fr 1fr}}
-    @media(max-width:560px){.topbar{padding:9px}.brand h1{font-size:15px}.brand p{display:none}.top-actions button{height:32px;padding:0 8px;font-size:8px}.page{padding:8px 7px 28px}.notice{align-items:flex-start;flex-direction:column}.dataset-grid{grid-template-columns:1fr 1fr}.dataset-grid .wide-mobile{grid-column:1/-1}.summary-mini{grid-template-columns:1fr 1fr}.quality-grid{grid-template-columns:1fr 1fr 1fr}.stage-list{grid-template-columns:1fr 1fr}.chart-wrap{height:330px}.sample-strip{align-items:stretch;flex-direction:column}.sample-actions{display:grid;grid-template-columns:repeat(4,1fr)}.sample-actions button{width:100%}.combo-result{grid-template-columns:1fr 1fr}.filter-row{grid-template-columns:1fr .6fr 1fr auto}.tbl{font-size:6.5px}}
+    @media(max-width:820px){.dataset-bar{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}.sidebar,.inspector{position:static;max-height:none}.stage-list{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-wrap{height:380px}.dataset-grid{grid-template-columns:1fr 1fr}.inspector-kpis{grid-template-columns:1fr 1fr}.quick-guide-steps{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.topbar{padding:9px}.brand h1{font-size:15px}.brand p{display:none}.top-actions button{height:32px;padding:0 8px;font-size:8px}.page{padding:8px 7px 28px}.notice{align-items:flex-start;flex-direction:column}.quick-guide-head{flex-direction:column}.quick-guide-steps{grid-template-columns:1fr}.quick-step{padding:7px}.dataset-grid{grid-template-columns:1fr 1fr}.dataset-grid .wide-mobile{grid-column:1/-1}.summary-mini{grid-template-columns:1fr 1fr}.quality-grid{grid-template-columns:1fr 1fr 1fr}.stage-list{grid-template-columns:1fr 1fr}.chart-wrap{height:330px}.sample-strip{align-items:stretch;flex-direction:column}.sample-actions{display:grid;grid-template-columns:repeat(4,1fr)}.sample-actions button{width:100%}.combo-result{grid-template-columns:1fr 1fr}.filter-row{grid-template-columns:1fr .6fr 1fr auto}.tbl{font-size:6.5px}}
   </style>
 </head>
 <body>
@@ -52,6 +53,27 @@
 
   <main class="page">
     <section class="notice"><div><b>Training 2 = Setup Discovery Lab</b> <span>Train หา Setup · Validation คัดเลือก/จัดอันดับ · Holdout ล็อกไว้เป็น Final Exam เท่านั้น</span></div><code>Price(T+10) vs Entry(T0)</code></section>
+
+    <section class="quick-guide" aria-label="คู่มือใช้งาน Training 2">
+      <div class="quick-guide-head">
+        <div>
+          <h2>Training 2 คืออะไร · ใช้ยังไง</h2>
+          <p>ห้องวิจัยหา Setup จากข้อมูลย้อนหลังว่า “สภาพตลาด + เงื่อนไขแบบไหน” มีหลักฐานว่าทำนายราคาอีก 10 นาทีได้จริง ก่อนเอาผลไปออกแบบ Engine ตัวจริง</p>
+        </div>
+        <span class="quick-guide-tag">เริ่มตาม 1 → 7</span>
+      </div>
+      <div class="quick-guide-steps">
+        <div class="quick-step"><strong><em>1</em>เลือกข้อมูล</strong><span>มีข้อมูลแล้ว: เลือก Historical Session แล้วกด “ใช้ชุดนี้” · ถ้ายังไม่มีให้ “โหลดข้อมูลใหม่”</span></div>
+        <div class="quick-step"><strong><em>2</em>สร้าง Dataset</strong><span>กด “สร้าง Training Dataset” นี่คือปุ่มที่เริ่มสร้าง Samples + วิเคราะห์จริง</span></div>
+        <div class="quick-step"><strong><em>3</em>เช็กความพร้อม</strong><span>รอให้ Samples เป็นตัวเลข และ Integrity ขึ้น PASS ก่อนเริ่มอ่านผล</span></div>
+        <div class="quick-step"><strong><em>4</em>คัด Stage</strong><span>ดู Market Map → Playability → Best / Avoid เพื่อหาว่าตลาดแบบไหนมี Edge น่าศึกษาต่อ</span></div>
+        <div class="quick-step"><strong><em>5</em>หาเงื่อนไข</strong><span>ใช้ Feature Explorer หา Feature ที่มีประโยชน์ แล้ว Combination Lab รวมเป็น Setup</span></div>
+        <div class="quick-step"><strong><em>6</em>ดูพฤติกรรม T+10</strong><span>เปิด T+10 Outcome และกราฟตัวอย่างเพื่อดูว่าหลัง T0 ราคาวิ่งอย่างไร ไม่ใช่ดูแค่ชนะ/แพ้สุดท้าย</span></div>
+        <div class="quick-step"><strong><em>7</em>สอบ Final Holdout</strong><span>ล็อก Setup ให้เรียบร้อยก่อน แล้วค่อย Run Final Holdout เป็นข้อสอบสุดท้าย ห้ามใช้ Holdout ช่วยคิดสูตร</span></div>
+      </div>
+      <div class="quick-guide-key"><b>จำง่าย:</b> “ใช้ชุดนี้” = เลือก/โหลด Historical Session เข้ามาเท่านั้น · “สร้าง Training Dataset” = เริ่มสร้าง Samples และ Research จริง</div>
+      <div class="quick-guide-warn">Training 2 เป็น Research Lab ไม่แก้ Live Engine, ไม่ออกออเดอร์ และไม่เขียนน้ำหนักเข้า Engine ให้อัตโนมัติ ผลที่ได้ต้องนำไปพิจารณาก่อนสร้าง Engine ใหม่</div>
+    </section>
 
     <section class="dataset-bar">
       <div class="card">
