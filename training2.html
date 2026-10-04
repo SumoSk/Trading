@@ -64,8 +64,8 @@
         <div class="quick-step"><strong><em>1</em>เลือกข้อมูล</strong><span>มีข้อมูลแล้ว: เลือก Historical Session แล้วกด “ใช้ชุดนี้” · ถ้ายังไม่มีให้ “โหลดข้อมูลใหม่”</span></div>
         <div class="quick-step"><strong><em>2</em>สร้าง Dataset</strong><span>กด “สร้าง Training Dataset” นี่คือปุ่มที่เริ่มสร้าง Samples + วิเคราะห์จริง</span></div>
         <div class="quick-step"><strong><em>3</em>เช็กความพร้อม</strong><span>รอให้ Samples เป็นตัวเลข และ Integrity ขึ้น PASS ก่อนเริ่มอ่านผล</span></div>
-        <div class="quick-step"><strong><em>4</em>คัด Stage</strong><span>ดู Market Map → Playability → Best / Avoid เพื่อหาว่าตลาดแบบไหนมี Edge น่าศึกษาต่อ</span></div>
-        <div class="quick-step"><strong><em>5</em>หาเงื่อนไข</strong><span>ใช้ Feature Explorer หา Feature ที่มีประโยชน์ แล้ว Combination Lab รวมเป็น Setup</span></div>
+        <div class="quick-step"><strong><em>4</em>คัด Stage</strong><span>ดู Market Map → Setup Ranking → Best Setups เพื่อดูว่าสูตรไหนชนะตัวอย่างได้ดีที่สุด</span></div>
+        <div class="quick-step"><strong><em>5</em>หาเงื่อนไข</strong><span>ใช้ Feature Explorer หาเงื่อนไขที่สัมพันธ์กับผลชนะ แล้ว Combination Lab รวมเป็น Setup</span></div>
         <div class="quick-step"><strong><em>6</em>ดูพฤติกรรม T+10</strong><span>เปิด T+10 Outcome และกราฟตัวอย่างเพื่อดูว่าหลัง T0 ราคาวิ่งอย่างไร ไม่ใช่ดูแค่ชนะ/แพ้สุดท้าย</span></div>
         <div class="quick-step"><strong><em>7</em>สอบ Final Holdout</strong><span>ล็อก Setup ให้เรียบร้อยก่อน แล้วค่อย Run Final Holdout เป็นข้อสอบสุดท้าย ห้ามใช้ Holdout ช่วยคิดสูตร</span></div>
       </div>
@@ -121,7 +121,7 @@
           </div>
         </div>
 
-        <div class="tabs" id="tabs"><button class="tab active" data-tab="market">Market Map</button><button class="tab" data-tab="playability">Playability</button><button class="tab" data-tab="features">Feature Explorer</button><button class="tab" data-tab="combo">Combination Lab</button><button class="tab" data-tab="outcome">T+10 Outcome</button><button class="tab" data-tab="split">Data Split</button><button class="tab" data-tab="best">Best / Avoid</button></div>
+        <div class="tabs" id="tabs"><button class="tab active" data-tab="market">Market Map</button><button class="tab" data-tab="playability">Setup Ranking</button><button class="tab" data-tab="features">Feature Explorer</button><button class="tab" data-tab="combo">Combination Lab</button><button class="tab" data-tab="outcome">T+10 Outcome</button><button class="tab" data-tab="split">Data Split</button><button class="tab" data-tab="best">Best Setups</button></div>
 
         <div class="tab-panel active card" id="panel-market"></div>
         <div class="tab-panel card" id="panel-playability"></div>
@@ -137,7 +137,7 @@
 
       <aside class="card inspector">
         <div class="card-head"><div><h3>Inspector</h3><small id="inspector-stage">ALL MARKET</small></div><span class="badge" id="sample-count-badge">0 samples</span></div>
-        <div class="play-hero" id="play-hero"><small>PLAYABILITY</small><strong>—</strong><span>รอ Dataset</span></div>
+        <div class="play-hero" id="play-hero"><small>BEST VALIDATION</small><strong>—</strong><span>รอ Dataset</span></div>
         <div class="inspector-kpis">
           <div class="kpi"><span>RAW HIGH</span><b id="kpi-high">—</b><em id="kpi-high-n">—</em></div>
           <div class="kpi"><span>RAW LOW</span><b id="kpi-low">—</b><em id="kpi-low-n">—</em></div>
@@ -147,7 +147,7 @@
           <div class="kpi"><span>MATCHING</span><b id="kpi-matching">—</b><em>Candidate samples</em></div>
         </div>
         <div class="split-grid"><div class="split-box"><span>TRAIN</span><b id="split-train">—</b><small id="split-train-n">—</small></div><div class="split-box"><span>VALIDATION</span><b id="split-val">—</b><small id="split-val-n">—</small></div><div class="split-box"><span>HOLDOUT</span><b id="split-hold">—</b><small id="split-hold-n">—</small></div></div>
-        <div class="method-note" id="candidate-rule">Playability ใช้ Train + Validation เท่านั้น · Holdout จะไม่ถูกเปิดจนกด Run Final Holdout</div>
+        <div class="method-note" id="candidate-rule">Train ใช้ค้นสูตร · Validation ใช้วัดว่ารอดกับข้อมูลที่ไม่เคยใช้หา Setup · Holdout เปิดเฉพาะ Final Exam</div>
         <div class="integrity" id="integrity-box"></div>
       </aside>
     </section>
@@ -155,7 +155,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
   <script src="historical-data.js?v=20261003-r4"></script>
-  <script src="training2-core.js?v=20261004-r5"></script>
-  <script src="training2.js?v=20261004-r5"></script>
+  <script src="training2-core.js?v=20261004-r6"></script>
+  <script src="training2.js?v=20261004-r6"></script>
 </body>
 </html>
