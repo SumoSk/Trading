@@ -51,7 +51,7 @@
   </header>
 
   <main class="page">
-    <section class="notice"><div><b>Training 2 ไม่แก้ Live Engine</b> <span>Candidate ถูกค้นจาก Train แล้วจึงสอบ Validation/Holdout · T+1…T+10 ไม่ย้อนกลับมาเป็น Feature</span></div><code>Price(T+10) vs Entry(T0)</code></section>
+    <section class="notice"><div><b>Training 2 = Setup Discovery Lab</b> <span>Train หา Setup · Validation คัดเลือก/จัดอันดับ · Holdout ล็อกไว้เป็น Final Exam เท่านั้น</span></div><code>Price(T+10) vs Entry(T0)</code></section>
 
     <section class="dataset-bar">
       <div class="card">
@@ -119,11 +119,11 @@
           <div class="kpi"><span>RAW LOW</span><b id="kpi-low">—</b><em id="kpi-low-n">—</em></div>
           <div class="kpi"><span>AUTO DIRECTION</span><b id="kpi-side">—</b><em id="kpi-side-note">เลือกจาก Train เท่านั้น</em></div>
           <div class="kpi"><span>HOLDOUT</span><b id="kpi-hold">—</b><em id="kpi-hold-n">—</em></div>
-          <div class="kpi"><span>STABILITY</span><b id="kpi-stability">—</b><em>Validation ↔ Holdout</em></div>
+          <div class="kpi"><span>STABILITY</span><b id="kpi-stability">—</b><em>Train ↔ Validation</em></div>
           <div class="kpi"><span>MATCHING</span><b id="kpi-matching">—</b><em>Candidate samples</em></div>
         </div>
         <div class="split-grid"><div class="split-box"><span>TRAIN</span><b id="split-train">—</b><small id="split-train-n">—</small></div><div class="split-box"><span>VALIDATION</span><b id="split-val">—</b><small id="split-val-n">—</small></div><div class="split-box"><span>HOLDOUT</span><b id="split-hold">—</b><small id="split-hold-n">—</small></div></div>
-        <div class="method-note" id="candidate-rule">Playability จะค้นเงื่อนไขจาก Train ก่อน แล้วล็อก Direction/Condition เดิมไปสอบ Validation และ Holdout</div>
+        <div class="method-note" id="candidate-rule">Playability ใช้ Train + Validation เท่านั้น · Holdout จะไม่ถูกเปิดจนกด Run Final Holdout</div>
         <div class="integrity" id="integrity-box"></div>
       </aside>
     </section>
@@ -131,7 +131,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
   <script src="historical-data.js?v=20261003-r4"></script>
-  <script src="training2-core.js?v=20261004-r4"></script>
-  <script src="training2.js?v=20261004-r4"></script>
+  <script src="training2-core.js?v=20261004-r5"></script>
+  <script src="training2.js?v=20261004-r5"></script>
 </body>
 </html>
