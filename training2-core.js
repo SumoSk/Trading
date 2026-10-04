@@ -304,6 +304,8 @@
       volumeAcceleration,
       rangePosition,
       rangeWidthAtr: range20 / a14,
+      extensionAtr: Math.abs(close - e21) / a14,
+      expansionAtr: range / a14,
       bodyAtr: body / a14,
       upperWickAtr: upperWick / a14,
       lowerWickAtr: lowerWick / a14,
@@ -527,6 +529,8 @@
     ['volumeAcceleration','Volume acceleration'],
     ['rangePosition','Range position'],
     ['rangeWidthAtr','Range width / ATR'],
+    ['extensionAtr','Extension from EMA21 / ATR'],
+    ['expansionAtr','Candle expansion / ATR'],
     ['bodyAtr','Body / ATR'],
     ['upperWickAtr','Upper wick / ATR'],
     ['lowerWickAtr','Lower wick / ATR'],
@@ -550,7 +554,7 @@
 
   const SEARCH_FEATURE_KEYS = Object.freeze([
     'emaDistance','emaSlope5','trendStrength','momentum3','momentum5','acceleration',
-    'relativeVolume','volumeAcceleration','rangePosition','rangeWidthAtr','bodyAtr',
+    'relativeVolume','volumeAcceleration','rangePosition','rangeWidthAtr','extensionAtr','expansionAtr','bodyAtr',
     'upperWickAtr','lowerWickAtr','closeLocation','volatilityRatio','pressure5',
     'distanceToSupportAtr','distanceToResistanceAtr','fibPosition','fibDistanceAtr',
     'htf5Direction','htf15Direction'
@@ -755,10 +759,64 @@
     return { score,label,level,stability,oosRate:oos,evaluation };
   }
 
+  function researchDecision(playability) {
+    const p = playability || {};
+    if (p.score == null || p.level === 'insufficient') {
+      return { status:'INSUFFICIENT', label:'ข้อมูลยังไม่พอ', canTrade:false, showDirection:false };
+    }
+    if (p.level === 'good') {
+      return { status:'PLAYABLE', label:'น่าเล่น', canTrade:true, showDirection:true };
+    }
+    if (p.level === 'watch') {
+      return { status:'SELECTIVE', label:'เลือกจังหวะ', canTrade:false, showDirection:true };
+    }
+    return { status:'AVOID', label:'เดายาก / งด', canTrade:false, showDirection:false };
+  }
+
+  function discoverFeatureUsefulness(rows) {
+    const source = (rows || []).filter(x => x.split !== 'PURGE');
+    const train = source.filter(x => x.split === 'TRAIN');
+    if (train.length < 45) return [];
+
+    const out = [];
+    for (const featureKey of SEARCH_FEATURE_KEYS) {
+      let best = null;
+      for (const rule of makeThresholdRules(train, featureKey)) {
+        const keptTrain = applyConditions(train, [rule]);
+        const desc = stats(keptTrain);
+        if (!desc.bestSide) continue;
+        const score = candidateScore(keptTrain, desc.bestSide, 1, train.length);
+        if (!Number.isFinite(score)) continue;
+        if (!best || score > best.trainSelectionScore) {
+          const keptAll = applyConditions(source, [rule]);
+          const evaluation = lockedDirectionEvaluation(keptAll, desc.bestSide);
+          best = {
+            featureKey,
+            rule,
+            direction: desc.bestSide,
+            trainSelectionScore: score,
+            evaluation,
+            matching: keptAll.length,
+            playability: playabilityFromEvaluation(evaluation, 1)
+          };
+        }
+      }
+      if (best) {
+        best.decision = researchDecision(best.playability);
+        out.push(best);
+      }
+    }
+    return out.sort((a,b) => {
+      const pa = a.playability?.score ?? -1, pb = b.playability?.score ?? -1;
+      if (pb !== pa) return pb - pa;
+      return (b.evaluation?.holdout?.n || 0) - (a.evaluation?.holdout?.n || 0);
+    });
+  }
+
   function researchStage(rows) {
     const candidate = discoverBestCondition(rows);
     const playability = candidate.playability || {score:null,label:'ข้อมูลยังไม่พอ',level:'insufficient',stability:null};
-    return { candidate, playability };
+    return { candidate, playability, decision:researchDecision(playability) };
   }
 
   function groupByStage(samples) {
@@ -771,7 +829,7 @@
       const research = researchStage(rows);
       return {
         stage,group:stageGroup(stage),rows,summary:bySplit(rows),
-        research,playability:research.playability
+        research,playability:research.playability,decision:research.decision
       };
     }).sort((a,b)=>b.rows.length-a.rows.length);
   }
@@ -846,6 +904,8 @@
     groupByStage,
     discoverBestCondition,
     discoverBestConditions,
+    discoverFeatureUsefulness,
+    researchDecision,
     evaluateConditionSet,
     featureBins,
     applyConditions,
