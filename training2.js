@@ -17,7 +17,7 @@
   const fmt=n=>Number(n||0).toLocaleString('en-US');
   const p1=v=>Number.isFinite(v)?(v*100).toFixed(1)+'%':'—';
   const n2=v=>Number.isFinite(Number(v))?Number(v).toFixed(2):'—';
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const dtLocal=ms=>{const d=new Date(ms),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;};
   const parseLocal=v=>{const t=new Date(v).getTime();return Number.isFinite(t)?t:null;};
   const marketLabel=symbol=>MARKETS.find(x=>x[0]===symbol)?.[1]||String(symbol||'').replace(/USDT$/,'');
