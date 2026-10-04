@@ -35,7 +35,7 @@
     .play-hero{padding:10px;border:1px solid #2a3f54;border-radius:10px;background:#0a1721;margin-bottom:7px}.play-hero small{display:block;color:var(--muted);font-size:6px}.play-hero strong{display:block;margin-top:2px;font-size:22px}.play-hero span{display:block;margin-top:3px;font-size:8px}.play-hero.good{border-color:#2c7259;background:#0c211b}.play-hero.good strong,.play-hero.good span{color:var(--green)}.play-hero.watch{border-color:#6f5d31;background:#211d12}.play-hero.watch strong,.play-hero.watch span{color:var(--yellow)}.play-hero.hard{border-color:#73384b;background:#25141c}.play-hero.hard strong,.play-hero.hard span{color:var(--red)}
     .split-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:7px}.split-box{padding:7px;border:1px solid #203449;border-radius:8px;background:#08131d}.split-box span{display:block;font-size:6px;color:var(--muted)}.split-box b{display:block;margin-top:2px;font-size:9px}.split-box small{display:block;margin-top:2px;color:#6c8197;font-size:6px}
     .filter-box{display:grid;gap:7px}.filter-row{display:grid;grid-template-columns:1.5fr .65fr 1fr auto;gap:5px}.filter-row select,.filter-row input,.combo-stage,.feature-select{height:34px;border:1px solid #293e54;border-radius:8px;background:#08131e;color:#d5e1ed;padding:0 7px;font-size:8px}.filter-row button{width:34px;border:1px solid #49384a;border-radius:8px;background:#1d1117;color:#d38395}
-    .feature-toolbar,.combo-toolbar{display:flex;align-items:end;gap:6px;flex-wrap:wrap;margin-bottom:8px}.feature-toolbar label,.combo-toolbar label{display:grid;gap:4px}.feature-toolbar span,.combo-toolbar span{font-size:6px;color:var(--muted)}.feature-toolbar .feature-select,.combo-toolbar .combo-stage{min-width:170px}.combo-result{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px}
+    .feature-toolbar,.combo-toolbar{display:flex;align-items:end;gap:6px;flex-wrap:wrap;margin-bottom:8px}.feature-toolbar label,.combo-toolbar label{display:grid;gap:4px}.feature-toolbar span,.combo-toolbar span{font-size:6px;color:var(--muted)}.feature-toolbar .feature-select,.combo-toolbar .combo-stage{min-width:170px}.combo-result{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:5px;margin-top:8px}
     .timeline{display:grid;grid-template-columns:3fr .12fr 1fr .12fr 1fr;height:26px;border:1px solid #23384c;border-radius:8px;overflow:hidden;margin:8px 0}.timeline div{display:grid;place-items:center;font-size:7px}.timeline .train{background:#171f39;color:#cbbfff}.timeline .purge{background:#351f27}.timeline .val{background:#19302b;color:#8fdfc0}.timeline .hold{background:#1b2839;color:#93bdec}
     .candidate-list{display:grid;gap:5px;margin-top:8px}.candidate{padding:7px;border:1px solid #283b50;border-radius:8px;background:#09151f}.candidate b{font-size:8px}.candidate span{display:block;margin-top:2px;font-size:6px;color:var(--muted)}
     .method-note{padding:8px 9px;border:1px solid #51492d;border-radius:8px;background:#1c1910;color:#bdad7f;font-size:7px;line-height:1.5;margin-top:8px}.integrity{display:grid;gap:5px;margin-top:7px}.integrity-row{display:flex;justify-content:space-between;gap:8px;padding:6px;border:1px solid #203449;border-radius:7px;background:#08131d;font-size:7px}.integrity-row b.ok{color:var(--green)}.integrity-row b.fail{color:var(--red)}.empty{padding:20px;text-align:center;color:#61768d;font-size:8px;border:1px dashed #263a4e;border-radius:9px}
@@ -115,7 +115,9 @@
         <div class="card-head"><div><h3>Inspector</h3><small id="inspector-stage">ALL MARKET</small></div><span class="badge" id="sample-count-badge">0 samples</span></div>
         <div class="play-hero" id="play-hero"><small>PLAYABILITY</small><strong>—</strong><span>รอ Dataset</span></div>
         <div class="inspector-kpis">
-          <div class="kpi"><span>AUTO DIRECTION</span><b id="kpi-side">—</b><em>เลือกจาก Train เท่านั้น</em></div>
+          <div class="kpi"><span>RAW HIGH</span><b id="kpi-high">—</b><em id="kpi-high-n">—</em></div>
+          <div class="kpi"><span>RAW LOW</span><b id="kpi-low">—</b><em id="kpi-low-n">—</em></div>
+          <div class="kpi"><span>AUTO DIRECTION</span><b id="kpi-side">—</b><em id="kpi-side-note">เลือกจาก Train เท่านั้น</em></div>
           <div class="kpi"><span>HOLDOUT</span><b id="kpi-hold">—</b><em id="kpi-hold-n">—</em></div>
           <div class="kpi"><span>STABILITY</span><b id="kpi-stability">—</b><em>Validation ↔ Holdout</em></div>
           <div class="kpi"><span>MATCHING</span><b id="kpi-matching">—</b><em>Candidate samples</em></div>
@@ -129,7 +131,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
   <script src="historical-data.js?v=20261003-r4"></script>
-  <script src="training2-core.js?v=20261004-r3"></script>
-  <script src="training2.js?v=20261004-r3"></script>
+  <script src="training2-core.js?v=20261004-r4"></script>
+  <script src="training2.js?v=20261004-r4"></script>
 </body>
 </html>
