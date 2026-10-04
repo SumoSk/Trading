@@ -774,7 +774,7 @@
     const complexityPenalty = complexity * 2;
     const score = Math.round(clamp(edge*sampleFactor*(0.45+0.55*stability)-complexityPenalty,0,100));
     const level = score >= 70 ? 'good' : score >= 45 ? 'watch' : 'hard';
-    const label = level === 'good' ? 'น่าเล่น' : level === 'watch' ? 'เลือกจังหวะ' : 'เดายาก / งด';
+    const label = level === 'good' ? 'Research score สูง' : level === 'watch' ? 'Research score กลาง' : 'Research score ต่ำ';
     return { score,label,level,stability,validationRate:va.winRate,evaluation };
   }
 
