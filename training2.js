@@ -1,661 +1,309 @@
 (() => {
   'use strict';
 
-  const CORE = () => globalThis.Training2Core;
-  const HD = () => globalThis.HistoricalDataV1;
-  const MINUTE = 60_000;
-  const MARKETS = [
-    ['BTCUSDT','BTC'],['XAUUSDT','XAU'],['SKHYUSDT','SKHY'],['AMDUSDT','AMD'],
-    ['INTCUSDT','INTEL'],['NVDAUSDT','NVDA'],['OPENAIUSDT','OPENAI']
-  ];
+  const CORE=()=>globalThis.Training2Core;
+  const HD=()=>globalThis.HistoricalDataV1;
+  const MINUTE=60_000;
+  const MARKETS=[['BTCUSDT','BTC'],['XAUUSDT','XAU'],['SKHYUSDT','SKHY'],['AMDUSDT','AMD'],['INTCUSDT','INTEL'],['NVDAUSDT','NVDA'],['OPENAIUSDT','OPENAI']];
 
-  const state = {
-    session:null,
-    bars:[],
-    samples:[],
-    stage:null,
-    sampleRows:[],
-    sampleCursor:0,
-    reveal:false,
-    chart:null,
-    series:null,
-    priceLine:null,
-    controller:null,
-    compareA:null,
+  const state={
+    session:null,bars:[],samples:[],groups:[],allResearch:null,stage:null,
+    sampleRows:[],sampleCursor:0,reveal:false,overlay:false,
+    chart:null,series:null,priceLine:null,controller:null,compareA:null,
     candidates:loadCandidates()
   };
 
-  const $ = id => document.getElementById(id);
-  const fmt = n => Number(n || 0).toLocaleString('en-US');
-  const p1 = v => Number.isFinite(v) ? (v * 100).toFixed(1) + '%' : '—';
-  const n2 = v => Number.isFinite(v) ? Number(v).toFixed(2) : '—';
-  const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const dtLocal = ms => {
-    const d = new Date(ms);
-    const p = n => String(n).padStart(2,'0');
-    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-  };
-  const parseLocal = v => {
-    const t = new Date(v).getTime();
-    return Number.isFinite(t) ? t : null;
-  };
-  const marketLabel = symbol => MARKETS.find(x => x[0] === symbol)?.[1] || String(symbol || '').replace(/USDT$/,'');
-  const stageLabel = stage => ({
-    TREND_EARLY_UP:'Trend Early ↑',
-    TREND_EARLY_DOWN:'Trend Early ↓',
-    TREND_UP:'Trend ↑',
-    TREND_DOWN:'Trend ↓',
-    SIDEWAY_EDGE_LOW:'Sideway · ขอบล่าง',
-    SIDEWAY_EDGE_HIGH:'Sideway · ขอบบน',
-    SIDEWAY_HIGH_VOLUME:'Sideway · Volume สูง',
-    SIDEWAY_CHOP:'Sideway · Chop',
-    BREAKOUT_UP:'Breakout ↑',
-    BREAKOUT_DOWN:'Breakout ↓',
-    COMPRESSION:'Compression',
-    SHOCK:'Shock / Expansion',
-    TRANSITION:'Transition',
-    WARMUP:'Warm-up'
-  })[stage] || stage || 'ALL MARKET';
+  const $=id=>document.getElementById(id);
+  const fmt=n=>Number(n||0).toLocaleString('en-US');
+  const p1=v=>Number.isFinite(v)?(v*100).toFixed(1)+'%':'—';
+  const n2=v=>Number.isFinite(Number(v))?Number(v).toFixed(2):'—';
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const dtLocal=ms=>{const d=new Date(ms),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;};
+  const parseLocal=v=>{const t=new Date(v).getTime();return Number.isFinite(t)?t:null;};
+  const marketLabel=symbol=>MARKETS.find(x=>x[0]===symbol)?.[1]||String(symbol||'').replace(/USDT$/,'');
+  const stageLabel=stage=>({
+    TREND_EARLY:'Trend Early',TREND_HEALTHY:'Trend Healthy',TREND_ACCELERATING:'Trend Accelerating',
+    TREND_MATURE:'Trend Mature',TREND_EXTENDED:'Trend Extended',PULLBACK:'Pullback',
+    SIDEWAY_STABLE:'Sideway Stable',SIDEWAY_EDGE:'Sideway Edge',SIDEWAY_HIGH_VOLUME:'Sideway High Volume',
+    SIDEWAY_CHOP:'Sideway Chop',COMPRESSION:'Compression',BREAKOUT_ATTEMPT:'Breakout Attempt',
+    BREAKOUT_ACCEPTED:'Breakout Accepted',FAILED_BREAKOUT:'Failed Breakout',EXHAUSTION:'Exhaustion',
+    REVERSAL_DEVELOPING:'Reversal Developing',SHOCK_UNRESOLVED:'Shock / Random Expansion',TRANSITION:'Transition'
+  })[stage]||stage||'ALL MARKET';
 
-  function setBadge(el, text, type='') {
-    if (!el) return;
-    el.textContent = text;
-    el.className = 'badge' + (type ? ' ' + type : '');
+  function setBadge(el,text,type=''){if(!el)return;el.textContent=text;el.className='badge'+(type?' '+type:'');}
+  function loadCandidates(){try{const x=JSON.parse(localStorage.getItem('aris-training2-candidates-v2')||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
+  function saveCandidates(){try{localStorage.setItem('aris-training2-candidates-v2',JSON.stringify(state.candidates.slice(0,40)));}catch{}}
+  function intervalMs(){return CORE()?.intervalMs?.($('interval')?.value||'1m')||MINUTE;}
+  function conditionText(conditions=[]){
+    if(!conditions.length)return 'Baseline ของ Stage · ไม่มี filter เพิ่ม';
+    return conditions.map(c=>c.field==='stage'?'Stage = '+stageLabel(c.value):`${CORE().featureMeta.find(x=>x.key===c.field)?.label||c.field} ${c.op} ${Number(c.value).toFixed(3)}`).join(' · ');
+  }
+  function stabilityLabel(v){
+    if(!Number.isFinite(v))return '—';
+    if(v>=.8)return 'A';
+    if(v>=.6)return 'B';
+    if(v>=.4)return 'C';
+    return 'D';
   }
 
-  function loadCandidates() {
-    try {
-      const raw = JSON.parse(localStorage.getItem('aris-training2-candidates-v1') || '[]');
-      return Array.isArray(raw) ? raw : [];
-    } catch { return []; }
+  function initTimeRange(){
+    const tf=$('interval')?.value||'1m',step=CORE().intervalMs(tf)||MINUTE;
+    const end=HD()?.lastClosedOpenTime?.(tf)??(Date.now()-step);
+    const bars=Number($('bar-count')?.value||10000);
+    $('end-time').value=dtLocal(end);
+    $('start-time').value=dtLocal(end-Math.max(1,bars-1)*step);
+  }
+  function syncStartFromBarCount(){
+    const step=intervalMs(),end=parseLocal($('end-time').value)??(Date.now()-step);
+    $('start-time').value=dtLocal(end-Math.max(1,Number($('bar-count').value||10000)-1)*step);
   }
 
-  function saveCandidates() {
-    try { localStorage.setItem('aris-training2-candidates-v1', JSON.stringify(state.candidates.slice(0,30))); } catch {}
+  async function refreshSessions(){
+    const select=$('session-select');if(!select||!HD())return;
+    const tf=$('interval').value;
+    const rows=await HD().listSessions(80);
+    const eligible=rows.filter(x=>x.interval===tf&&x.datasetId&&Number(x.loadedBars||0)>0);
+    select.innerHTML=eligible.length
+      ?eligible.map(s=>`<option value="${esc(s.id)}">${esc(marketLabel(s.symbol))} · ${esc(s.interval)} · ${fmt(s.requestedAnalysisBars||s.loadedBars)} bars · ${esc(s.status||'')}</option>`).join('')
+      :`<option value="">ยังไม่มี Historical Session ${esc(tf)}</option>`;
   }
 
-  function initTimeRange() {
-    const end = HD()?.lastClosedOpenTime?.('1m') ?? (Date.now() - MINUTE);
-    const bars = Number($('bar-count')?.value || 10000);
-    const start = end - Math.max(1, bars - 1) * MINUTE;
-    $('end-time').value = dtLocal(end);
-    $('start-time').value = dtLocal(start);
+  function showQuality(session){
+    const q=session?.quality||{};
+    $('quality-grade').textContent=q.grade||'—';
+    $('quality-missing').textContent=Number.isFinite(Number(q.missing))?fmt(q.missing):'—';
+    $('quality-duplicates').textContent=Number.isFinite(Number(q.duplicates))?fmt(q.duplicates):'—';
+    $('quality-invalid').textContent=Number.isFinite(Number(q.invalid))?fmt(q.invalid):'—';
+    $('quality-coverage').textContent=Number.isFinite(Number(q.extendedCoverage))?(Number(q.extendedCoverage)*100).toFixed(1)+'%':'—';
   }
 
-  function syncStartFromBarCount() {
-    const end = parseLocal($('end-time').value) ?? (Date.now() - MINUTE);
-    const bars = Number($('bar-count').value || 10000);
-    $('start-time').value = dtLocal(end - Math.max(1, bars - 1) * MINUTE);
-  }
-
-  async function refreshSessions() {
-    const select = $('session-select');
-    if (!select || !HD()) return;
-    const rows = await HD().listSessions(50);
-    const eligible = rows.filter(x => x.interval === '1m' && x.datasetId && Number(x.loadedBars || 0) > 0);
-    select.innerHTML = eligible.length
-      ? eligible.map(s => `<option value="${esc(s.id)}">${esc(marketLabel(s.symbol))} · 1m · ${fmt(s.requestedAnalysisBars || s.loadedBars)} bars · ${esc(s.status || '')}</option>`).join('')
-      : '<option value="">ยังไม่มี Historical Session 1m</option>';
-  }
-
-  async function downloadData() {
-    if (!HD()) return alert('HistoricalDataV1 ยังไม่พร้อมค่ะ');
-    const symbol = $('market').value;
-    const startTime = parseLocal($('start-time').value);
-    const endTime = parseLocal($('end-time').value);
-    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
-      alert('ช่วงเวลาไม่ถูกต้องค่ะ');
-      return;
-    }
-
-    state.controller?.abort?.();
-    state.controller = new AbortController();
-    $('download-data').disabled = true;
-    $('build-dataset').disabled = true;
-    $('cancel-download').hidden = false;
-    $('progress').classList.add('show');
-    setBadge($('data-status'),'กำลังโหลด','warn');
-
-    try {
-      const session = await HD().downloadDataset({
-        symbol,
-        interval:'1m',
-        startTime,
-        endTime,
-        warmupBars:120,
-        signal:state.controller.signal,
-        engineMeta:{engineVersion:'TRAINING-2-RESEARCH',engineBlobSha:'training2-core-v1',auditSchema:null},
-        onProgress:p=>{
-          const pct = Math.max(0, Math.min(100, Number(p.progress || 0) * 100));
-          $('progress-bar').style.width = pct.toFixed(1) + '%';
-          $('progress-left').textContent = fmt(p.loadedBars) + ' / ' + fmt(p.expectedBars) + ' bars';
-          $('progress-right').textContent = pct.toFixed(1) + '%';
-        }
+  async function downloadData(){
+    if(!HD())return alert('HistoricalDataV1 ยังไม่พร้อมค่ะ');
+    const symbol=$('market').value,interval=$('interval').value;
+    const startTime=parseLocal($('start-time').value),endTime=parseLocal($('end-time').value);
+    if(!Number.isFinite(startTime)||!Number.isFinite(endTime)||endTime<=startTime)return alert('ช่วงเวลาไม่ถูกต้องค่ะ');
+    state.controller?.abort?.();state.controller=new AbortController();
+    $('download-data').disabled=true;$('build-dataset').disabled=true;$('cancel-download').hidden=false;$('progress').classList.add('show');setBadge($('data-status'),'กำลังโหลด','warn');
+    try{
+      const session=await HD().downloadDataset({
+        symbol,interval,startTime,endTime,warmupBars:160,signal:state.controller.signal,
+        engineMeta:{engineVersion:'TRAINING-2-RESEARCH',engineBlobSha:'training2-core-v2',auditSchema:null},
+        onProgress:p=>{const pc=Math.max(0,Math.min(100,Number(p.progress||0)*100));$('progress-bar').style.width=pc.toFixed(1)+'%';$('progress-left').textContent=fmt(p.loadedBars)+' / '+fmt(p.expectedBars)+' bars';$('progress-right').textContent=pc.toFixed(1)+'%';}
       });
-      await loadSession(session.id);
-      setBadge($('data-status'),'ข้อมูลพร้อม','good');
-      await refreshSessions();
-    } catch (err) {
-      if (err?.name === 'AbortError') setBadge($('data-status'),'ยกเลิกแล้ว','warn');
-      else {
-        console.error(err);
-        setBadge($('data-status'),'โหลดไม่สำเร็จ','bad');
-        alert('โหลดข้อมูลไม่สำเร็จ: ' + String(err?.message || err));
-      }
-    } finally {
-      $('download-data').disabled = false;
-      $('cancel-download').hidden = true;
-      state.controller = null;
-    }
+      await loadSession(session.id);await refreshSessions();setBadge($('data-status'),'ข้อมูลพร้อม','good');
+    }catch(err){
+      if(err?.name==='AbortError')setBadge($('data-status'),'ยกเลิกแล้ว','warn');
+      else{console.error(err);setBadge($('data-status'),'โหลดไม่สำเร็จ','bad');alert('โหลดข้อมูลไม่สำเร็จ: '+String(err?.message||err));}
+    }finally{$('download-data').disabled=false;$('cancel-download').hidden=true;state.controller=null;}
   }
 
-  async function loadSession(id) {
-    if (!id || !HD()) return;
-    const session = await HD().getSession(id);
-    if (!session) throw new Error('ไม่พบ Session');
-    const bars = await HD().getDatasetBars(session.datasetId);
-    state.session = session;
-    state.bars = bars;
-    state.samples = [];
-    state.stage = null;
-    state.sampleRows = [];
-    state.sampleCursor = 0;
-    state.reveal = false;
-
-    $('market').value = session.symbol || 'BTCUSDT';
-    $('start-time').value = dtLocal(session.analysisStart);
-    $('end-time').value = dtLocal(session.analysisEnd);
-    $('mini-market').textContent = marketLabel(session.symbol);
-    $('mini-bars').textContent = fmt(bars.length);
-    $('mini-samples').textContent = '—';
-    $('mini-integrity').textContent = '—';
-    $('build-dataset').disabled = bars.length < 80;
-    $('export-research').disabled = true;
-    setBadge($('data-status'), session.quality?.grade ? 'Data ' + session.quality.grade : 'ข้อมูลพร้อม', session.quality?.grade === 'C' ? 'bad' : 'good');
-    $('chart-empty').textContent = 'ข้อมูลพร้อม · กด “สร้าง Training Dataset”';
-    $('chart-empty').style.display = 'grid';
-    resetPanels();
+  async function loadSession(id){
+    if(!id||!HD())return;
+    const session=await HD().getSession(id);if(!session)throw new Error('ไม่พบ Session');
+    if(!CORE().supportedIntervals.includes(session.interval))throw new Error('Training 2 รองรับ 1m / 5m / 10m เท่านั้น');
+    const bars=await HD().getDatasetBars(session.datasetId);
+    state.session=session;state.bars=bars;state.samples=[];state.groups=[];state.allResearch=null;state.stage=null;state.sampleRows=[];state.sampleCursor=0;state.reveal=false;
+    $('market').value=session.symbol||'BTCUSDT';$('interval').value=session.interval||'1m';
+    $('start-time').value=dtLocal(session.analysisStart);$('end-time').value=dtLocal(session.analysisEnd);
+    $('mini-market').textContent=marketLabel(session.symbol)+' · '+session.interval;$('mini-bars').textContent=fmt(bars.length);$('mini-samples').textContent='—';$('mini-integrity').textContent='—';
+    $('build-dataset').disabled=bars.length<100;$('export-research').disabled=true;
+    showQuality(session);setBadge($('data-status'),session.quality?.grade?'Data '+session.quality.grade:'ข้อมูลพร้อม',session.quality?.grade==='C'?'bad':'good');
+    resetPanels();renderRawPreview();
   }
+  async function useSelectedSession(){const id=$('session-select').value;if(!id)return;try{await loadSession(id);}catch(e){alert(String(e?.message||e));}}
 
-  async function useSelectedSession() {
-    const id = $('session-select').value;
-    if (!id) return;
-    try { await loadSession(id); }
-    catch (err) { alert(String(err?.message || err)); }
-  }
-
-  async function buildDataset() {
-    if (!state.bars.length || !CORE()) return;
-    $('build-dataset').disabled = true;
-    $('progress').classList.add('show');
-    setBadge($('data-status'),'กำลังสร้าง Samples','warn');
-    $('progress-bar').style.width = '0%';
-
-    try {
-      const result = await CORE().buildSamples(state.bars,{
-        analysisStart:state.session?.analysisStart,
-        analysisEnd:state.session?.analysisEnd,
-        onProgress:p=>{
-          const max = Math.max(1, p.total || state.bars.length);
-          const pct = Math.max(0,Math.min(100,(p.scanned || 0)/max*100));
-          $('progress-bar').style.width = pct.toFixed(1)+'%';
-          $('progress-left').textContent = 'Samples ' + fmt(p.built || 0);
-          $('progress-right').textContent = pct.toFixed(1)+'%';
-        }
+  async function buildDataset(){
+    if(!state.bars.length||!CORE())return;
+    $('build-dataset').disabled=true;$('progress').classList.add('show');setBadge($('data-status'),'กำลังสร้าง Samples + ค้น Edge','warn');$('progress-bar').style.width='0%';
+    try{
+      const result=await CORE().buildSamples(state.bars,{
+        interval:state.session?.interval||$('interval').value,
+        analysisStart:state.session?.analysisStart,analysisEnd:state.session?.analysisEnd,
+        onProgress:p=>{const max=Math.max(1,p.total||state.bars.length),pc=Math.max(0,Math.min(100,(p.scanned||0)/max*100));$('progress-bar').style.width=pc.toFixed(1)+'%';$('progress-left').textContent='Samples '+fmt(p.built||0);$('progress-right').textContent=pc.toFixed(1)+'%';}
       });
-      state.bars = result.bars;
-      state.samples = result.samples;
-      state.stage = null;
-      const audit = CORE().auditDataset(state.samples);
-      $('mini-samples').textContent = fmt(state.samples.length);
-      $('mini-integrity').textContent = audit.ok ? 'PASS' : 'FAIL';
-      $('mini-integrity').style.color = audit.ok ? 'var(--green)' : 'var(--red)';
-      $('export-research').disabled = false;
-      setBadge($('data-status'),'Dataset พร้อม','good');
-      renderAll();
-      chooseSampleRows(state.samples);
-      renderSample();
-    } catch (err) {
-      console.error(err);
-      setBadge($('data-status'),'สร้างไม่สำเร็จ','bad');
-      alert('สร้าง Training Dataset ไม่สำเร็จ: '+String(err?.message || err));
-    } finally {
-      $('build-dataset').disabled = false;
-    }
+      state.bars=result.bars;state.samples=result.samples;
+      setBadge($('data-status'),'กำลังค้น Best Conditions','warn');
+      await new Promise(r=>setTimeout(r,0));
+      state.groups=CORE().groupByStage(state.samples);
+      state.allResearch=CORE().researchStage(state.samples);
+      const audit=CORE().auditDataset(state.samples);
+      $('mini-samples').textContent=fmt(state.samples.length);$('mini-integrity').textContent=audit.ok?'PASS':'FAIL';$('mini-integrity').style.color=audit.ok?'var(--green)':'var(--red)';
+      $('export-research').disabled=false;setBadge($('data-status'),'Dataset + Research พร้อม','good');
+      renderAll();chooseSampleRows(state.samples);renderSample();
+    }catch(err){console.error(err);setBadge($('data-status'),'สร้างไม่สำเร็จ','bad');alert('สร้าง Training Dataset ไม่สำเร็จ: '+String(err?.message||err));}
+    finally{$('build-dataset').disabled=false;}
   }
 
-  function resetPanels() {
+  function resetPanels(){
     $('stage-list').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    $('panel-market').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    $('panel-playability').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    $('feature-results').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    $('panel-outcome').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    $('panel-split').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    $('panel-best').innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
-    updateInspector([]);
+    for(const id of ['panel-market','panel-playability','feature-results','panel-outcome','panel-split','panel-best'])$(id).innerHTML='<div class="empty">สร้าง Dataset ก่อนค่ะ</div>';
+    $('combo-results').innerHTML='<div class="empty">เลือกเงื่อนไขแล้วกดคำนวณ</div>';$('combo-compare').innerHTML='';updateInspector([]);
+  }
+  function activeRows(){return state.stage?state.samples.filter(x=>x.stage===state.stage):state.samples;}
+  function activeResearch(){return state.stage?state.groups.find(x=>x.stage===state.stage)?.research:state.allResearch;}
+
+  function setStage(stage){
+    state.stage=stage||null;document.querySelectorAll('.stage-item').forEach(el=>el.classList.toggle('active',(el.dataset.stage||'')===(state.stage||'')));
+    $('inspector-stage').textContent=stageLabel(state.stage);syncStageSelects();renderMarketPanel();renderPlayability();renderFeatureExplorer();renderOutcome();renderBest();updateInspector(activeRows());chooseSampleRows(activeRows());renderSample();
   }
 
-  function activeRows() {
-    return state.stage ? state.samples.filter(x => x.stage === state.stage) : state.samples;
-  }
+  function renderAll(){renderStageList();populateFeatureControls();syncStageSelects();renderMarketPanel();renderPlayability();renderFeatureExplorer();renderComboFilters();renderComboResults(CORE().evaluateConditionSet(state.samples,[]));renderOutcome();renderSplit();renderBest();updateInspector(activeRows());}
 
-  function setStage(stage) {
-    state.stage = stage || null;
-    document.querySelectorAll('.stage-item').forEach(el=>el.classList.toggle('active', (el.dataset.stage || '') === (state.stage || '')));
-    $('inspector-stage').textContent = stageLabel(state.stage);
-    syncStageSelects();
-    renderMarketPanels();
-    renderPlayability();
-    renderFeatureExplorer();
-    renderOutcome();
-    renderBest();
-    updateInspector(activeRows());
-    chooseSampleRows(activeRows());
-    renderSample();
-  }
-
-  function renderAll() {
-    renderStageList();
-    renderMarketPanels();
-    renderPlayability();
-    populateFeatureControls();
-    syncStageSelects();
-    renderFeatureExplorer();
-    renderComboFilters();
-    renderComboResults([]);
-    renderOutcome();
-    renderSplit();
-    renderBest();
-    updateInspector(activeRows());
-  }
-
-  function renderStageList() {
-    if (!state.samples.length) return;
-    const groups = CORE().groupByStage(state.samples);
-    const total = state.samples.length;
-    $('stage-list').innerHTML = groups.map(g=>{
-      const p = g.playability;
-      const score = p.score == null ? '—' : String(p.score);
-      return `<div class="stage-item" data-stage="${esc(g.stage)}">
-        <div><strong>${esc(stageLabel(g.stage))}</strong><small>${fmt(g.rows.length)} samples · ${(g.rows.length/total*100).toFixed(1)}%</small></div>
-        <div class="stage-score ${esc(p.level || '')}">${score}</div>
-      </div>`;
-    }).join('');
+  function renderStageList(){
+    const total=state.samples.length;
+    $('stage-list').innerHTML=state.groups.map(g=>`<div class="stage-item" data-stage="${esc(g.stage)}"><div><strong>${esc(stageLabel(g.stage))}</strong><small>${fmt(g.rows.length)} samples · ${(g.rows.length/total*100).toFixed(1)}%</small></div><div class="stage-score ${esc(g.playability.level||'')}">${g.playability.score==null?'—':g.playability.score}</div></div>`).join('');
     $('stage-list').querySelectorAll('.stage-item').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.stage)));
   }
 
-  function summaryTable(rows) {
-    const s = CORE().bySplit(rows);
-    const line = (name,x)=>`<tr><td>${name}</td><td class="num">${fmt(x.decided)}</td><td class="num">${p1(x.highRate)}</td><td class="num">${p1(x.lowRate)}</td><td>${x.bestSide || '—'}</td><td class="num">${p1(x.bestRate)}</td></tr>`;
-    return `<div class="table-wrap"><table class="tbl"><thead><tr><th>ชุดข้อมูล</th><th class="num">n</th><th class="num">HIGH</th><th class="num">LOW</th><th>Best side</th><th class="num">Best rate</th></tr></thead><tbody>
-      ${line('ทั้งหมด',s.all)}${line('Train',s.train)}${line('Validation',s.validation)}${line('Holdout',s.holdout)}
-    </tbody></table></div>`;
+  function summaryTable(rows){
+    const s=CORE().bySplit(rows),line=(name,x)=>`<tr><td>${name}</td><td class="num">${fmt(x.decided)}</td><td class="num">${p1(x.highRate)}</td><td class="num">${p1(x.lowRate)}</td></tr>`;
+    return `<div class="table-wrap"><table class="tbl"><thead><tr><th>ชุดข้อมูล</th><th class="num">n</th><th class="num">HIGH</th><th class="num">LOW</th></tr></thead><tbody>${line('ทั้งหมด',s.all)}${line('Train',s.train)}${line('Validation',s.validation)}${line('Holdout',s.holdout)}</tbody></table></div>`;
+  }
+  function candidateTable(research){
+    const c=research?.candidate;if(!c||!c.evaluation)return '<div class="empty">ข้อมูลของ Stage นี้ยังไม่พอค้น Candidate</div>';
+    const e=c.evaluation;
+    return `<div class="method-note"><b>Auto Candidate:</b> ${esc(c.direction)} · ${esc(conditionText(c.conditions))}</div><div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th class="num">n</th><th class="num">Win rate ของทิศที่ล็อกจาก Train</th></tr></thead><tbody><tr><td>TRAIN</td><td class="num">${fmt(e.train.n)}</td><td class="num">${p1(e.train.winRate)}</td></tr><tr><td>VALIDATION</td><td class="num">${fmt(e.validation.n)}</td><td class="num">${p1(e.validation.winRate)}</td></tr><tr><td>HOLDOUT</td><td class="num">${fmt(e.holdout.n)}</td><td class="num">${p1(e.holdout.winRate)}</td></tr></tbody></table></div>`;
   }
 
-  function renderMarketPanels() {
-    const rows = activeRows();
-    const groups = CORE().groupByStage(rows);
-    $('panel-market').innerHTML = `
-      <div class="card-head"><div><h3>${state.stage ? stageLabel(state.stage) : 'Market Map'}</h3><small>สัดส่วน Stage และผล T+10 ที่เกิดขึ้นจริง</small></div><span class="badge">${fmt(rows.length)} samples</span></div>
-      ${state.stage ? summaryTable(rows) : `<div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th class="num">Samples</th><th class="num">%</th><th class="num">HIGH</th><th class="num">LOW</th></tr></thead><tbody>${groups.map(g=>`<tr class="clickable" data-stage-row="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td class="num">${fmt(g.rows.length)}</td><td class="num">${(g.rows.length/rows.length*100).toFixed(1)}%</td><td class="num">${p1(g.summary.all.highRate)}</td><td class="num">${p1(g.summary.all.lowRate)}</td></tr>`).join('')}</tbody></table></div>`}
-    `;
+  function renderMarketPanel(){
+    const rows=activeRows();
+    if(state.stage){
+      $('panel-market').innerHTML=`<div class="card-head"><div><h3>${esc(stageLabel(state.stage))}</h3><small>Outcome ดิบของ Stage + Candidate ที่ค้นจาก Train</small></div><span class="badge">${fmt(rows.length)} samples</span></div>${summaryTable(rows)}${candidateTable(activeResearch())}`;
+      return;
+    }
+    $('panel-market').innerHTML=`<div class="card-head"><div><h3>Market Map</h3><small>Stage ของ 10,000 แท่งและผล T+10 ดิบ</small></div><span class="badge">${fmt(rows.length)} samples</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th class="num">Samples</th><th class="num">%</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Playability</th></tr></thead><tbody>${state.groups.map(g=>`<tr class="clickable" data-stage-row="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td class="num">${fmt(g.rows.length)}</td><td class="num">${(g.rows.length/rows.length*100).toFixed(1)}%</td><td class="num">${p1(g.summary.all.highRate)}</td><td class="num">${p1(g.summary.all.lowRate)}</td><td class="num">${g.playability.score==null?'—':g.playability.score}</td></tr>`).join('')}</tbody></table></div>`;
     $('panel-market').querySelectorAll('[data-stage-row]').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.stageRow)));
   }
 
-  function renderPlayability() {
-    if (!state.samples.length) return;
-    const groups = CORE().groupByStage(state.samples);
-    $('panel-playability').innerHTML = `
-      <div class="card-head"><div><h3>Playability Map</h3><small>คะแนนนี้ใช้ Validation/Holdout เป็นหลัก เพื่อบอกว่าช่วงใด “เดาง่าย/ยาก”</small></div><span class="badge purple">ไม่ใช่ Direction</span></div>
-      <div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th class="num">Score</th><th>สถานะ</th><th class="num">n</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>
-      ${groups.map(g=>{
-        const p=g.playability,s=p.stats;
-        const cls=p.level==='good'?'play-good':p.level==='watch'?'play-watch':'play-hard';
-        return `<tr class="clickable" data-play-stage="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td class="num ${cls}">${p.score==null?'—':p.score}</td><td class="${cls}">${esc(p.label)}</td><td class="num">${fmt(g.rows.length)}</td><td class="num">${p1(s.validation.bestRate)}</td><td class="num">${p1(s.holdout.bestRate)}</td></tr>`;
-      }).join('')}
-      </tbody></table></div>
-      <div class="method-note">ถ้า Stage ใดตัวเลข Train สวย แต่ Validation/Holdout ไม่ตาม คะแนนจะถูกลดลงเอง และถ้าจำนวนตัวอย่างน้อยจะยังไม่ถูกยกให้เป็นช่วงน่าเล่นค่ะ</div>
-    `;
+  function renderPlayability(){
+    $('panel-playability').innerHTML=`<div class="card-head"><div><h3>Playability Map</h3><small>แต่ละ Stage ค้น Condition จาก Train เท่านั้น แล้วเอา Condition + Direction เดิมไปสอบ Validation/Holdout</small></div><span class="badge purple">NO OOS DIRECTION LEAK</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th>Auto Candidate</th><th>ทิศ</th><th class="num">Score</th><th class="num">Stability</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>${state.groups.map(g=>{const c=g.research.candidate,e=c?.evaluation,p=g.playability,cls=p.level==='good'?'play-good':p.level==='watch'?'play-watch':'play-hard';return `<tr class="clickable" data-play-stage="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td>${esc(conditionText(c?.conditions||[]))}</td><td>${esc(c?.direction||'—')}</td><td class="num ${cls}">${p.score==null?'—':p.score}</td><td class="num">${stabilityLabel(p.stability)}</td><td class="num">${p1(e?.validation?.winRate)}</td><td class="num">${p1(e?.holdout?.winRate)}</td></tr>`;}).join('')}</tbody></table></div><div class="method-note">ตัวอย่างสำคัญ: Sideway ทั้งก้อนอาจ HIGH/LOW 50/50 แต่ถ้าภายในมี “ขอบกรอบ + Feature” ที่ค้นจาก Train แล้วรอดข้อมูลใหม่ Stage นั้นยังสามารถมี Playability สูงได้ค่ะ</div>`;
     $('panel-playability').querySelectorAll('[data-play-stage]').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.playStage)));
   }
 
-  function populateFeatureControls() {
-    const stageOptions = ['<option value="">ALL MARKET</option>'].concat(CORE().groupByStage(state.samples).map(g=>`<option value="${esc(g.stage)}">${esc(stageLabel(g.stage))}</option>`));
-    $('feature-stage').innerHTML = stageOptions.join('');
-    $('combo-stage').innerHTML = stageOptions.join('');
-    $('feature-key').innerHTML = CORE().featureMeta.map(f=>`<option value="${esc(f.key)}">${esc(f.label)}</option>`).join('');
+  function populateFeatureControls(){
+    const stages=['<option value="">ALL MARKET</option>'].concat(state.groups.map(g=>`<option value="${esc(g.stage)}">${esc(stageLabel(g.stage))}</option>`));
+    $('feature-stage').innerHTML=stages.join('');$('combo-stage').innerHTML=stages.join('');
+    $('feature-key').innerHTML=CORE().featureMeta.map(f=>`<option value="${esc(f.key)}">${esc(f.label)}</option>`).join('');
+  }
+  function syncStageSelects(){if($('feature-stage'))$('feature-stage').value=state.stage||'';if($('combo-stage'))$('combo-stage').value=state.stage||'';}
+
+  function renderFeatureExplorer(){
+    if(!state.samples.length)return;
+    const stage=$('feature-stage')?.value||state.stage||'',key=$('feature-key')?.value||CORE().featureMeta[0].key;
+    const rows=stage?state.samples.filter(x=>x.stage===stage):state.samples,bins=CORE().featureBins(rows,key,5),meta=CORE().featureMeta.find(x=>x.key===key);
+    $('feature-results').innerHTML=`<div class="card-head"><div><h3>${esc(meta?.label||key)}</h3><small>${stage?stageLabel(stage):'ALL MARKET'} · แบ่งค่าจริง 5 ช่วงเพื่อดูความสัมพันธ์กับ T+10</small></div><span class="badge">${fmt(rows.length)} samples</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ช่วงค่า</th><th class="num">n</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Validation HIGH</th><th class="num">Holdout HIGH</th></tr></thead><tbody>${bins.map(b=>`<tr><td>${n2(b.lo)} → ${n2(b.hi)}</td><td class="num">${fmt(b.rows.length)}</td><td class="num">${p1(b.stats.all.highRate)}</td><td class="num">${p1(b.stats.all.lowRate)}</td><td class="num">${p1(b.stats.validation.highRate)}</td><td class="num">${p1(b.stats.holdout.highRate)}</td></tr>`).join('')}</tbody></table></div><div class="method-note">Explorer เป็นเครื่องมือดูข้อมูล ไม่ใช่ตัวอนุมัติสูตร ส่วน Best Conditions จะค้น threshold จาก Train แยกต่างหากค่ะ</div>`;
   }
 
-  function syncStageSelects() {
-    if ($('feature-stage')) $('feature-stage').value = state.stage || '';
-    if ($('combo-stage')) $('combo-stage').value = state.stage || '';
+  function renderComboFilters(){if(!state.samples.length||$('combo-filters').children.length)return;addComboFilter();}
+  function addComboFilter(prefill={}){
+    const wrap=document.createElement('div');wrap.className='filter-row';
+    const opts=CORE().featureMeta.map(f=>`<option value="${esc(f.key)}" ${prefill.field===f.key?'selected':''}>${esc(f.label)}</option>`).join('');
+    wrap.innerHTML=`<select class="combo-field">${opts}</select><select class="combo-op"><option>&gt;</option><option>&gt;=</option><option>&lt;</option><option>&lt;=</option></select><input class="combo-value" inputmode="decimal" placeholder="ค่า" value="${esc(prefill.value??'')}"><button type="button">×</button>`;
+    if(prefill.op)wrap.querySelector('.combo-op').value=prefill.op;wrap.querySelector('button').addEventListener('click',()=>wrap.remove());$('combo-filters').append(wrap);
+  }
+  function currentConditions(){
+    const c=[],stage=$('combo-stage').value;if(stage)c.push({field:'stage',op:'=',value:stage});
+    $('combo-filters').querySelectorAll('.filter-row').forEach(row=>{const value=row.querySelector('.combo-value').value.trim();if(value!=='')c.push({field:row.querySelector('.combo-field').value,op:row.querySelector('.combo-op').value,value:Number(value)});});
+    return c;
+  }
+  function renderComboResults(result){
+    if(!state.samples.length)return;
+    const r=result||CORE().evaluateConditionSet(state.samples,currentConditions()),e=r.evaluation,p=r.playability;
+    $('combo-results').innerHTML=`<div class="method-note">${esc(conditionText(r.conditions))}</div><div class="combo-result"><div class="kpi"><span>MATCHING</span><b>${fmt(r.rows.length)}</b><em>samples</em></div><div class="kpi"><span>DIRECTION</span><b>${esc(r.direction||'—')}</b><em>ล็อกจาก Train</em></div><div class="kpi"><span>TRAIN</span><b>${p1(e?.train?.winRate)}</b><em>${fmt(e?.train?.n||0)}</em></div><div class="kpi"><span>VALIDATION</span><b>${p1(e?.validation?.winRate)}</b><em>${fmt(e?.validation?.n||0)}</em></div><div class="kpi"><span>HOLDOUT</span><b>${p1(e?.holdout?.winRate)}</b><em>${fmt(e?.holdout?.n||0)}</em></div></div>`;
+    if(state.compareA&&e){
+      const a=state.compareA.evaluation;
+      $('combo-compare').innerHTML=`<div class="card-head" style="margin-top:10px"><div><h3>Compare A vs B</h3><small>ทั้ง A/B ล็อก Direction จาก Train ของตัวเอง</small></div></div><div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th>Direction</th><th class="num">Train</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody><tr><td>A</td><td>${esc(state.compareA.direction)}</td><td class="num">${p1(a.train.winRate)}</td><td class="num">${p1(a.validation.winRate)}</td><td class="num">${p1(a.holdout.winRate)}</td></tr><tr><td>B</td><td>${esc(r.direction)}</td><td class="num">${p1(e.train.winRate)}</td><td class="num">${p1(e.validation.winRate)}</td><td class="num">${p1(e.holdout.winRate)}</td></tr></tbody></table></div>`;
+    }else $('combo-compare').innerHTML='';
+  }
+  function runCombo(){const r=CORE().evaluateConditionSet(state.samples,currentConditions());renderComboResults(r);chooseSampleRows(r.rows);renderSample();updateInspector(r.rows,r);}
+  function saveCompareA(){const r=CORE().evaluateConditionSet(state.samples,currentConditions());if(!r.evaluation)return;state.compareA=r;renderComboResults(r);}
+  function saveCandidate(){
+    const r=CORE().evaluateConditionSet(state.samples,currentConditions());if(!r.evaluation)return;
+    const c={id:'CAND-'+Date.now(),createdAt:Date.now(),symbol:state.session?.symbol,interval:state.session?.interval,conditions:r.conditions,n:r.rows.length,direction:r.direction,train:r.evaluation.train.winRate,validation:r.evaluation.validation.winRate,holdout:r.evaluation.holdout.winRate,playability:r.playability?.score};
+    state.candidates.unshift(c);saveCandidates();renderBest();
   }
 
-  function renderFeatureExplorer() {
-    if (!state.samples.length) return;
-    const stage = $('feature-stage')?.value || state.stage || '';
-    const key = $('feature-key')?.value || CORE().featureMeta[0].key;
-    const rows = stage ? state.samples.filter(x=>x.stage===stage) : state.samples;
-    const bins = CORE().featureBins(rows,key,5);
-    const meta = CORE().featureMeta.find(x=>x.key===key);
-    $('feature-results').innerHTML = `
-      <div class="card-head"><div><h3>${esc(meta?.label || key)}</h3><small>${stage ? stageLabel(stage) : 'ALL MARKET'} · แบ่งช่วงค่าตามข้อมูลจริง 5 กลุ่ม</small></div><span class="badge">${fmt(rows.length)} samples</span></div>
-      <div class="table-wrap"><table class="tbl"><thead><tr><th>ช่วงค่า</th><th class="num">n</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Validation best</th><th class="num">Holdout best</th><th class="num">Playability</th></tr></thead><tbody>
-      ${bins.map(b=>`<tr><td>${n2(b.lo)} → ${n2(b.hi)}</td><td class="num">${fmt(b.rows.length)}</td><td class="num">${p1(b.stats.all.highRate)}</td><td class="num">${p1(b.stats.all.lowRate)}</td><td class="num">${p1(b.stats.validation.bestRate)}</td><td class="num">${p1(b.stats.holdout.bestRate)}</td><td class="num">${b.playability.score==null?'—':b.playability.score}</td></tr>`).join('')}
-      </tbody></table></div>
-      <div class="method-note">หน้านี้ไม่ได้บอกว่าสูตรไหนต้องใช้ แต่ช่วยดูว่าเมื่อ Feature เปลี่ยน พฤติกรรม T+10 เปลี่ยนตามหรือไม่ และต้องดู Validation/Holdout ควบคู่กันค่ะ</div>
-    `;
+  function renderOutcome(){
+    const rows=activeRows(),traj=CORE().trajectorySummary(rows);
+    $('panel-outcome').innerHTML=`<div class="card-head"><div><h3>T+10 Outcome Explorer</h3><small>${state.stage?stageLabel(state.stage):'ALL MARKET'} · T+1…T+10 ใช้ดู Outcome เท่านั้น</small></div><span class="badge">${fmt(rows.length)} samples</span></div>${summaryTable(rows)}<div class="table-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>เวลา</th><th class="num">Avg move / ATR</th><th class="num">Median / ATR</th><th class="num">เหนือ Entry</th><th class="num">n</th></tr></thead><tbody>${traj.map(x=>`<tr><td>T+${x.minute}</td><td class="num">${n2(x.avgMoveAtr)}</td><td class="num">${n2(x.medianMoveAtr)}</td><td class="num">${p1(x.positiveRate)}</td><td class="num">${fmt(x.n)}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
-  function renderComboFilters() {
-    if (!state.samples.length) return;
-    if ($('combo-filters').children.length) return;
-    addComboFilter();
+  function renderSplit(){
+    const s=CORE().bySplit(state.samples),purge=state.samples.filter(x=>x.split==='PURGE').length,audit=CORE().auditDataset(state.samples);
+    $('panel-split').innerHTML=`<div class="card-head"><div><h3>Chronological Split</h3><small>60 / 20 / 20 ตามเวลา + Purge ทุก Sample ที่ Settlement อาจซ้อนข้ามรอยต่อ</small></div><span class="badge ${audit.ok?'good':'bad'}">${audit.ok?'Integrity PASS':'Integrity FAIL'}</span></div><div class="timeline"><div class="train">TRAIN</div><div class="purge"></div><div class="val">VALIDATION</div><div class="purge"></div><div class="hold">HOLDOUT</div></div><div class="split-grid"><div class="split-box"><span>TRAIN</span><b>${fmt(s.train.n)}</b><small>ใช้ค้น Condition</small></div><div class="split-box"><span>VALIDATION</span><b>${fmt(s.validation.n)}</b><small>ไม่ใช้ค้น threshold</small></div><div class="split-box"><span>HOLDOUT</span><b>${fmt(s.holdout.n)}</b><small>สอบรอบท้าย</small></div></div><div class="method-note">Purge ${fmt(purge)} samples · Candidate ภายในแต่ละ Stage ถูกเลือกจาก Train เท่านั้นค่ะ</div><div class="integrity">${audit.issues.length?audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join(''):'<div class="integrity-row"><span>Exact T+10 / T0 cutoff / finite features / no split overlap</span><b class="ok">PASS</b></div>'}</div>`;
   }
 
-  function addComboFilter(prefill={}) {
-    const wrap = document.createElement('div');
-    wrap.className='filter-row';
-    const opts = CORE().featureMeta.map(f=>`<option value="${esc(f.key)}" ${prefill.field===f.key?'selected':''}>${esc(f.label)}</option>`).join('');
-    wrap.innerHTML = `<select class="combo-field">${opts}</select><select class="combo-op"><option>&gt;</option><option>&gt;=</option><option>&lt;</option><option>&lt;=</option></select><input class="combo-value" inputmode="decimal" placeholder="ค่า" value="${esc(prefill.value ?? '')}"><button type="button">×</button>`;
-    if (prefill.op) wrap.querySelector('.combo-op').value=prefill.op;
-    wrap.querySelector('button').addEventListener('click',()=>wrap.remove());
-    $('combo-filters').append(wrap);
-  }
-
-  function currentConditions() {
-    const conditions = [];
-    const stage = $('combo-stage').value;
-    if (stage) conditions.push({field:'stage',op:'=',value:stage});
-    $('combo-filters').querySelectorAll('.filter-row').forEach(row=>{
-      const field=row.querySelector('.combo-field').value;
-      const op=row.querySelector('.combo-op').value;
-      const value=row.querySelector('.combo-value').value.trim();
-      if (value !== '') conditions.push({field,op,value:Number(value)});
-    });
-    return conditions;
-  }
-
-  function renderComboResults(rows, conditions=currentConditions()) {
-    if (!state.samples.length) return;
-    const s=CORE().bySplit(rows);
-    const play=CORE().playability(rows);
-    const condText = conditions.length ? conditions.map(c=>c.field==='stage' ? 'Stage = '+stageLabel(c.value) : `${c.field} ${c.op} ${c.value}`).join(' · ') : 'ไม่มีเงื่อนไข';
-    $('combo-results').innerHTML = `
-      <div class="method-note">${esc(condText)}</div>
-      <div class="combo-result">
-        <div class="kpi"><span>MATCHING</span><b>${fmt(rows.length)}</b><em>samples</em></div>
-        <div class="kpi"><span>HIGH</span><b>${p1(s.all.highRate)}</b><em>${fmt(s.all.high)}</em></div>
-        <div class="kpi"><span>LOW</span><b>${p1(s.all.lowRate)}</b><em>${fmt(s.all.low)}</em></div>
-        <div class="kpi"><span>PLAYABILITY</span><b>${play.score==null?'—':play.score}</b><em>${esc(play.label)}</em></div>
-      </div>
-      ${summaryTable(rows)}
-    `;
-    if (state.compareA) {
-      const a=state.compareA.summary,b=CORE().bySplit(rows);
-      $('combo-compare').innerHTML = `<div class="card-head" style="margin-top:10px"><div><h3>Compare A vs B</h3><small>A = เงื่อนไขที่บันทึกไว้ · B = เงื่อนไขปัจจุบัน</small></div></div>
-      <div class="table-wrap"><table class="tbl"><thead><tr><th>ชุด</th><th class="num">n</th><th>Best side</th><th class="num">Train</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>
-      <tr><td>A</td><td class="num">${fmt(a.all.decided)}</td><td>${a.all.bestSide||'—'}</td><td class="num">${p1(a.train.bestRate)}</td><td class="num">${p1(a.validation.bestRate)}</td><td class="num">${p1(a.holdout.bestRate)}</td></tr>
-      <tr><td>B</td><td class="num">${fmt(b.all.decided)}</td><td>${b.all.bestSide||'—'}</td><td class="num">${p1(b.train.bestRate)}</td><td class="num">${p1(b.validation.bestRate)}</td><td class="num">${p1(b.holdout.bestRate)}</td></tr>
-      </tbody></table></div>`;
-    } else $('combo-compare').innerHTML='';
-  }
-
-  function runCombo() {
-    const conditions=currentConditions();
-    const rows=CORE().applyConditions(state.samples,conditions);
-    renderComboResults(rows,conditions);
-    chooseSampleRows(rows);
-    renderSample();
-    updateInspector(rows);
-  }
-
-  function saveCompareA() {
-    if (!state.samples.length) return;
-    const conditions=currentConditions();
-    const rows=CORE().applyConditions(state.samples,conditions);
-    state.compareA={conditions,summary:CORE().bySplit(rows)};
-    renderComboResults(rows,conditions);
-  }
-
-  function saveCandidate() {
-    if (!state.samples.length) return;
-    const conditions=currentConditions();
-    const rows=CORE().applyConditions(state.samples,conditions);
-    const summary=CORE().bySplit(rows);
-    const play=CORE().playability(rows);
-    const c={
-      id:'CAND-'+Date.now(),
-      createdAt:Date.now(),
-      symbol:state.session?.symbol,
-      conditions,
-      n:rows.length,
-      bestSide:summary.all.bestSide,
-      train:summary.train.bestRate,
-      validation:summary.validation.bestRate,
-      holdout:summary.holdout.bestRate,
-      playability:play.score
-    };
-    state.candidates.unshift(c);
-    saveCandidates();
-    renderBest();
-  }
-
-  function renderOutcome() {
-    if (!state.samples.length) return;
-    const rows=activeRows();
-    const traj=CORE().trajectorySummary(rows);
-    $('panel-outcome').innerHTML = `
-      <div class="card-head"><div><h3>T+10 Outcome Explorer</h3><small>${state.stage?stageLabel(state.stage):'ALL MARKET'} · ข้อมูล T+1…T+10 ใช้เพื่อดู Outcome เท่านั้น ไม่ย้อนกลับเป็น Predictor ของ T0</small></div><span class="badge">${fmt(rows.length)} samples</span></div>
-      ${summaryTable(rows)}
-      <div class="table-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>เวลา</th><th class="num">Avg move / ATR</th><th class="num">Median / ATR</th><th class="num">อยู่เหนือ Entry</th><th class="num">n</th></tr></thead><tbody>
-      ${traj.map(x=>`<tr><td>T+${x.minute}</td><td class="num">${n2(x.avgMoveAtr)}</td><td class="num">${n2(x.medianMoveAtr)}</td><td class="num">${p1(x.positiveRate)}</td><td class="num">${fmt(x.n)}</td></tr>`).join('')}
-      </tbody></table></div>
-    `;
-  }
-
-  function renderSplit() {
-    if (!state.samples.length) return;
-    const s=CORE().bySplit(state.samples);
-    const purge=state.samples.filter(x=>x.split==='PURGE').length;
-    const audit=CORE().auditDataset(state.samples);
-    $('panel-split').innerHTML = `
-      <div class="card-head"><div><h3>Chronological Split</h3><small>เรียงตามเวลา 60 / 20 / 20 และเว้น Purge รอบรอยต่อเพื่อไม่ให้ T+10 ซ้อนกันข้ามชุด</small></div><span class="badge ${audit.ok?'good':'bad'}">${audit.ok?'Integrity PASS':'Integrity FAIL'}</span></div>
-      <div class="timeline"><div class="train">TRAIN</div><div class="purge"></div><div class="val">VALIDATION</div><div class="purge"></div><div class="hold">HOLDOUT</div></div>
-      <div class="split-grid">
-        <div class="split-box"><span>TRAIN</span><b>${fmt(s.train.n)}</b><small>60% ต้นข้อมูล</small></div>
-        <div class="split-box"><span>VALIDATION</span><b>${fmt(s.validation.n)}</b><small>ช่วงถัดมา</small></div>
-        <div class="split-box"><span>HOLDOUT</span><b>${fmt(s.holdout.n)}</b><small>ช่วงท้ายสุด</small></div>
-      </div>
-      <div class="method-note">Purge: ${fmt(purge)} samples · Holdout ไม่ถูกใช้สร้างเงื่อนไขในหน้าจอนี้โดยอัตโนมัติ ผู้ใช้เห็นผลเพื่อประเมิน Candidate เท่านั้นค่ะ</div>
-      <div class="integrity">${audit.issues.length?audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join(''):'<div class="integrity-row"><span>T+10 exact / Feature finite / Split overlap</span><b class="ok">PASS</b></div>'}</div>
-    `;
-  }
-
-  function renderBest() {
-    if (!state.samples.length) return;
-    const ranked=CORE().rankStages(state.samples);
-    const best=ranked.slice(0,5),avoid=ranked.slice().reverse().slice(0,5);
-    const cand = state.candidates.filter(c=>!state.session?.symbol || c.symbol===state.session.symbol).slice(0,8);
-    $('panel-best').innerHTML = `
-      <div class="card-head"><div><h3>Best / Avoid</h3><small>จัดอันดับ Stage จากข้อมูล OOS; Candidate ที่ผู้ใช้เก็บจะแสดงด้านล่าง</small></div><span class="badge purple">Research only</span></div>
-      <div class="table-wrap"><table class="tbl"><thead><tr><th>น่าเล่น</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th><th class="num">n</th></tr></thead><tbody>
-      ${best.map(x=>`<tr class="clickable" data-best-stage="${esc(x.stage)}"><td>${esc(stageLabel(x.stage))}</td><td class="num play-good">${x.playability.score}</td><td class="num">${p1(x.playability.stats.validation.bestRate)}</td><td class="num">${p1(x.playability.stats.holdout.bestRate)}</td><td class="num">${fmt(x.rows.length)}</td></tr>`).join('')}
-      </tbody></table></div>
-      <div class="table-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>ควรระวัง / หลีกเลี่ยง</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th><th class="num">n</th></tr></thead><tbody>
-      ${avoid.map(x=>`<tr class="clickable" data-best-stage="${esc(x.stage)}"><td>${esc(stageLabel(x.stage))}</td><td class="num play-hard">${x.playability.score}</td><td class="num">${p1(x.playability.stats.validation.bestRate)}</td><td class="num">${p1(x.playability.stats.holdout.bestRate)}</td><td class="num">${fmt(x.rows.length)}</td></tr>`).join('')}
-      </tbody></table></div>
-      <div class="candidate-list">${cand.length?cand.map(c=>`<div class="candidate"><b>${esc(c.bestSide||'—')} · Holdout ${p1(c.holdout)} · Playability ${c.playability??'—'}</b><span>${fmt(c.n)} samples · ${esc(c.conditions.map(x=>x.field==='stage'?'Stage='+stageLabel(x.value):x.field+x.op+x.value).join(' · '))}</span></div>`).join(''):'<div class="empty">ยังไม่มี Candidate ที่บันทึกไว้</div>'}</div>
-    `;
+  function renderBest(){
+    const valid=state.groups.filter(x=>x.playability.score!=null).slice().sort((a,b)=>b.playability.score-a.playability.score);
+    const best=valid.slice(0,7),avoid=state.groups.slice().sort((a,b)=>(a.playability.score??-1)-(b.playability.score??-1)).slice(0,7);
+    const saved=state.candidates.filter(c=>(!state.session?.symbol||c.symbol===state.session.symbol)&&(!state.session?.interval||c.interval===state.session.interval)).slice(0,8);
+    const row=g=>{const c=g.research.candidate,e=c?.evaluation;return `<tr class="clickable" data-best-stage="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td>${esc(conditionText(c?.conditions||[]))}</td><td>${esc(c?.direction||'—')}</td><td class="num">${g.playability.score??'—'}</td><td class="num">${p1(e?.validation?.winRate)}</td><td class="num">${p1(e?.holdout?.winRate)}</td></tr>`;};
+    $('panel-best').innerHTML=`<div class="card-head"><div><h3>Best Conditions / Avoid Zones</h3><small>นี่คือการค้น Condition อัตโนมัติภายในแต่ละ Stage ไม่ใช่แค่จัดอันดับ Stage ดิบ</small></div><span class="badge purple">Train-search → OOS-check</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>สนามน่าเล่น</th><th>Best Condition</th><th>ทิศ</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>${best.map(row).join('')}</tbody></table></div><div class="table-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>สนามยาก / ควรระวัง</th><th>Condition ที่ดีที่สุดที่ Train หาได้</th><th>ทิศ</th><th class="num">Playability</th><th class="num">Validation</th><th class="num">Holdout</th></tr></thead><tbody>${avoid.map(row).join('')}</tbody></table></div><div class="candidate-list">${saved.length?saved.map(c=>`<div class="candidate"><b>${esc(c.direction||'—')} · Validation ${p1(c.validation)} · Holdout ${p1(c.holdout)} · Playability ${c.playability??'—'}</b><span>${fmt(c.n)} samples · ${esc(conditionText(c.conditions))}</span></div>`).join(''):'<div class="empty">ยังไม่มี Manual Candidate ที่บันทึกไว้</div>'}</div>`;
     $('panel-best').querySelectorAll('[data-best-stage]').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.bestStage)));
   }
 
-  function updateInspector(rows) {
-    const s=CORE()?.bySplit?.(rows || []);
-    const play=CORE()?.playability?.(rows || []);
-    $('sample-count-badge').textContent=fmt(rows?.length || 0)+' samples';
-    if (!s || !play || !rows?.length) {
-      $('play-hero').className='play-hero';
-      $('play-hero').innerHTML='<small>PLAYABILITY</small><strong>—</strong><span>รอ Dataset</span>';
-      for (const id of ['kpi-high','kpi-low','kpi-side','kpi-hold','split-train','split-val','split-hold']) $(id).textContent='—';
-      $('integrity-box').innerHTML='';
-      return;
-    }
-    $('play-hero').className='play-hero '+(play.level||'');
-    $('play-hero').innerHTML=`<small>PLAYABILITY</small><strong>${play.score==null?'—':play.score+'/100'}</strong><span>${esc(play.label)}</span>`;
-    $('kpi-high').textContent=p1(s.all.highRate);$('kpi-high-n').textContent=fmt(s.all.high)+' wins';
-    $('kpi-low').textContent=p1(s.all.lowRate);$('kpi-low-n').textContent=fmt(s.all.low)+' wins';
-    $('kpi-side').textContent=s.all.bestSide||'—';
-    $('kpi-hold').textContent=p1(s.holdout.bestRate);$('kpi-hold-n').textContent=fmt(s.holdout.decided)+' decided';
-    $('split-train').textContent=p1(s.train.bestRate);$('split-train-n').textContent=fmt(s.train.decided)+' samples';
-    $('split-val').textContent=p1(s.validation.bestRate);$('split-val-n').textContent=fmt(s.validation.decided)+' samples';
-    $('split-hold').textContent=p1(s.holdout.bestRate);$('split-hold-n').textContent=fmt(s.holdout.decided)+' samples';
-
-    const audit=CORE().auditDataset(state.samples);
-    $('integrity-box').innerHTML = audit.issues.length
-      ? audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join('')
-      : '<div class="integrity-row"><span>Dataset integrity</span><b class="ok">PASS</b></div>';
+  function updateInspector(rows,manualResult=null){
+    $('sample-count-badge').textContent=fmt(rows?.length||0)+' samples';
+    if(!rows?.length){$('play-hero').className='play-hero';$('play-hero').innerHTML='<small>PLAYABILITY</small><strong>—</strong><span>รอ Dataset</span>';for(const id of ['kpi-side','kpi-hold','kpi-stability','kpi-matching','split-train','split-val','split-hold'])$(id).textContent='—';$('integrity-box').innerHTML='';return;}
+    const research=manualResult||activeResearch(),c=manualResult||research?.candidate,p=manualResult?.playability||research?.playability,e=manualResult?.evaluation||research?.candidate?.evaluation;
+    $('play-hero').className='play-hero '+(p?.level||'');$('play-hero').innerHTML=`<small>PLAYABILITY</small><strong>${p?.score==null?'—':p.score+'/100'}</strong><span>${esc(p?.label||'ข้อมูลยังไม่พอ')}</span>`;
+    $('kpi-side').textContent=c?.direction||'—';$('kpi-hold').textContent=p1(e?.holdout?.winRate);$('kpi-hold-n').textContent=fmt(e?.holdout?.n||0)+' samples';$('kpi-stability').textContent=stabilityLabel(p?.stability);$('kpi-matching').textContent=fmt((e?.train?.n||0)+(e?.validation?.n||0)+(e?.holdout?.n||0));
+    $('split-train').textContent=p1(e?.train?.winRate);$('split-train-n').textContent=fmt(e?.train?.n||0)+' matches';$('split-val').textContent=p1(e?.validation?.winRate);$('split-val-n').textContent=fmt(e?.validation?.n||0)+' matches';$('split-hold').textContent=p1(e?.holdout?.winRate);$('split-hold-n').textContent=fmt(e?.holdout?.n||0)+' matches';
+    $('candidate-rule').innerHTML='<b>Candidate:</b> '+esc(conditionText(c?.conditions||[]))+'<br><b>Direction:</b> '+esc(c?.direction||'—')+' · ถูกเลือกจาก Train เท่านั้น';
+    const audit=CORE().auditDataset(state.samples);$('integrity-box').innerHTML=audit.issues.length?audit.issues.map(x=>`<div class="integrity-row"><span>${esc(x.text)}</span><b class="fail">${fmt(x.count)}</b></div>`).join(''):'<div class="integrity-row"><span>Dataset integrity</span><b class="ok">PASS</b></div>';
   }
 
-  function chooseSampleRows(rows) {
-    state.sampleRows = (rows || []).slice();
-    state.sampleCursor = 0;
-    state.reveal = false;
-  }
-
-  function ensureChart() {
-    if (state.chart || !globalThis.LightweightCharts) return;
-    const host=$('chart');
-    state.chart=LightweightCharts.createChart(host,{
-      width:host.clientWidth,height:host.clientHeight,
-      layout:{background:{type:'solid',color:'#071018'},textColor:'#7890a8',fontSize:10},
-      grid:{vertLines:{color:'#112333'},horzLines:{color:'#112333'}},
-      rightPriceScale:{borderColor:'#20374d'},timeScale:{borderColor:'#20374d',timeVisible:true,secondsVisible:false},
-      crosshair:{mode:0}
-    });
-    if (state.chart.addSeries && LightweightCharts.CandlestickSeries) {
-      state.series=state.chart.addSeries(LightweightCharts.CandlestickSeries,{
-        upColor:'#4bc99b',downColor:'#d86f88',borderUpColor:'#4bc99b',borderDownColor:'#d86f88',wickUpColor:'#4bc99b',wickDownColor:'#d86f88'
-      });
-    } else {
-      state.series=state.chart.addCandlestickSeries({
-        upColor:'#4bc99b',downColor:'#d86f88',borderUpColor:'#4bc99b',borderDownColor:'#d86f88',wickUpColor:'#4bc99b',wickDownColor:'#d86f88'
-      });
-    }
+  function chooseSampleRows(rows){state.sampleRows=(rows||[]).slice();state.sampleCursor=0;state.reveal=false;}
+  function ensureChart(){
+    if(state.chart||!globalThis.LightweightCharts)return;const host=$('chart');
+    state.chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:host.clientHeight,layout:{background:{type:'solid',color:'#071018'},textColor:'#7890a8',fontSize:10},grid:{vertLines:{color:'#112333'},horzLines:{color:'#112333'}},rightPriceScale:{borderColor:'#20374d'},timeScale:{borderColor:'#20374d',timeVisible:true,secondsVisible:false},crosshair:{mode:0}});
+    state.series=state.chart.addSeries&&LightweightCharts.CandlestickSeries?state.chart.addSeries(LightweightCharts.CandlestickSeries,{upColor:'#4bc99b',downColor:'#d86f88',borderUpColor:'#4bc99b',borderDownColor:'#d86f88',wickUpColor:'#4bc99b',wickDownColor:'#d86f88'}):state.chart.addCandlestickSeries({upColor:'#4bc99b',downColor:'#d86f88',borderUpColor:'#4bc99b',borderDownColor:'#d86f88',wickUpColor:'#4bc99b',wickDownColor:'#d86f88'});
     new ResizeObserver(()=>state.chart?.applyOptions({width:host.clientWidth,height:host.clientHeight})).observe(host);
   }
+  function chartData(bars){return bars.map(b=>({time:Math.floor(Number(b.time)/1000),open:Number(b.open),high:Number(b.high),low:Number(b.low),close:Number(b.close)}));}
+  function renderRawPreview(){
+    ensureChart();if(!state.series||!state.bars.length)return;
+    const slice=state.bars.slice(-Math.min(220,state.bars.length));state.series.setData(chartData(slice));state.chart.timeScale().fitContent();$('chart-empty').style.display='none';$('chart-title').textContent='Historical Preview · '+marketLabel(state.session?.symbol)+' '+(state.session?.interval||'');$('chart-meta').textContent=fmt(state.bars.length)+' bars · ตรวจข้อมูลก่อนสร้าง Dataset';$('sample-title').textContent='Preview ก่อน Train';$('sample-detail').textContent='กราฟนี้ยังไม่แสดง Future label หรือ Candidate';setBadge($('reveal-badge'),'Preview');$('chart-overlay').classList.remove('show');
+  }
+  function renderOverlay(sample){
+    const f=sample?.features;if(!f){$('chart-overlay').classList.remove('show');return;}
+    $('chart-overlay').innerHTML=`<b>${esc(stageLabel(sample.stage))}</b><br>EMA gap ${n2(f.emaDistance)} ATR · Momentum3 ${n2(f.momentum3)}<br>Rel.Vol ${n2(f.relativeVolume)} · Vol accel ${n2(f.volumeAcceleration)}<br>Range pos ${n2(f.rangePosition)} · Width ${n2(f.rangeWidthAtr)} ATR<br>Structure ${esc(f.structureState)} · Fib ${n2(f.fibPosition)} · nearest ${n2(f.fibNearest)}<br>5m ${f.htf5Direction??'—'} · 15m ${f.htf15Direction??'—'}`;
+    $('chart-overlay').classList.toggle('show',state.overlay);
+  }
+  function renderSample(){
+    ensureChart();const rows=state.sampleRows;
+    if(!rows.length||!state.series){if(state.bars.length)renderRawPreview();else $('chart-empty').style.display='grid';return;}
+    $('chart-empty').style.display='none';state.sampleCursor=Math.max(0,Math.min(rows.length-1,state.sampleCursor));const s=rows[state.sampleCursor],i=s.barIndex,from=Math.max(0,i-55),to=Math.min(state.bars.length-1,i+(state.reveal?s.horizonSteps:0));
+    state.series.setData(chartData(state.bars.slice(from,to+1)));if(state.priceLine){try{state.series.removePriceLine(state.priceLine);}catch{}}
+    state.priceLine=state.series.createPriceLine({price:s.entryPrice,color:'#9a82ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'T0'});state.chart.timeScale().fitContent();
+    $('chart-title').textContent=stageLabel(s.stage)+' · '+(state.sampleCursor+1)+' / '+rows.length;$('chart-meta').textContent=new Date(s.entryTime).toLocaleString('th-TH')+' · Entry '+n2(s.entryPrice);
+    $('sample-title').textContent='T0 · '+stageLabel(s.stage)+' · '+s.split;$('sample-detail').textContent=state.reveal?`T+10 = ${s.outcome} · Settlement ${n2(s.settlementPrice)} · Δ ${n2(s.deltaAtr)} ATR`:'Future ถูกซ่อน · Feature cutoff = เวลาปิดแท่ง T0';
+    setBadge($('reveal-badge'),state.reveal?'T+10 '+s.outcome:'Future ซ่อนอยู่',state.reveal?(s.outcome==='HIGH'?'good':s.outcome==='LOW'?'bad':'warn'):'');$('sample-reveal').textContent=state.reveal?'ซ่อนอนาคต':'Reveal T+10';renderOverlay(s);
+  }
+  function moveSample(d){if(!state.sampleRows.length)return;state.sampleCursor=(state.sampleCursor+d+state.sampleRows.length)%state.sampleRows.length;state.reveal=false;renderSample();}
 
-  function renderSample() {
-    ensureChart();
-    const rows=state.sampleRows;
-    if (!rows.length || !state.series) {
-      $('chart-empty').style.display='grid';
-      $('sample-title').textContent='ยังไม่มี Sample';
-      $('sample-detail').textContent='เลือก Stage หรือ Combination ที่มีข้อมูล';
-      return;
-    }
-    $('chart-empty').style.display='none';
-    state.sampleCursor=Math.max(0,Math.min(rows.length-1,state.sampleCursor));
-    const s=rows[state.sampleCursor];
-    const i=s.barIndex;
-    const from=Math.max(0,i-55);
-    const to=Math.min(state.bars.length-1,i+(state.reveal?10:0));
-    const data=state.bars.slice(from,to+1).map(b=>({
-      time:Math.floor(Number(b.time)/1000),open:Number(b.open),high:Number(b.high),low:Number(b.low),close:Number(b.close)
-    }));
-    state.series.setData(data);
-    if (state.priceLine) {
-      try { state.series.removePriceLine(state.priceLine); } catch {}
-    }
-    state.priceLine=state.series.createPriceLine({price:s.entryPrice,color:'#9a82ff',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'T0'});
-    state.chart.timeScale().fitContent();
-
-    $('chart-title').textContent=stageLabel(s.stage)+' · '+(state.sampleCursor+1)+' / '+rows.length;
-    $('chart-meta').textContent=new Date(s.entryTime).toLocaleString('th-TH')+' · Entry '+n2(s.entryPrice);
-    $('sample-title').textContent='T0 · '+stageLabel(s.stage)+' · '+s.split;
-    $('sample-detail').textContent=state.reveal
-      ? `T+10 = ${s.outcome} · Settlement ${n2(s.settlementPrice)} · Δ ${n2(s.deltaAtr)} ATR`
-      : 'อนาคต T+1…T+10 ถูกซ่อนอยู่ · Feature ใช้ข้อมูลถึง T0 เท่านั้น';
-    $('reveal-badge').textContent=state.reveal ? 'T+10 '+s.outcome : 'Future ซ่อนอยู่';
-    $('reveal-badge').className='badge '+(state.reveal?(s.outcome==='HIGH'?'good':s.outcome==='LOW'?'bad':'warn'):'');
-    $('sample-reveal').textContent=state.reveal?'ซ่อนอนาคต':'Reveal T+10';
+  function exportResearch(){
+    if(!state.samples.length)return;
+    const payload={schema:'aris-training2-research-export-v2',exportedAt:new Date().toISOString(),purpose:'Exact T+10 research. Conditions selected from Train; Validation/Holdout evaluation only.',session:{id:state.session?.id,datasetId:state.session?.datasetId,symbol:state.session?.symbol,interval:state.session?.interval,analysisStart:state.session?.analysisStart,analysisEnd:state.session?.analysisEnd},counts:{bars:state.bars.length,samples:state.samples.length},integrity:CORE().auditDataset(state.samples),features:CORE().featureMeta,stages:state.groups.map(g=>({stage:g.stage,n:g.rows.length,playability:g.playability,candidate:g.research.candidate})),manualCandidates:state.candidates};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ARIS-Training2-'+(state.session?.symbol||'MARKET')+'-'+Date.now()+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
   }
 
-  function moveSample(delta) {
-    if (!state.sampleRows.length) return;
-    state.sampleCursor=(state.sampleCursor+delta+state.sampleRows.length)%state.sampleRows.length;
-    state.reveal=false;
-    renderSample();
-  }
-
-  function exportResearch() {
-    if (!state.samples.length) return;
-    const groups=CORE().groupByStage(state.samples).map(g=>({
-      stage:g.stage,n:g.rows.length,playability:g.playability.score,label:g.playability.label,
-      train:g.summary.train,validation:g.summary.validation,holdout:g.summary.holdout
-    }));
-    const payload={
-      schema:'aris-training2-research-export-v1',
-      exportedAt:new Date().toISOString(),
-      purpose:'Exact T+10 market predictability research; no live mutation',
-      session:{id:state.session?.id,datasetId:state.session?.datasetId,symbol:state.session?.symbol,interval:'1m',analysisStart:state.session?.analysisStart,analysisEnd:state.session?.analysisEnd},
-      horizonMinutes:10,
-      counts:{bars:state.bars.length,samples:state.samples.length},
-      integrity:CORE().auditDataset(state.samples),
-      stages:groups,
-      candidates:state.candidates
-    };
-    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='ARIS-Training2-'+(state.session?.symbol||'MARKET')+'-'+Date.now()+'.json';
-    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
-  }
-
-  function bindTabs() {
-    $('tabs').querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
-      $('tabs').querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
-      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+btn.dataset.tab));
-    }));
-  }
-
-  function bind() {
-    $('go-chart').addEventListener('click',()=>location.href='index.html');
-    $('go-train1').addEventListener('click',()=>location.href='training.html');
+  function bindTabs(){$('tabs').querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{$('tabs').querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+btn.dataset.tab));}));}
+  function bind(){
+    $('go-chart').addEventListener('click',()=>location.href='index.html');$('go-train1').addEventListener('click',()=>location.href='training.html');
     $('market').innerHTML=MARKETS.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('');
-    $('bar-count').addEventListener('change',syncStartFromBarCount);
-    $('end-time').addEventListener('change',syncStartFromBarCount);
-    $('download-data').addEventListener('click',downloadData);
-    $('cancel-download').addEventListener('click',()=>state.controller?.abort?.());
-    $('refresh-sessions').addEventListener('click',refreshSessions);
-    $('use-session').addEventListener('click',useSelectedSession);
-    $('build-dataset').addEventListener('click',buildDataset);
-    $('export-research').addEventListener('click',exportResearch);
-    $('clear-stage').addEventListener('click',()=>setStage(null));
-    $('feature-stage').addEventListener('change',renderFeatureExplorer);
-    $('feature-key').addEventListener('change',renderFeatureExplorer);
-    $('refresh-feature').addEventListener('click',renderFeatureExplorer);
-    $('combo-add').addEventListener('click',()=>addComboFilter());
-    $('combo-run').addEventListener('click',runCombo);
-    $('combo-save-a').addEventListener('click',saveCompareA);
-    $('combo-save-candidate').addEventListener('click',saveCandidate);
-    $('combo-stage').addEventListener('change',runCombo);
-    $('sample-prev').addEventListener('click',()=>moveSample(-1));
-    $('sample-next').addEventListener('click',()=>moveSample(1));
-    $('sample-reveal').addEventListener('click',()=>{state.reveal=!state.reveal;renderSample();});
+    $('interval').addEventListener('change',async()=>{initTimeRange();await refreshSessions();});
+    $('bar-count').addEventListener('change',syncStartFromBarCount);$('end-time').addEventListener('change',syncStartFromBarCount);
+    $('download-data').addEventListener('click',downloadData);$('cancel-download').addEventListener('click',()=>state.controller?.abort?.());$('refresh-sessions').addEventListener('click',refreshSessions);$('use-session').addEventListener('click',useSelectedSession);$('build-dataset').addEventListener('click',buildDataset);$('export-research').addEventListener('click',exportResearch);$('clear-stage').addEventListener('click',()=>setStage(null));
+    $('feature-stage').addEventListener('change',renderFeatureExplorer);$('feature-key').addEventListener('change',renderFeatureExplorer);$('refresh-feature').addEventListener('click',renderFeatureExplorer);
+    $('combo-add').addEventListener('click',()=>addComboFilter());$('combo-run').addEventListener('click',runCombo);$('combo-save-a').addEventListener('click',saveCompareA);$('combo-save-candidate').addEventListener('click',saveCandidate);$('combo-stage').addEventListener('change',runCombo);
+    $('sample-prev').addEventListener('click',()=>moveSample(-1));$('sample-next').addEventListener('click',()=>moveSample(1));$('sample-reveal').addEventListener('click',()=>{state.reveal=!state.reveal;renderSample();});$('toggle-overlay').addEventListener('click',()=>{state.overlay=!state.overlay;renderSample();});
     bindTabs();
   }
 
-  async function init() {
-    if (!HD() || !CORE()) {
-      alert('Training 2 โหลดโมดูลไม่ครบค่ะ');
-      return;
-    }
-    initTimeRange();
-    bind();
-    await refreshSessions();
-    resetPanels();
+  async function init(){
+    if(!HD()||!CORE()){alert('Training 2 โหลดโมดูลไม่ครบค่ะ');return;}
+    initTimeRange();bind();await refreshSessions();resetPanels();
   }
-
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
-  else init();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

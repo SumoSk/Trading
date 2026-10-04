@@ -162,3 +162,25 @@ Research tabs:
 Training 2 V1 is successful when the user can take a large historical 1-minute dataset, build exact T+10 samples, inspect which market states and feature ranges are easier or harder to predict, validate those findings chronologically, visually inspect real examples, save candidates, and export the results without changing the Live Engine.
 
 The next project phase should only design a new live prediction engine after Training 2 has produced stable evidence about where the actual T+10 edge exists.
+
+
+## V2 brief-alignment update — 2026-10-04
+
+Training 2 now matches the original handoff brief more closely:
+
+- Playability is no longer calculated from the raw HIGH/LOW majority of a Stage.
+- For each Stage, Training 2 searches candidate feature thresholds on TRAIN only.
+- The selected Direction and Conditions are then locked and evaluated unchanged on VALIDATION and HOLDOUT.
+- Best Conditions therefore means an automatically discovered Train candidate, not merely the Stage with the highest raw HIGH/LOW imbalance.
+- Avoid Zones are Stages where the best Train-discovered candidate still fails to produce stable out-of-sample evidence.
+- T0 is the actual close time of the Entry bar, so Entry price and Entry timestamp refer to the same event.
+- Timeframes currently supported for exact +10-minute settlement are 1m, 5m and 10m.
+- The feature snapshot now includes volume acceleration, range width, candle pressure/sequence, HH-HL / LH-LL structure, support/resistance distance, Fibonacci context and causal 5m/15m context when the selected base timeframe permits it.
+- Market Stage now includes trend early/healthy/accelerating/mature/extended, pullback, sideway stable/edge/high-volume/chop, compression, breakout attempt/accepted/failed, exhaustion, reversal developing, shock and transition.
+- Historical data can be previewed before Dataset construction.
+- Data Quality now exposes missing, duplicate, invalid and extended-data coverage.
+- The chart has a Feature Overlay for inspecting the exact T0 snapshot.
+- Stability is displayed separately from Win Rate.
+- Integrity checks verify exact T+10, T0 feature cutoff, finite feature values and non-overlapping chronological split boundaries.
+
+The Live Engine is still not modified automatically by Training 2.
