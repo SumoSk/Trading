@@ -10,7 +10,7 @@
     session:null,bars:[],samples:[],groups:[],allResearch:null,stage:null,
     sampleRows:[],sampleCursor:0,reveal:false,overlay:false,
     chart:null,series:null,priceLine:null,controller:null,compareA:null,
-    candidates:loadCandidates(),featureRankCache:new Map(),comboTimer:null
+    candidates:loadCandidates(),holdoutTests:loadHoldoutTests(),featureRankCache:new Map(),comboTimer:null
   };
 
   const $=id=>document.getElementById(id);
@@ -33,6 +33,47 @@
   function setBadge(el,text,type=''){if(!el)return;el.textContent=text;el.className='badge'+(type?' '+type:'');}
   function loadCandidates(){try{const x=JSON.parse(localStorage.getItem('aris-training2-candidates-v2')||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
   function saveCandidates(){try{localStorage.setItem('aris-training2-candidates-v2',JSON.stringify(state.candidates.slice(0,40)));}catch{}}
+  function loadHoldoutTests(){try{const x=JSON.parse(localStorage.getItem('aris-training2-final-holdout-v1')||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
+  function saveHoldoutTests(){try{localStorage.setItem('aris-training2-final-holdout-v1',JSON.stringify(state.holdoutTests.slice(0,200)));}catch{}}
+  function developmentRows(rows){return (rows||[]).filter(x=>x.split==='TRAIN'||x.split==='VALIDATION');}
+  function setupFingerprint(stage,conditions,direction){
+    const normalized=(conditions||[]).map(c=>({field:c.field,op:c.op,value:Number(c.value)})).sort((a,b)=>(a.field+a.op+a.value).localeCompare(b.field+b.op+b.value));
+    const raw=JSON.stringify({schema:'training2-final-v1',stage:stage||'ALL',direction:direction||null,conditions:normalized});
+    let h=2166136261;
+    for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619);}
+    return (h>>>0).toString(16).padStart(8,'0');
+  }
+  function holdoutStateFor(group){
+    const c=group?.research?.candidate,d=group?.decision||decisionFor(group?.playability);
+    if(!c?.evaluation||!c.direction||!d?.showDirection)return {status:'NOT_READY',label:'ยังไม่พร้อมสอบ',record:null};
+    const datasetId=state.session?.datasetId||state.session?.id||'unknown';
+    const fingerprint=setupFingerprint(group.stage,c.conditions,c.direction);
+    const sameScope=state.holdoutTests.filter(x=>x.datasetId===datasetId&&x.stage===group.stage);
+    const current=sameScope.find(x=>x.fingerprint===fingerprint);
+    if(current)return {status:'TESTED',label:current.result?.verdict?.label||'TESTED',record:current,fingerprint};
+    if(sameScope.length)return {status:'INVALIDATED',label:'INVALIDATED · สูตรเปลี่ยนหลังเคยเปิด Holdout',record:null,fingerprint};
+    return {status:'LOCKED',label:'🔒 LOCKED · ยังไม่เปิด Holdout',record:null,fingerprint};
+  }
+  function holdoutText(group){
+    const h=holdoutStateFor(group);
+    if(h.status==='TESTED'){
+      const r=h.record?.result;
+      return `${r?.verdict?.label||'TESTED'} · ${p1(r?.holdout?.winRate)} · n=${fmt(r?.holdout?.n||0)}`;
+    }
+    return h.label;
+  }
+  function runAutoHoldout(stage){
+    const group=state.groups.find(x=>x.stage===stage);
+    if(!group)return;
+    const h=holdoutStateFor(group),c=group.research?.candidate;
+    if(h.status==='TESTED'){alert('Setup นี้สอบ Final Holdout แล้วค่ะ');return;}
+    if(h.status==='INVALIDATED'){alert('Holdout เดิมถูกเปิดไปแล้วและ Setup เปลี่ยนค่ะ ต้องใช้ Dataset/ช่วงเวลาใหม่เป็น Final Holdout');return;}
+    if(h.status!=='LOCKED'||!c?.evaluation){alert('Setup นี้ยังไม่พร้อมสอบ Holdout ค่ะ');return;}
+    const result=CORE().runFinalHoldout(state.samples,c.conditions,c.direction,c.evaluation.validation);
+    const record={id:'HOLD-'+Date.now(),datasetId:state.session?.datasetId||state.session?.id||'unknown',sessionId:state.session?.id||null,stage:group.stage,fingerprint:h.fingerprint,conditions:c.conditions,direction:c.direction,testedAt:Date.now(),result};
+    state.holdoutTests.unshift(record);saveHoldoutTests();
+    renderMarketPanel();renderPlayability();renderBest();updateInspector(activeRows());
+  }
   function intervalMs(){return CORE()?.intervalMs?.($('interval')?.value||'1m')||MINUTE;}
   function conditionText(conditions=[]){
     if(!conditions.length)return 'Baseline ของ Stage · ไม่มี filter เพิ่ม';
@@ -54,7 +95,7 @@
   function candidateRowsFor(group){
     const c=group?.research?.candidate;
     if(!c)return [];
-    return CORE().applyConditions(group.rows,c.conditions||[]);
+    return developmentRows(CORE().applyConditions(group.rows,c.conditions||[]));
   }
   function openAutoCandidate(stage){
     const group=state.groups.find(x=>x.stage===stage);
