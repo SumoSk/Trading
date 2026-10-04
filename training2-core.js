@@ -780,16 +780,10 @@
 
   function researchDecision(playability) {
     const p = playability || {};
-    if (p.score == null || p.level === 'insufficient') {
+    if (!p.evaluation && !Number.isFinite(p.validationRate)) {
       return { status:'INSUFFICIENT', label:'ข้อมูลยังไม่พอ', canTrade:false, showDirection:false };
     }
-    if (p.level === 'good') {
-      return { status:'PLAYABLE', label:'น่าเล่น', canTrade:true, showDirection:true };
-    }
-    if (p.level === 'watch') {
-      return { status:'SELECTIVE', label:'เลือกจังหวะ', canTrade:false, showDirection:true };
-    }
-    return { status:'AVOID', label:'เดายาก / งด', canTrade:false, showDirection:false };
+    return { status:'RESEARCH', label:'Research candidate', canTrade:false, showDirection:true };
   }
 
   function discoverFeatureUsefulness(rows) {
@@ -822,12 +816,14 @@
       }
       if (best) {
         best.decision = researchDecision(best.playability);
+        best.validationConfidence = wilsonLower(best.evaluation.validation.wins, best.evaluation.validation.n);
         out.push(best);
       }
     }
     return out.sort((a,b) => {
-      const pa = a.playability?.score ?? -1, pb = b.playability?.score ?? -1;
-      if (pb !== pa) return pb - pa;
+      const ac = Number.isFinite(a.validationConfidence) ? a.validationConfidence : -1;
+      const bc = Number.isFinite(b.validationConfidence) ? b.validationConfidence : -1;
+      if (bc !== ac) return bc - ac;
       return (b.evaluation?.validation?.n || 0) - (a.evaluation?.validation?.n || 0);
     });
   }
@@ -856,7 +852,14 @@
   function discoverBestConditions(samples) {
     return groupByStage(samples)
       .filter(x => x.research?.candidate?.status === 'OK')
-      .sort((a,b)=>(b.playability.score ?? -1)-(a.playability.score ?? -1));
+      .sort((a,b)=>{
+        const av=a.research?.candidate?.evaluation?.validation;
+        const bv=b.research?.candidate?.evaluation?.validation;
+        const as=av?wilsonLower(av.wins,av.n):-1;
+        const bs=bv?wilsonLower(bv.wins,bv.n):-1;
+        if(bs!==as)return bs-as;
+        return (bv?.n||0)-(av?.n||0);
+      });
   }
 
   function trajectorySummary(rows) {
