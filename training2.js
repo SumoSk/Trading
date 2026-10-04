@@ -43,22 +43,33 @@
     for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619);}
     return (h>>>0).toString(16).padStart(8,'0');
   }
+  function frozenSetupMap(){
+    const out={};
+    for(const g of state.groups||[]){
+      const c=g.research?.candidate,d=g.decision||decisionFor(g.playability);
+      if(c?.evaluation&&c.direction&&d?.showDirection)out[g.stage]=setupFingerprint(g.stage,c.conditions,c.direction);
+    }
+    return out;
+  }
   function holdoutStateFor(group){
     const c=group?.research?.candidate,d=group?.decision||decisionFor(group?.playability);
     if(!c?.evaluation||!c.direction||!d?.showDirection)return {status:'NOT_READY',label:'ยังไม่พร้อมสอบ',record:null};
     const datasetId=state.session?.datasetId||state.session?.id||'unknown';
     const fingerprint=setupFingerprint(group.stage,c.conditions,c.direction);
-    const sameScope=state.holdoutTests.filter(x=>x.datasetId===datasetId&&x.stage===group.stage);
-    const current=sameScope.find(x=>x.fingerprint===fingerprint);
+    const datasetTests=state.holdoutTests.filter(x=>x.datasetId===datasetId);
+    const current=datasetTests.find(x=>x.stage===group.stage&&x.fingerprint===fingerprint);
     if(current)return {status:'TESTED',label:current.result?.verdict?.label||'TESTED',record:current,fingerprint};
-    if(sameScope.length)return {status:'INVALIDATED',label:'INVALIDATED · สูตรเปลี่ยนหลังเคยเปิด Holdout',record:null,fingerprint};
+    if(datasetTests.length){
+      const frozen=datasetTests[datasetTests.length-1]?.frozenSetups||datasetTests[0]?.frozenSetups||{};
+      if(frozen[group.stage]!==fingerprint)return {status:'INVALIDATED',label:'INVALIDATED · Setup เปลี่ยนหลัง Holdout ถูกเปิด',record:null,fingerprint};
+    }
     return {status:'LOCKED',label:'🔒 LOCKED · ยังไม่เปิด Holdout',record:null,fingerprint};
   }
   function holdoutText(group){
     const h=holdoutStateFor(group);
     if(h.status==='TESTED'){
       const r=h.record?.result;
-      return `${r?.verdict?.label||'TESTED'} · ${p1(r?.holdout?.winRate)} · n=${fmt(r?.holdout?.n||0)}`;
+      return `${r?.verdict?.label||'TESTED'} · ${p1(r?.holdout?.winRate)} · n=${fmt(r?.holdout?.n||0)}${Number.isFinite(r?.verdict?.minRequired)?' · เกณฑ์ ≥'+p1(r.verdict.minRequired):''}`;
     }
     return h.label;
   }
@@ -70,7 +81,10 @@
     if(h.status==='INVALIDATED'){alert('Holdout เดิมถูกเปิดไปแล้วและ Setup เปลี่ยนค่ะ ต้องใช้ Dataset/ช่วงเวลาใหม่เป็น Final Holdout');return;}
     if(h.status!=='LOCKED'||!c?.evaluation){alert('Setup นี้ยังไม่พร้อมสอบ Holdout ค่ะ');return;}
     const result=CORE().runFinalHoldout(state.samples,c.conditions,c.direction,c.evaluation.validation);
-    const record={id:'HOLD-'+Date.now(),datasetId:state.session?.datasetId||state.session?.id||'unknown',sessionId:state.session?.id||null,stage:group.stage,fingerprint:h.fingerprint,conditions:c.conditions,direction:c.direction,testedAt:Date.now(),result};
+    const datasetId=state.session?.datasetId||state.session?.id||'unknown';
+    const prior=state.holdoutTests.find(x=>x.datasetId===datasetId);
+    const frozenSetups=prior?.frozenSetups||frozenSetupMap();
+    const record={id:'HOLD-'+Date.now(),datasetId,sessionId:state.session?.id||null,stage:group.stage,fingerprint:h.fingerprint,frozenSetups,conditions:c.conditions,direction:c.direction,testedAt:Date.now(),result};
     state.holdoutTests.unshift(record);saveHoldoutTests();
     renderMarketPanel();renderPlayability();renderBest();updateInspector(activeRows());
   }
