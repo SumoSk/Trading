@@ -274,6 +274,7 @@
         <header class="training-lab-head">
           <div><span class="training-kicker">HISTORICAL TRAINING</span><h2>Training Lab</h2></div>
           <div class="training-head-actions">
+            ${STANDALONE?'<button type="button" class="training-guide-open" id="training2-switch">เทรน 2</button>':''}
             <button type="button" class="training-guide-open" id="training-guide-open">คู่มือ</button>
             <button type="button" class="training-lab-close" id="training-lab-close">${STANDALONE?'← กลับกราฟ':'×'}</button>
           </div>
@@ -452,16 +453,30 @@
 
   function ensureButton(){
     let btn=byId('training-lab-open');
-    if(btn)return btn;
+    let btn2=byId('training2-open');
     const quick=byId('toolbar-more-quick')||document.querySelector('.toolbar-more-popover');
-    if(!quick)return null;
-    btn=document.createElement('button');
-    btn.id='training-lab-open';
-    btn.className='training-lab-open';
-    btn.type='button';
-    btn.textContent='เทรน';
-    btn.title='เปิด ARIS Training Lab';
-    quick.prepend(btn);
+    if(!quick)return btn||null;
+    if(!btn){
+      btn=document.createElement('button');
+      btn.id='training-lab-open';
+      btn.className='training-lab-open';
+      btn.type='button';
+      btn.textContent='เทรน 1';
+      btn.title='เปิด Training 1';
+      quick.prepend(btn);
+    }else{
+      btn.textContent='เทรน 1';
+      btn.title='เปิด Training 1';
+    }
+    if(!btn2){
+      btn2=document.createElement('button');
+      btn2.id='training2-open';
+      btn2.className='training-lab-open training2-open';
+      btn2.type='button';
+      btn2.textContent='เทรน 2';
+      btn2.title='เปิด Training 2 · T+10 Research Lab';
+      quick.insertBefore(btn2,btn);
+    }
     return btn;
   }
 
@@ -894,12 +909,21 @@
   function bind(){
     if(!STANDALONE){
       const btn=ensureButton();
-      if(!btn||btn.dataset.bound)return;
-      btn.dataset.bound='1';
-      btn.addEventListener('click',()=>{
-        const more=byId('toolbar-more');if(more?.open)more.open=false;
-        window.location.href='training.html';
-      });
+      const btn2=byId('training2-open');
+      if(btn&&!btn.dataset.bound){
+        btn.dataset.bound='1';
+        btn.addEventListener('click',()=>{
+          const more=byId('toolbar-more');if(more?.open)more.open=false;
+          window.location.href='training.html';
+        });
+      }
+      if(btn2&&!btn2.dataset.bound){
+        btn2.dataset.bound='1';
+        btn2.addEventListener('click',()=>{
+          const more=byId('toolbar-more');if(more?.open)more.open=false;
+          window.location.href='training2.html';
+        });
+      }
       return;
     }
 
@@ -908,6 +932,7 @@
     page.dataset.bound='1';
 
     byId('training-lab-close').addEventListener('click',()=>{window.location.href='index.html';});
+    byId('training2-switch')?.addEventListener('click',()=>{window.location.href='training2.html';});
     byId('train-challenge-open')?.addEventListener('click',async()=>{
       const game=globalThis.TenCandleChallengeV1;
       if(!game){alert('10-Candle Challenge ยังโหลดไม่พร้อมค่ะ');return;}
