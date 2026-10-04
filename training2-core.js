@@ -335,7 +335,7 @@
     ['atrCompression', 'ATR14 / ATR50'],
     ['distanceToRangeHighAtr', 'Distance to range high / ATR'],
     ['distanceToRangeLowAtr', 'Distance to range low / ATR']
-  ].map(([key, label]) => ({ key, label }));
+  ].map(([key, label]) => ({ key, label })));
 
   function quantile(sorted, q) {
     if (!sorted.length) return null;
