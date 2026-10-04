@@ -261,7 +261,7 @@
       $('panel-market').querySelector('[data-run-current-holdout]')?.addEventListener('click',()=>runAutoHoldout(state.stage));
       return;
     }
-    $('panel-market').innerHTML=`<div class="card-head"><div><h3>Market Map</h3><small>Stage ของ 10,000 แท่งและผล T+10 ดิบ</small></div><span class="badge">${fmt(rows.length)} samples</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th class="num">Samples</th><th class="num">%</th><th class="num">HIGH</th><th class="num">LOW</th><th class="num">Playability</th></tr></thead><tbody>${state.groups.map(g=>`<tr class="clickable" data-stage-row="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td class="num">${fmt(g.rows.length)}</td><td class="num">${(g.rows.length/rows.length*100).toFixed(1)}%</td><td class="num">${p1(g.summary.all.highRate)}</td><td class="num">${p1(g.summary.all.lowRate)}</td><td class="num">${g.playability.score==null?'—':g.playability.score}</td></tr>`).join('')}</tbody></table></div>`;
+    $('panel-market').innerHTML=`<div class="card-head"><div><h3>Market Map</h3><small>Stage distribution ทั้ง Dataset; Outcome แสดงเฉพาะ Train + Validation</small></div><span class="badge purple">HOLDOUT OUTCOME HIDDEN</span></div><div class="table-wrap"><table class="tbl"><thead><tr><th>Stage</th><th class="num">Samples</th><th class="num">%</th><th class="num">DEV HIGH</th><th class="num">DEV LOW</th><th class="num">Playability</th></tr></thead><tbody>${state.groups.map(g=>{const ds=CORE().stats(developmentRows(g.rows));return `<tr class="clickable" data-stage-row="${esc(g.stage)}"><td>${esc(stageLabel(g.stage))}</td><td class="num">${fmt(g.rows.length)}</td><td class="num">${(g.rows.length/rows.length*100).toFixed(1)}%</td><td class="num">${p1(ds.highRate)}</td><td class="num">${p1(ds.lowRate)}</td><td class="num">${g.playability.score==null?'—':g.playability.score}</td></tr>`;}).join('')}</tbody></table></div>`;
     $('panel-market').querySelectorAll('[data-stage-row]').forEach(el=>el.addEventListener('click',()=>setStage(el.dataset.stageRow)));
   }
 
@@ -383,7 +383,13 @@
   function chartData(bars){return bars.map(b=>({time:Math.floor(Number(b.time)/1000),open:Number(b.open),high:Number(b.high),low:Number(b.low),close:Number(b.close)}));}
   function renderRawPreview(){
     ensureChart();if(!state.series||!state.bars.length)return;
-    const slice=state.bars.slice(-Math.min(220,state.bars.length));state.series.setData(chartData(slice));state.chart.timeScale().fitContent();$('chart-empty').style.display='none';$('chart-title').textContent='Historical Preview · '+marketLabel(state.session?.symbol)+' '+(state.session?.interval||'');$('chart-meta').textContent=fmt(state.bars.length)+' bars · ตรวจข้อมูลก่อนสร้าง Dataset';$('sample-title').textContent='Preview ก่อน Train';$('sample-detail').textContent='กราฟนี้ยังไม่แสดง Future label หรือ Candidate';setBadge($('reveal-badge'),'Preview');$('chart-overlay').classList.remove('show');
+    const analysis=state.bars.filter(b=>Number(b.time)>=(state.session?.analysisStart??-Infinity)&&Number(b.time)<=(state.session?.analysisEnd??Infinity));
+    const source=analysis.length?analysis:state.bars;
+    const devEnd=Math.max(1,Math.floor(source.length*0.80));
+    const center=Math.max(0,Math.floor(devEnd*0.65));
+    const from=Math.max(0,center-110),to=Math.min(devEnd,from+220);
+    const slice=source.slice(from,to);
+    state.series.setData(chartData(slice));state.chart.timeScale().fitContent();$('chart-empty').style.display='none';$('chart-title').textContent='Historical Preview · '+marketLabel(state.session?.symbol)+' '+(state.session?.interval||'');$('chart-meta').textContent=fmt(slice.length)+' development-preview bars · ช่วง Holdout ถูกซ่อน';$('sample-title').textContent='Preview ก่อน Train';$('sample-detail').textContent='แสดงเฉพาะช่วง Development โดยไม่เปิดข้อมูลปลาย Dataset ที่กันไว้เป็น Holdout';setBadge($('reveal-badge'),'Holdout hidden','purple');$('chart-overlay').classList.remove('show');
   }
   function renderOverlay(sample){
     const f=sample?.features;if(!f){$('chart-overlay').classList.remove('show');return;}
@@ -404,7 +410,10 @@
 
   function exportResearch(){
     if(!state.samples.length)return;
-    const payload={schema:'aris-training2-research-export-v2',exportedAt:new Date().toISOString(),purpose:'Exact T+10 research. Conditions selected from Train; Validation/Holdout evaluation only.',session:{id:state.session?.id,datasetId:state.session?.datasetId,symbol:state.session?.symbol,interval:state.session?.interval,analysisStart:state.session?.analysisStart,analysisEnd:state.session?.analysisEnd},counts:{bars:state.bars.length,samples:state.samples.length},integrity:CORE().auditDataset(state.samples),features:CORE().featureMeta,stages:state.groups.map(g=>({stage:g.stage,n:g.rows.length,playability:g.playability,candidate:g.research.candidate})),manualCandidates:state.candidates};
+    const datasetId=state.session?.datasetId||state.session?.id||'unknown';
+    const manual=state.candidates.map(c=>({id:c.id,createdAt:c.createdAt,symbol:c.symbol,interval:c.interval,conditions:c.conditions,n:c.n,status:c.status,direction:c.direction,internalTrainDirection:c.internalTrainDirection,train:c.train,validation:c.validation,playability:c.playability,holdoutStatus:c.holdoutStatus||'LOCKED'}));
+    const finalTests=state.holdoutTests.filter(x=>x.datasetId===datasetId);
+    const payload={schema:'aris-training2-research-export-v3',exportedAt:new Date().toISOString(),purpose:'Exact T+10 Setup Discovery. Train searches; Validation ranks; Holdout is explicit Final Exam only.',session:{id:state.session?.id,datasetId:state.session?.datasetId,symbol:state.session?.symbol,interval:state.session?.interval,analysisStart:state.session?.analysisStart,analysisEnd:state.session?.analysisEnd},counts:{bars:state.bars.length,samples:state.samples.length},integrity:CORE().auditDataset(state.samples),features:CORE().featureMeta,stages:state.groups.map(g=>({stage:g.stage,n:g.rows.length,playability:g.playability,decision:g.decision,candidate:g.research.candidate,finalHoldout:finalTests.find(x=>x.stage===g.stage&&x.fingerprint===setupFingerprint(g.stage,g.research?.candidate?.conditions||[],g.research?.candidate?.direction||null))||null})),manualCandidates:manual,finalHoldoutTests:finalTests};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ARIS-Training2-'+(state.session?.symbol||'MARKET')+'-'+Date.now()+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
   }
 
