@@ -1,0 +1,64 @@
+(function(root){
+'use strict';
+const $=id=>document.getElementById(id),number=x=>Number.isFinite(x)?x.toLocaleString(undefined,{maximumFractionDigits:3}):'—';
+let degree='Working',visible=true,last=null,initialized=false;
+try{degree=localStorage.getItem('aris-elliott-degree')||'Working';visible=localStorage.getItem('aris-elliott-visible')!=='off';}catch{}
+if(!['Micro','Working','Structural'].includes(degree))degree='Working';
+const direction=d=>d>0?'ขึ้น':d<0?'ลง':'ยังไม่ชัด';
+const patterns={IMPULSE:'Impulse',DIAGONAL_CANDIDATE:'Diagonal Candidate',ZIGZAG:'Zigzag',FLAT:'Flat',TRIANGLE:'Triangle'};
+function render(out,version){
+ const panel=$('elliott-panel');if(!panel)return;
+ panel.hidden=version!=='ARIS-3.3.0';if(panel.hidden)return;
+ if(!initialized){
+  initialized=true;$('elliott-degree').value=degree;$('elliott-toggle').checked=visible;
+  $('elliott-toggle').addEventListener('change',e=>{visible=e.target.checked;try{localStorage.setItem('aris-elliott-visible',visible?'on':'off');}catch{}document.dispatchEvent(new Event('elliott-redraw'));});
+  $('elliott-degree').addEventListener('change',e=>{degree=e.target.value;try{localStorage.setItem('aris-elliott-degree',degree);}catch{}render(last,'ARIS-3.3.0');document.dispatchEvent(new Event('elliott-redraw'));});
+  $('elliott-export').addEventListener('click',()=>document.dispatchEvent(new Event('elliott-export')));
+ }
+ last=out;$('elliott-degree-title').textContent=degree.toUpperCase();
+ const selection=out?.degrees?.[degree],c=selection?.preferred,alt=selection?.alternate,unknown=selection?.unknown||out?.unknown;
+ const state=root.ArisV33?.STATE_TH||{},unknownText=root.ArisV33?.UNKNOWN_TH||{};
+ if(!c){$('elliott-current').textContent=unknownText[unknown]||'กำลังรวบรวมโครงสร้างคลื่น';for(const id of ['elliott-next','elliott-target','elliott-risk'])$(id).textContent='';$('elliott-detail').textContent=out?.error?'ส่วนวิเคราะห์คลื่นมีข้อผิดพลาด · จุดเข้าเดิมยังทำงาน':'ข้อมูลยังไม่พอสำหรับนับคลื่น';return;}
+ const n=c.next;
+ $('elliott-current').textContent=(unknown?(unknownText[unknown]||'ยังไม่ชัด')+' · สมมติฐาน ':'ตอนนี้ ')+c.currentWave+' '+direction(c.currentDirection)+' · '+(state[c.state]||c.state);
+ $('elliott-next').textContent='ถัดไป '+n.wave+' '+direction(n.direction)+' · Wave Score '+c.score+'/100';
+ $('elliott-target').textContent='โซน '+number(n.targetLow)+'–'+number(n.targetHigh)+' · '+n.fromBars+'–'+n.toBars+' แท่ง'+(out?.seconds?' ('+(n.fromBars*out.seconds/60)+'–'+(n.toBars*out.seconds/60)+' นาที)':'');
+ $('elliott-risk').textContent='Trigger '+(n.trigger.direction>0?'ยืนเหนือ ':'ยืนใต้ ')+number(n.trigger.price)+' · ยกเลิกเมื่อ'+(n.invalidationDirection>0?'ต่ำกว่า ':'สูงกว่า ')+number(n.invalidation);
+ const detail=$('elliott-detail');detail.replaceChildren();
+ const rows=['Pattern: '+(patterns[c.pattern]||c.pattern)+(c.variant?' · '+c.variant:''),'ลักษณะ: '+(c.personality?.notes?.join(' · ')||'รอตรวจแรงและโครงสร้างย่อย'),
+ 'คลื่นย่อย: ผ่าน '+c.subwaves.validLegs+'/'+c.subwaves.totalLegs+' ขา · '+(c.subwaves.state==='VALID'?'ตรวจ subdivision ผ่าน':'ยังยืนยัน pattern ไม่ครบ'),
+ 'Parent: '+(c.parentWave?c.parentWave.degree+' Wave '+c.parentWave.wave:'ยังเชื่อมโครงสร้างใหญ่ไม่ได้'),
+ 'Alternate: '+(alt?(patterns[alt.pattern]||alt.pattern)+' '+alt.currentWave+' → '+alt.next.wave+' '+direction(alt.next.direction)+' · '+alt.score+'/100':'ยังไม่มี count สำรองที่ผ่านกฎ'),
+ 'Wave Fib: '+n.waveFib.sourceWave+' → '+n.waveFib.targetWave+' · ฐาน '+number(n.waveFib.projectionBase),
+ 'แหล่งเป้า: '+n.primary.sources.join(' + ')+(n.primary.sources.length<2?' · ยังไม่มี confluence จากแหล่งอื่น':''),
+ 'กล่อง: '+(out?.box?.state||'ยังไม่เปิด prediction เพราะ count ไม่ชัด'),
+ 'ประวัติ '+(out?.historyBars||0)+' แท่ง · Audit '+(out?.auditCount||0)+' · EXPERIMENTAL: คะแนนไม่ใช่โอกาสชนะ'];
+ if(c.extension)rows.push('พบ Wave 3 ยืด · ตรวจคลื่นย่อยก่อนถือว่าคลื่นใหญ่จบ');if(c.truncated)rows.push('Wave 5 ไม่ทำ extreme ใหม่ · '+(c.subwaves.legs[4]?.state==='VALID'?'คลื่นย่อยผ่าน':'ยังเป็น truncation candidate'));
+ for(const text of rows){const el=document.createElement('p');el.textContent=text;detail.append(el);}
+}
+function overlay(svg,make,w,h,out,chart,series){
+ if(!visible||!out?.degrees)return;
+ const c=out.degrees[degree]?.preferred;if(!c)return;
+ const scale=chart.timeScale(),spacing=scale.options().barSpacing||6,anchor=[...c.pivots].reverse().find(p=>!p.provisional&&Number.isFinite(scale.timeToCoordinate(p.time)));
+ if(!anchor)return;const ax=scale.timeToCoordinate(anchor.time),seconds=out.seconds||60;
+ const xy=p=>{const xx=scale.timeToCoordinate(p.time);return {x:Number.isFinite(xx)?xx:ax+(p.time-anchor.time)/seconds*spacing,y:series.priceToCoordinate(p.price)};};
+ const points=c.pivots.map(xy),g=make('g',{'class':'elliott-overlay','pointer-events':'none'});
+ for(let i=1;i<points.length;i++){
+  const a=points[i-1],b=points[i];if(![a.x,a.y,b.x,b.y].every(Number.isFinite))continue;
+  g.append(make('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:c.pivots[i].provisional?'#d4fc78':'#72cbe1','stroke-width':c.pivots[i].provisional?1.7:1,opacity:c.pivots[i].provisional?.95:.6,'stroke-dasharray':c.pivots[i].provisional?'4 3':'none'}));
+  if(b.x>=0&&b.x<w-35&&b.y>=0&&b.y<h){const t=make('text',{x:b.x+3,y:Math.max(30,Math.min(h-8,b.y+(c.pivots[i].type==='H'?-8:15))),fill:'#dcfca1','font-size':11,'paint-order':'stroke',stroke:'#10202c','stroke-width':3});t.textContent=c.pivots[i].label+(c.pivots[i].provisional?'?':'');g.append(t);}
+ }
+ const n=c.next,inv=series.priceToCoordinate(n.invalidation);if(Number.isFinite(inv)&&inv>0&&inv<h){g.append(make('line',{x1:Math.max(0,points[0].x),y1:inv,x2:w-55,y2:inv,stroke:'#ff839d','stroke-dasharray':'3 5',opacity:.7}));}
+ const box=degree==='Working'?out.box:null;
+ if(box&&['ACTIVE','EXTENDED'].includes(box.state)&&box.candidateKey===c.key){
+  const a=xy({time:box.startTime,price:box.targetHigh}),b=xy({time:box.endTime,price:box.targetLow});
+  if([a.x,a.y,b.x,b.y].every(Number.isFinite)){
+   const left=Math.max(0,a.x),right=Math.min(w-55,b.x),top=Math.max(24,Math.min(a.y,b.y)),bottom=Math.min(h-8,Math.max(a.y,b.y));
+   if(right>left&&bottom>top){g.append(make('rect',{x:left,y:top,width:right-left,height:bottom-top,rx:3,fill:'#b9ee6130',stroke:'#d3f77d','stroke-width':1,'stroke-dasharray':'5 3'}));const t=make('text',{x:left+4,y:top+12,fill:'#e6ffb3','font-size':9});t.textContent='W'+box.wave+' · '+box.fromBars+'–'+box.toBars+' แท่ง';g.append(t);
+    const origin=points.at(-1);g.append(make('line',{x1:origin.x,y1:origin.y,x2:(left+right)/2,y2:(top+bottom)/2,stroke:'#dbf9a3','stroke-dasharray':'2 5',opacity:.55}));}
+  }
+ }
+ svg.append(g);
+}
+root.ArisV33UI={render,overlay};
+})(globalThis);

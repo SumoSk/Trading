@@ -9,6 +9,7 @@
     {version:'ARIS-2.0.0',label:'ARIS 2.0'},
     {version:'ARIS-3.0.0',label:'ARIS 3.0'},
     {version:'ARIS-3.1.0',label:'ARIS 3.1'},
+    {version:'ARIS-3.3.0',label:'ARIS 3.3 · Elliott'},
     {version:'ARIS-3.2.0',label:'ARIS 3.2'},
     {version:'ARIS-4.0.0',label:'ARIS 4.0 · Sideway'}
   ]);
@@ -35,10 +36,12 @@
     const base=new URL('.',document.baseURI).href;
     frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><base href="'+escapeHtml(base)+'"></head><body>'+
       '<script>window.__TRAINING_VERSION='+JSON.stringify(v)+';<\/script>'+
-      '<script src="'+escapeHtml(asset('training-engine-core.js','20261002-r9'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('training-engine-core.js','20261006-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v2.js','20260930-r6'))+'"><\/script>'+ 
       '<script src="'+escapeHtml(asset('v3.js','20261001-r6'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v31.js','20261001-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v33-base.js','20261006-r1'))+'"><\/script>'+
+      '<script src="'+escapeHtml(asset('v33.js','20261006-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v32.js','20261002-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v32-direction.js','20261002-r1'))+'"><\/script>'+
       '<script src="'+escapeHtml(asset('v32-triggers.js','20261002-r1'))+'"><\/script>'+
@@ -53,7 +56,7 @@
     while(performance.now()-started<8000){
       const w=frame.contentWindow;
       const core=w?.EventSignalV6;
-      if(core?.Engine&&core?.CFG){
+      if(core?.Engine&&core?.CFG&&(v!=='ARIS-3.3.0'||w?.ArisV33BaseEngine&&w?.ArisV33)){
         if(core.CFG.version!==v){
           frame.remove();
           throw new Error('Training engine โหลดผิดเวอร์ชัน: '+core.CFG.version+' แทน '+v);
