@@ -569,8 +569,8 @@ class V3Engine extends BaseEngine{
  }
  step(x){
   const f=features(x.bars,x.price,x.horizonBars||10);
-  if(!f)return {status:'warmup',reason:'ARIS V3.3 · รอแท่งสมบูรณ์อย่างน้อย 35 แท่ง',signal:null};
-  if(!x.fresh||!finite(x.price)||!finite(x.ts)||x.price<=0){this.previous=null;this.v3Candidate=null;return this.lastView={f,status:'offline',signal:null,event:null,reason:'ARIS V3.3 · พักจน Futures สดและต่อเนื่อง'};}
+  if(!f)return {status:'warmup',reason:'ARIS V3.1 · รอแท่งสมบูรณ์อย่างน้อย 35 แท่ง',signal:null};
+  if(!x.fresh||!finite(x.price)||!finite(x.ts)||x.price<=0){this.previous=null;this.v3Candidate=null;return this.lastView={f,status:'offline',signal:null,event:null,reason:'ARIS V3.1 · พักจน Futures สดและต่อเนื่อง'};}
   if(x.id===this.lastId)return {...(this.lastView||{}),status:this.lastView?.status==='new'?'issued':this.lastView?.status,signal:null};
   if(this.previous&&x.ts<=this.previous.ts)return {...(this.lastView||{}),status:this.lastView?.status==='new'?'issued':this.lastView?.status,signal:null};
   const prev=this.previous;this.lastId=x.id;this.previous={price:x.price,ts:x.ts};
@@ -600,16 +600,16 @@ class V3Engine extends BaseEngine{
    reasons:[st.stateLabel,thesis.why,...st.blocked.slice(0,2)],reason:st.summary};
   base.watch=watch;
 
-  if(!prev||x.ts-prev.ts>5000){this.v3Candidate=null;return this.lastView={...base,status:'warming',reason:'ARIS V3.3 · กำลังต่อเรื่องราวตลาดจากข้อมูลสด',gate:{state:'WATCH',direction:watch.direction,code:'v3_warming',blocker:'รอข้อมูลต่อเนื่อง',waitingFor:[thesis.nextPlan],metrics:gateMetrics(st,bundle,ep)}};}
+  if(!prev||x.ts-prev.ts>5000){this.v3Candidate=null;return this.lastView={...base,status:'warming',reason:'ARIS V3.1 · กำลังต่อเรื่องราวตลาดจากข้อมูลสด',gate:{state:'WATCH',direction:watch.direction,code:'v3_warming',blocker:'รอข้อมูลต่อเนื่อง',waitingFor:[thesis.nextPlan],metrics:gateMetrics(st,bundle,ep)}};}
 
   if(!thesis.playbook||!thesis.d){
    this.v3Candidate=null;
-   return this.lastView={...base,status:'watch',reason:'ARIS V3.3 · '+st.summary,gate:{state:'WATCH',direction:watch.direction,code:'v3_observe',blocker:thesis.why,waitingFor:[thesis.trigger,thesis.nextPlan],metrics:gateMetrics(st,bundle,ep)}};
+   return this.lastView={...base,status:'watch',reason:'ARIS V3.1 · '+st.summary,gate:{state:'WATCH',direction:watch.direction,code:'v3_observe',blocker:thesis.why,waitingFor:[thesis.trigger,thesis.nextPlan],metrics:gateMetrics(st,bundle,ep)}};
   }
 
   if((ep.issuedLegKeys||[]).includes(ep.legKey)){
    this.v3Candidate=null;
-   return this.lastView={...base,status:'issued',reason:'ARIS V3.3 · เหตุการณ์ตลาดเดิม / ขาโครงสร้างเดิม · ไม่ออกซ้ำ',gate:{state:'WAIT',direction:dirLabel(thesis.d),code:'v3_same_leg',
+   return this.lastView={...base,status:'issued',reason:'ARIS V3.1 · เหตุการณ์ตลาดเดิม / ขาโครงสร้างเดิม · ไม่ออกซ้ำ',gate:{state:'WAIT',direction:dirLabel(thesis.d),code:'v3_same_leg',
     blocker:'ไม้ในขาโครงสร้างนี้ถูกใช้แล้ว',waitingFor:['รอการย่อสร้างฐานและกลับมายืน เพื่อสร้างขาใหม่ หรือรอโครงสร้างรีเซ็ต'],metrics:gateMetrics(st,bundle,ep)}};
   }
 
@@ -621,12 +621,12 @@ class V3Engine extends BaseEngine{
    const canHold=!!(cand&&cand.key===candidateKey&&bundle.hardReady&&!bundle.softBlocked&&x.ts-(cand.lastQualifiedAt||cand.evidenceSince)<=grace);
    if(canHold){
     const waiting=unique([...bundle.developing,...bundle.blocked,thesis.trigger]).slice(0,7);
-    return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3.3 · จุดเข้ายังอยู่ในสายตา หลักฐานอ่อนลงชั่วคราวแต่โครงสร้างและตำแหน่งยังไม่เสีย',
+    return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3.1 · จุดเข้ายังอยู่ในสายตา หลักฐานอ่อนลงชั่วคราวแต่โครงสร้างและตำแหน่งยังไม่เสีย',
      gate:{state:'READY',direction:dirLabel(thesis.d),code:'v3_candidate_grace',blocker:waiting[0]||'รอหลักฐานอ่อนกลับมายืนยัน',waitingFor:waiting,metrics:gateMetrics(st,bundle,ep)}};
    }
    this.v3Candidate=null;
    const waiting=unique([...bundle.blocked,...bundle.developing,thesis.trigger]).slice(0,7);
-   return this.lastView={...base,status:bundle.state==='BLOCKED'?'tracking':'confirming',reason:'ARIS V3.3 · '+st.summary,
+   return this.lastView={...base,status:bundle.state==='BLOCKED'?'tracking':'confirming',reason:'ARIS V3.1 · '+st.summary,
     gate:{state:bundle.state==='BLOCKED'?'WATCH':'READY',direction:dirLabel(thesis.d),code:'v3_independent_gates',blocker:waiting[0]||'เงื่อนไขอิสระยังไม่ครบ',waitingFor:waiting,metrics:gateMetrics(st,bundle,ep)}};
   }
 
@@ -637,7 +637,7 @@ class V3Engine extends BaseEngine{
   const confirmTicks=bundle.fullReady?(CFG.v3ConfirmTicks||2):(CFG.v3EarlyConfirmTicks||2),confirmMs=bundle.fullReady?(CFG.v3ConfirmMs||500):(CFG.v3EarlyConfirmMs||650);
   if(cand.ticks<confirmTicks||x.ts-cand.evidenceSince<confirmMs){
    const readyText=bundle.fullReady?'4/4 ผ่านครบ':'3/4 แบบมีคุณภาพ · โครงสร้างและตำแหน่งผ่าน';
-   return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3.3 · '+readyText+' · กำลังยืนยันข้อมูลสดแบบสั้น',
+   return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3.1 · '+readyText+' · กำลังยืนยันข้อมูลสดแบบสั้น',
     gate:{state:'READY',direction:dirLabel(d),code:bundle.fullReady?'v3_live_confirm':'v3_early_confirm',blocker:'รอการยืนยันจากข้อมูลสด',waitingFor:['ยืนยัน '+confirmTicks+' ครั้ง และ '+confirmMs+' ms'],metrics:gateMetrics(st,bundle,ep)}};
   }
 
@@ -658,7 +658,7 @@ class V3Engine extends BaseEngine{
     v3GateStates:gateStates(bundle),v3GateDetails:bundle.gates,v3GatePassCount:bundle.passed,v31PolicyGuard:bundle.policyGuard||null,v3Higher:reader.htf,v3Fib:reader.fib,v3MarketState:st.state,v3Structure:reader.structure,
     v3Behavior:behaviorForDataset(reader.behavior),v3Micro:microForDataset(bundle.gates.micro),v3ShockState:ep.shock?.state||null,v3InvalidationPrice:invalid,
     v3Trigger:thesis.trigger,v3Invalidation:thesis.invalidation,v3NextPlan:thesis.nextPlan,v3ReasonNewEntry:(ep.issuedLegKeys||[]).length?'new_structural_leg':'first_entry_in_episode'
-   }},reason:'ARIS V3.3 · '+st.stateLabel+' · '+playbookLabel(thesis.playbook)+' · '+((cand.entryMode||bundle.mode)==='EARLY'?'เข้าเร็วจาก 3/4 ที่มีคุณภาพ':'เงื่อนไข 4/4 ผ่านครบ')};
+   }},reason:'ARIS V3.1 · '+st.stateLabel+' · '+playbookLabel(thesis.playbook)+' · '+((cand.entryMode||bundle.mode)==='EARLY'?'เข้าเร็วจาก 3/4 ที่มีคุณภาพ':'เงื่อนไข 4/4 ผ่านครบ')};
   this.signals.push(signal);if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(q=>q.result!=='pending');if(i>=0)this.signals.splice(i,1);}
   ep.issuedLegKeys=[...(ep.issuedLegKeys||[]),ep.legKey].slice(-12);ep.lastEntryAt=x.ts;ep.baseConfirmed=false;
   this.v3Candidate=null;this.v3LastSignal=signal;
@@ -686,12 +686,12 @@ const priorAssess=root.ContinuousDirection?.assess;
 if(root.ContinuousDirection){
  root.ContinuousDirection.assess=function(x){
   if(CFG.version!=='ARIS-3.3.0')return priorAssess?priorAssess(x):{available:false,reason:'Direction engine unavailable'};
-  const st=x.phase?.v3View?.story,f=x.features;if(!x.fresh||!st||!f)return {available:false,reason:x.reason||'ARIS V3.3 · กำลังสร้างเรื่องราวตลาด'};
+  const st=x.phase?.v3View?.story,f=x.features;if(!x.fresh||!st||!f)return {available:false,reason:x.reason||'ARIS V3.1 · กำลังสร้างเรื่องราวตลาด'};
   const high=Math.round(st.highEvidence),low=Math.round(st.lowEvidence),direction=Math.abs(high-low)<8?'BALANCED':high>low?'HIGH':'LOW',d=direction==='HIGH'?1:direction==='LOW'?-1:0;
   const room=d?roomAtr(x.zones||[],x.price,d,f.atr):null,extension=d?d*(x.price-f.ema21)/Math.max(f.atr,1e-9):0;
   const risk=st.entryState==='READY'?'ต่ำตามเกณฑ์':st.entryState==='BLOCKED'?'สูง':'กลาง';
   return {available:true,high,low,direction,risk,riskScore:risk==='สูง'?4:risk==='กลาง'?2:0,referencePrice:x.price,referenceTime:x.ts,targetTime:x.ts+CFG.horizonMs,
-   reason:'ARIS V3.3 · '+st.summary+' · '+st.thesis.nextPlan,parts:{episode:st.episodeFamily,state:st.state,thesis:st.thesis.code,playbook:st.playbook,gateStates:Object.fromEntries(Object.entries(st.gates||{}).map(([k,v])=>[k,v.state]))},
+   reason:'ARIS V3.1 · '+st.summary+' · '+st.thesis.nextPlan,parts:{episode:st.episodeFamily,state:st.state,thesis:st.thesis.code,playbook:st.playbook,gateStates:Object.fromEntries(Object.entries(st.gates||{}).map(([k,v])=>[k,v.state]))},
    weights:null,regime:x.regime?.v3State||x.regime?.mode||'TRANSITION',coverage:x.coverage||0,room:finite(room)?room:null,extension,retreat:0,v3Story:st};
  };
 }
