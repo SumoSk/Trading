@@ -189,6 +189,7 @@ function selectCounts(candidates,cfg=DEFAULTS){
  const unknown=!preferred?'INSUFFICIENT_STRUCTURE':preferred.score<cfg.minScore?'UNRESOLVED':alternate&&preferred.score-alternate.score<cfg.ambiguityGap?'MULTIPLE_COUNTS_CLOSE':null;
  return {preferred,alternate,unknown};
 }
+function resolveUnknown(preferred,microPivotCount,selectedUnknown){return !preferred&&microPivotCount>8?'COMPLEX_CORRECTION':selectedUnknown;}
 function previousCountStatus(previous,sets,ctx){
  if(!previous)return {invalid:false,reasons:[]};
  const pivots=sets?.[previous.degree]||[];
@@ -270,7 +271,7 @@ class Observer{
    this.record(s,previousStatus.invalid?'COUNT_INVALIDATED':'RECOUNT',{replaces:old.id||null,previous:{id:old.id||null,key:old.key,degree:old.degree,pattern:old.pattern,wave:old.currentWave,state:'INVALIDATED'},replacement:p?{id:p.id,key:p.key,degree:p.degree,pattern:p.pattern,wave:p.currentWave}:null,reason,reasons:previousStatus.reasons},x.ts);
   }
   if(rebuild){s.samples++;if(p&&!selected.unknown)s.known++;}
-  const unknown=!p&&sets.Micro.length>8?'COMPLEX_CORRECTION':selected.unknown;
+  const unknown=resolveUnknown(p,sets.Micro.length,selected.unknown);
   const activeWorking=s.boxes.filter(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.degree==='Working');
   for(const box of activeWorking){
    const countChanged=box.candidateKey!==p?.key||!!unknown;
@@ -294,7 +295,7 @@ class Observer{
    executionFib:clone(view.v3Story?.fib||null),auditCount:s.audit.length,historyBars:b.length,combinationCandidate:unknown&&sets.Micro.length>=9?'COMBINATION_CANDIDATE':null};
   s.output=clone(output);
   if(rebuild||reason||old?.state!==p?.state)this.record(s,'COUNT_SNAPSHOT',{degree:'Working',pattern:p?.pattern||null,currentWave:p?.currentWave||null,currentState:p?.state||null,preferredCount:p?.id||null,preferredScore:p?.score||null,
-   alternateCount:selected.alternate?.key||null,alternateScore:selected.alternate?.score||null,nextWave:p?.next.wave||null,nextDirection:p?.next.direction||null,
+   alternateCount:selected.alternate?.id||null,alternateScore:selected.alternate?.score||null,nextWave:p?.next.wave||null,nextDirection:p?.next.direction||null,
    targetLow:p?.next.targetLow||null,targetHigh:p?.next.targetHigh||null,targetStartBar:p?.next.fromBars||null,targetEndBar:p?.next.toBars||null,trigger:p?.next.trigger||null,invalidation:p?.next.invalidation||null,predictionState:activeBox?.state||null,
    pivotSet:p?.pivots||[],subwaveStructure:p?.subwaves||null,waveFib:p?.next.waveFib||null,htfContext:ctx.htf,recountReason:reason,invalidationReason:activeBox?.reason||null,unknown},x.ts);
   return clone(output);
@@ -310,7 +311,7 @@ class Observer{
    contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>{const stability=(s.stabilityBars||[]).filter(finite);return [k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null,samples:s.samples,evictedAudit:s.evictedAudit}];}))};
  }
 }
-const api={Observer,DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,project,previousCountStatus,updateBox,candidateIdentity,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
+const api={Observer,DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,resolveUnknown,project,previousCountStatus,updateBox,candidateIdentity,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 const core=root.EventSignalV6;
 if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
