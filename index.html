@@ -5754,6 +5754,20 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     timeline:ld.timeline?.length?ld.timeline:fd.timeline
    }};
   }
+  function mergeV33Memory(fullMemory,localMemory){
+   if(!fullMemory)return localMemory||null;if(!localMemory)return fullMemory;
+   const contexts={...(fullMemory.contexts||{})};
+   for(const [key,localCtx] of Object.entries(localMemory.contexts||{})){
+    const fullCtx=contexts[key];
+    if(!fullCtx){contexts[key]=localCtx;continue;}
+    const newer=(Number(localCtx.lastTs)||0)>(Number(fullCtx.lastTs)||0)?localCtx:fullCtx;
+    const barMap=new Map((fullCtx.bars||[]).map(q=>[q.time,q]));for(const q of (localCtx.bars||[]))if(!barMap.has(q.time))barMap.set(q.time,q);
+    const auditMap=new Map();for(const q of [...(fullCtx.audit||[]),...(localCtx.audit||[])]){const id=q?.id||('AUD:'+q?.timestamp+':'+q?.type);if(!auditMap.has(id))auditMap.set(id,q);}
+    const boxMap=new Map();for(const q of [...(fullCtx.boxes||[]),...(localCtx.boxes||[])]){if(!q?.id)continue;const old=boxMap.get(q.id),oldAt=Number(old?.at||old?.createdAt)||0,newAt=Number(q.at||q.createdAt)||0;if(!old||newAt>=oldAt)boxMap.set(q.id,q);}
+    contexts[key]={...fullCtx,...localCtx,...newer,bars:[...barMap.values()].sort((a,b)=>a.time-b.time).slice(-2400),audit:[...auditMap.values()].sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)).slice(-1200),boxes:[...boxMap.values()].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)).slice(-300)};
+   }
+   return {schema:localMemory.schema||fullMemory.schema||'aris-elliott-1',sequence:Math.max(Number(fullMemory.sequence)||0,Number(localMemory.sequence)||0),contexts};
+  }
   function mergeJournalState(full,local){
    if(!full)return local||{};
    const map=new Map((full.signals||[]).map(x=>[x.id,x]));
@@ -5765,7 +5779,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     audit:(full.audit?.length||0)>=(local?.audit?.length||0)?full.audit:local.audit,
     v2Memory:local?.v2Memory||full.v2Memory,
     v3Memory:local?.v3Memory||full.v3Memory,
-    v33Memory:local?.v33Memory||full.v33Memory
+    v33Memory:mergeV33Memory(full.v33Memory,local?.v33Memory)
    };
   }
   async function restoreJournalBeforeBoot(){
