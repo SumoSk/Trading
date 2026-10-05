@@ -11,6 +11,9 @@ const DEFAULTS=Object.freeze({historyLimit:2400,auditLimit:1200,pivotLimit:320,t
  degrees:[{name:'Micro',radius:2,minBars:2,minChildren:1,atr:.35},{name:'Working',radius:5,minBars:6,minChildren:3,atr:.9},{name:'Structural',radius:12,minBars:16,minChildren:3,atr:1.8}]});
 const STATE_TH={CANDIDATE:'เริ่มเข้าข่าย',FORMING:'กำลังก่อตัว',PROBABLE_COMPLETE:'อาจจบแล้ว รอยืนยัน',CONFIRMED_COMPLETE:'ยืนยันจบแล้ว',INVALIDATED:'สมมติฐานยกเลิก'};
 const UNKNOWN_TH={INSUFFICIENT_STRUCTURE:'จุดสวิงยังไม่พอ',UNRESOLVED:'ยังจำแนกคลื่นไม่ได้',COMPLEX_CORRECTION:'การพักตัวซับซ้อน',MULTIPLE_COUNTS_CLOSE:'Wave Count ยังไม่ชัด'};
+const DEGREE_CODE={Micro:'MIC',Working:'WRK',Structural:'STR'};
+function hashKey(value){let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0).toString(36).toUpperCase().padStart(7,'0');}
+function candidateIdentity(c){if(!c)return c;const h=hashKey(c.key);c.id=c.id||'COUNT-'+h;c.waveId=c.waveId||'W33-'+(DEGREE_CODE[c.degree]||'UNK')+'-'+h;return c;}
 function atr(b){return mean(b.slice(-24).map((q,i,a)=>Math.max(q.high-q.low,Math.abs(q.high-(a[i-1]?.close??q.open)),Math.abs(q.low-(a[i-1]?.close??q.open)))));}
 function barsOnly(b,asOf,seconds){return (b||[]).filter(q=>q.closed&&[q.time,q.open,q.high,q.low,q.close].every(finite)&&q.high>=Math.max(q.open,q.close)&&q.low<=Math.min(q.open,q.close)&&q.time+seconds<=asOf);}
 function feed(b,radius=2){
@@ -178,13 +181,24 @@ function generate(p,degree,layers,ctx,parent){
   }
  }
  const unique=new Map();for(const c of found)unique.set(c.key,c);
- return [...unique.values()].sort((a,b)=>b.score-a.score||b.pivots.length-a.pivots.length||a.key.localeCompare(b.key)).slice(0,ctx.topK);
+ return [...unique.values()].sort((a,b)=>b.score-a.score||b.pivots.length-a.pivots.length||a.key.localeCompare(b.key)).slice(0,ctx.topK).map(candidateIdentity);
 }
 function selectCounts(candidates,cfg=DEFAULTS){
  const preferred=candidates[0]||null;
  const alternate=candidates.find(q=>preferred&&q.key!==preferred.key&&(q.next.direction!==preferred.next.direction||q.pattern!==preferred.pattern||q.currentWave!==preferred.currentWave))||null;
  const unknown=!preferred?'INSUFFICIENT_STRUCTURE':preferred.score<cfg.minScore?'UNRESOLVED':alternate&&preferred.score-alternate.score<cfg.ambiguityGap?'MULTIPLE_COUNTS_CLOSE':null;
  return {preferred,alternate,unknown};
+}
+function previousCountStatus(previous,sets,ctx){
+ if(!previous)return {invalid:false,reasons:[]};
+ const pivots=sets?.[previous.degree]||[];
+ if(!pivots.length)return {invalid:false,reasons:['NO_CURRENT_PIVOT_SET']};
+ const end=liveEndpoint(pivots,ctx.bars,ctx.price,ctx.time),seq=end?pivots.concat(end):pivots,len=previous.pivots?.length||0;
+ if(len>=2&&seq.length>=len){
+  const check=hardRules(seq.slice(-len),previous.pattern,{parentWave:previous.parentWave?.wave});
+  if(!check.valid)return {invalid:true,reasons:check.reasons};
+ }
+ return {invalid:false,reasons:[]};
 }
 function updateBox(box,q){
  if(!['ACTIVE','EXTENDED'].includes(box.state))return null;
@@ -233,15 +247,32 @@ class Observer{
     else{c.parentWave=null;c.parentConflict=true;}
    }
   }
-  const selected=degrees.Working,p=selected.preferred,old=s.output?.preferred,reason=old&&p&&old.key!==p.key?'NEW_CONFIRMED_STRUCTURE_OR_RECLASSIFICATION':!old&&p?'INITIAL_COUNT':null;
-  if(p){
-   p.id=old?.key===p.key?old.id:'COUNT-'+(++this.sequence);p.waveId='W33-WRK-'+p.id;
-   if(reason){if(old)s.recounts++;this.record(s,old?'RECOUNT':'NEW_CANDIDATE',{replaces:old?.id||null,reason,count: p},x.ts);}
+  const selected=degrees.Working,p=selected.preferred,old=s.output?.preferred,previousStatus=previousCountStatus(old,sets,ctx);
+  let reason=null;
+  if(!old&&p)reason='INITIAL_COUNT';
+  else if(old&&!p)reason=previousStatus.invalid?(previousStatus.reasons[0]||'HARD_RULE_INVALIDATED'):'NO_VALID_CURRENT_COUNT';
+  else if(old&&p&&old.key!==p.key)reason=previousStatus.invalid?(previousStatus.reasons[0]||'HARD_RULE_INVALIDATED'):'NEW_CONFIRMED_STRUCTURE_OR_RECLASSIFICATION';
+  if(p&&old?.key===p.key&&old.id){p.id=old.id;p.waveId=old.waveId||p.waveId;}
+  if(!old&&p)this.record(s,'NEW_CANDIDATE',{reason,count:p},x.ts);
+  if(old&&reason&&old.key!==p?.key){
+   s.recounts++;
+   this.record(s,previousStatus.invalid?'COUNT_INVALIDATED':'RECOUNT',{replaces:old.id||null,previous:{id:old.id||null,key:old.key,degree:old.degree,pattern:old.pattern,wave:old.currentWave,state:'INVALIDATED'},replacement:p?{id:p.id,key:p.key,degree:p.degree,pattern:p.pattern,wave:p.currentWave}:null,reason,reasons:previousStatus.reasons},x.ts);
   }
   if(rebuild){s.samples++;if(p&&!selected.unknown)s.known++;}
   const unknown=!p&&sets.Micro.length>8?'COMPLEX_CORRECTION':selected.unknown;
-  if(p&&!unknown&&!s.boxes.some(q=>q.candidateKey===p.key&&q.currentState===p.state)){
-   for(const box of s.boxes.filter(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.degree==='Working')){box.state='INVALIDATED';box.reason='COUNT_REPLACED';box.at=x.ts;this.record(s,'BOX_INVALIDATED',{box},x.ts);}
+  const activeWorking=s.boxes.filter(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.degree==='Working');
+  for(const box of activeWorking){
+   const countChanged=box.candidateKey!==p?.key||!!unknown;
+   const stateChanged=!countChanged&&p&&box.currentState!==p.state;
+   if(countChanged||stateChanged){
+    box.state='INVALIDATED';
+    box.reason=countChanged?(previousStatus.invalid?(previousStatus.reasons[0]||'COUNT_INVALIDATED'):(p?'COUNT_REPLACED':'COUNT_NO_LONGER_VALID')):'WAVE_STATE_CHANGED_REPROJECT';
+    box.recounted=countChanged&&!!old&&old.key!==p?.key;
+    box.at=x.ts;
+    this.record(s,'BOX_INVALIDATED',{box},x.ts);
+   }
+  }
+  if(p&&!unknown&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
    const box={id:'BOX-'+(++this.sequence),candidateId:p.id,candidateKey:p.key,currentState:p.state,degree:'Working',pattern:p.pattern,currentWave:p.currentWave,...clone(p.next),createdAt:x.ts,originPrice:x.price,symbol,timeframe,regime:view.v3Story?.state||'UNKNOWN',state:'ACTIVE',triggered:false};
    s.boxes.push(box);if(s.boxes.length>300)s.boxes.shift();this.record(s,'PREDICTION_CREATED',{box},x.ts);
   }
@@ -267,7 +298,7 @@ class Observer{
    contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>[k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,samples:s.samples,evictedAudit:s.evictedAudit}]))};
  }
 }
-const api={Observer,DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,project,updateBox,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
+const api={Observer,DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,project,previousCountStatus,updateBox,candidateIdentity,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 const core=root.EventSignalV6;
 if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
