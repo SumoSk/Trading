@@ -118,13 +118,14 @@ function project(c,ctx){
  for(const h of Object.values(ctx.htf||{}))if(finite(h?.obstacle?.price))references.push({price:h.obstacle.price,source:'HTF'});
  if(ch)references.push({price:ch.a.price+ch.slope*(targetTime-ch.a.time),source:'CHANNEL'},{price:ch.through.price+ch.slope*(targetTime-ch.through.time),source:'CHANNEL'});
  const tol=Math.max(a*.3,magnitude*.05),ranked=levels.map(l=>({...l,confluence:references.filter(q=>Math.abs(q.price-l.price)<=tol)})).sort((x,y)=>y.confluence.length-x.confluence.length||Math.abs(x.ratio-1)-Math.abs(y.ratio-1));
- const best=ranked[0],primary={low:best.price-tol,high:best.price+tol,sources:['WAVE_FIB',...new Set(best.confluence.map(q=>q.source))],confluence:best.confluence};
- const extendedLevel=levels.at(-1),extended=ratios.at(-1)>1?{low:extendedLevel.price-tol,high:extendedLevel.price+tol}:null;
+ const confirmed=ranked.find(l=>l.confluence.length>0)||null,best=confirmed||ranked[0],fibOnlyTarget=best?{low:best.price-tol,high:best.price+tol,ratio:best.ratio}:null;
+ const primary=confirmed?{low:confirmed.price-tol,high:confirmed.price+tol,sources:['WAVE_FIB',...new Set(confirmed.confluence.map(q=>q.source))],confluence:confirmed.confluence}:null;
+ const extendedLevel=levels.at(-1),extended=primary&&ratios.at(-1)>1?{low:extendedLevel.price-tol,high:extendedLevel.price+tol}:null;
  // Origin for W2/W3; W4 cannot overlap W1 in ordinary impulse; W5 cannot undo W4 origin.
  const invalidation=motive?(n===1||n===2?p[0].price:n===3?(c.pattern==='IMPULSE'?p[1].price:p[2].price):n===4?p[2].price:p.at(-1).price):p.at(-1).price;
  const invalidationDirection=motive&&n<5?d:dir;
  const triggerPrice=dir>0?Math.max(...p.slice(-2).map(q=>q.price)):Math.min(...p.slice(-2).map(q=>q.price));
- return {wave:next,direction:dir,targetLow:primary.low,targetHigh:primary.high,primary,extended,fromBars,toBars,startTime:ctx.time+fromBars*ctx.seconds,endTime:targetTime,
+ return {wave:next,direction:dir,targetLow:primary?.low??null,targetHigh:primary?.high??null,primary,fibOnlyTarget,projectionReady:!!primary,targetStatus:primary?'CONFLUENT':'FIB_ONLY_UNCONFIRMED',extended,fromBars,toBars,startTime:ctx.time+fromBars*ctx.seconds,endTime:targetTime,
   trigger:{price:triggerPrice,direction:dir,kind:'RECLAIM_AND_HOLD'},invalidation,invalidationDirection,score:c.score,
   waveFib:{degree:c.degree,sourceWave:motive&&n===3?'3':'1/A',targetWave:next,start:sourceStart.price,end:sourceEnd.price,projectionBase:base,ratios,levels},channel:ch,
   timing:{method:'same-degree duration distribution × speed-adjusted range',samples:duration.length+historical.length,experimental:true}};
@@ -160,10 +161,13 @@ function makeCandidate(p,pattern,degree,layers,ctx,parent){
  const ratio=n>=2?Math.abs(p[2].price-p[1].price)/w1:0,fibFit=ratio>=.236&&ratio<=.786?4:0;
  c.scoreParts={structure:Math.min(20,8+n*2),subwaves:sub.quality*25,degree:p.at(-1).significance?5:2,duration:durationConsistency,fib:fibFit,...behavior.parts};
  c.score=Math.round(clip(20+Object.values(c.scoreParts).reduce((s,x)=>s+x,0),0,100));
+ c.next=project(c,ctx);
+ c.scoreParts.channel=c.next.channel?2:0;c.scoreParts.targetConfluence=c.next.projectionReady?Math.min(6,Math.max(1,(c.next.primary?.sources?.length||1)-1)*2):-3;
+ c.score=Math.round(clip(20+Object.values(c.scoreParts).reduce((s,x)=>s+x,0),0,100));
  if(pattern==='DIAGONAL_CANDIDATE'&&!['1','5','A','C'].includes(parent?.currentWave))c.score=Math.min(c.score,45);
  if(sub.state!=='VALID')c.score=Math.min(c.score,68); // Never claim validated pattern from an outline alone.
  if(parent&&parent.currentDirection!==c.direction){c.parentConflict=true;c.score=Math.max(0,c.score-6);}
- c.next=project(c,ctx);return c;
+ c.next.score=c.score;return c;
 }
 function liveEndpoint(p,b,price,time){
  if(!p.length)return null;const last=p.at(-1),after=b.filter(q=>q.time>=last.time),type=last.type==='H'?'L':'H';
@@ -284,7 +288,7 @@ class Observer{
     this.record(s,'BOX_INVALIDATED',{box},x.ts);
    }
   }
-  if(p&&!unknown&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
+  if(p&&!unknown&&p.next.projectionReady&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
    const box={id:'BOX-'+(++this.sequence),candidateId:p.id,candidateKey:p.key,currentState:p.state,degree:'Working',pattern:p.pattern,currentWave:p.currentWave,...clone(p.next),createdAt:x.ts,originPrice:x.price,symbol,timeframe,seconds,regime:view.v3Story?.state||'UNKNOWN',state:'ACTIVE',triggered:false};
    s.boxes.push(box);if(s.boxes.length>300)s.boxes.shift();this.record(s,'PREDICTION_CREATED',{box},x.ts);
   }
