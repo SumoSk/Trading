@@ -22,6 +22,36 @@ assert(!api.hardRules(piv([100,120,105,116,108,113]),'TRIANGLE').valid);
 assert(api.hardRules(piv([100,120,105,116,108,113]),'TRIANGLE',{parentWave:'4'}).valid);
 assert(!api.hardRules(piv([100,110,110])).valid,'duplicate/equal pivot must not validate');
 
+// Explicit extension / truncation annotations.
+const structuralCtx={...api.DEFAULTS,atr:2,bars:[],price:135,time:3600,seconds:60,zones:[],htf:{},behavior:{},features:{},momentum:0,flow:0,durations:[8,10,12]};
+const extended=api.makeCandidate(piv([100,110,104,140]),'IMPULSE','Working',[],structuralCtx,null);
+const truncated=api.makeCandidate(piv([100,110,104,140,120,135]),'IMPULSE','Working',[],structuralCtx,null);
+assert(extended?.extension,'Wave 3 extension must be annotated');
+assert(truncated?.truncated,'truncated Wave 5 must be annotated');
+
+// Recursive internal structure: Zigzag must validate 5-3-5, not just three external swings.
+const parentZ=[
+ {id:'Z0',time:0,i:0,price:100,type:'L',provisional:false},
+ {id:'ZA',time:6000,i:10,price:110,type:'H',provisional:false},
+ {id:'ZB',time:12000,i:20,price:105,type:'L',provisional:false},
+ {id:'ZC',time:18000,i:30,price:115,type:'H',provisional:false}
+];
+const lowerZ=[
+ {id:'A1',time:1000,price:103,type:'H'},{id:'A2',time:2000,price:101.5,type:'L'},{id:'A3',time:3000,price:107,type:'H'},{id:'A4',time:4000,price:104,type:'L'},
+ {id:'B1',time:8000,price:108,type:'L'},{id:'B2',time:10000,price:109,type:'H'},
+ {id:'C1',time:13000,price:108,type:'H'},{id:'C2',time:14000,price:106,type:'L'},{id:'C3',time:15000,price:112,type:'H'},{id:'C4',time:16000,price:109,type:'L'}
+];
+const zigSub=api.subdivision(parentZ,'ZIGZAG',[lowerZ],0,2);
+assert.equal(zigSub.state,'VALID');assert.equal(zigSub.validLegs,3);
+
+// Primary target must require independent confluence; Fib-only remains provisional and cannot open a box.
+const projectionCandidate={pivots:piv([100,110,104]),direction:1,pattern:'IMPULSE',degree:'Working',score:60};
+const projectionBase={...api.DEFAULTS,atr:2,bars:[],price:104,time:3600,seconds:60,htf:{},behavior:{},features:{},momentum:0,flow:0,durations:[8,10,12]};
+const fibOnly=api.project(projectionCandidate,{...projectionBase,zones:[]});
+const confluent=api.project(projectionCandidate,{...projectionBase,zones:[{price:114}]});
+assert.equal(fibOnly.projectionReady,false);assert.equal(fibOnly.targetLow,null);
+assert.equal(confluent.projectionReady,true);assert(confluent.primary.sources.includes('ZONE'));
+
 // Stable IDs for every degree/candidate.
 const idA=api.candidateIdentity({key:'Working|IMPULSE|P1|P2',degree:'Working'});
 const idB=api.candidateIdentity({key:'Working|IMPULSE|P1|P2',degree:'Working'});
@@ -130,6 +160,11 @@ for(let i=0;i<400;i++){
 assert(signals>0,'regression stream must issue real signals');
 const history=ec.elliott.serialize(),frozen=JSON.stringify(history.contexts['BTCUSDT|1m'].audit),restoredRuntime=new api.Observer(history);
 assert.equal(JSON.stringify(restoredRuntime.serialize().contexts['BTCUSDT|1m'].audit),frozen);
+const lifecycleTypes=history.contexts['BTCUSDT|1m'].audit.reduce((m,q)=>(m[q.type]=(m[q.type]||0)+1,m),{});
+assert(lifecycleTypes.RECOUNT>0,'replay must exercise recount history');
+assert(lifecycleTypes.COUNT_INVALIDATED>0,'replay must exercise invalidated count history');
+assert(lifecycleTypes.DEGREE_RECLASSIFIED>0,'replay must exercise degree reclassification');
+assert((history.contexts['BTCUSDT|1m'].stabilityBars||[]).length>0,'count stability must be recorded');
 const last=ec.lastView.v33Elliott;assert(last.historyBars>=390);assert(last.degrees.Working.pivots.length>0);
 assert.equal(ea.signals.length,ec.signals.length);
 assert.equal(JSON.stringify(ec.elliott.serialize().contexts['BTCUSDT|1m'].audit.slice(0,10)),JSON.stringify(history.contexts['BTCUSDT|1m'].audit.slice(0,10)));
