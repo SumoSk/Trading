@@ -1,0 +1,44 @@
+name: ARIS 3.3 regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'v33.js'
+      - 'v33-base.js'
+      - 'v33-ui.js'
+      - 'v33.css'
+      - 'v31.js'
+      - 'v3.js'
+      - 'v2.js'
+      - 'training-engine-core.js'
+      - 'training-engine-registry.js'
+      - 'index.html'
+      - 'tests/v33-smoke.cjs'
+      - '.github/workflows/aris-v33-regression.yml'
+  pull_request:
+    paths:
+      - 'v33.js'
+      - 'v33-base.js'
+      - 'v33-ui.js'
+      - 'v33.css'
+      - 'v31.js'
+      - 'v3.js'
+      - 'v2.js'
+      - 'training-engine-core.js'
+      - 'training-engine-registry.js'
+      - 'index.html'
+      - 'tests/v33-smoke.cjs'
+      - '.github/workflows/aris-v33-regression.yml'
+
+jobs:
+  v33-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run ARIS 3.3 smoke/regression
+        run: node tests/v33-smoke.cjs
