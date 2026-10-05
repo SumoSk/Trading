@@ -5764,7 +5764,8 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     watchSamples:(full.watchSamples?.length||0)>=(local?.watchSamples?.length||0)?full.watchSamples:local.watchSamples,
     audit:(full.audit?.length||0)>=(local?.audit?.length||0)?full.audit:local.audit,
     v2Memory:local?.v2Memory||full.v2Memory,
-    v3Memory:local?.v3Memory||full.v3Memory
+    v3Memory:local?.v3Memory||full.v3Memory,
+    v33Memory:local?.v33Memory||full.v33Memory
    };
   }
   async function restoreJournalBeforeBoot(){
