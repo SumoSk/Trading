@@ -1,42 +1,136 @@
-# ARIS 3.3 Elliott — first runnable release
+# ARIS 3.3 Elliott — r2 final-lock hardening
 
-User FINAL LOCK (108 requirements) is the target specification. User subsequently requested a usable version first and will perform acceptance testing. **This release is experimental and is not a claim that all 108 requirements or the full Definition of Done passed.**
+Target specification: **ARIS 3.3 Elliott Wave FINAL MASTER SPECIFICATION / FINAL LOCK**.
+
+This revision keeps ARIS 3.1 as the trading engine and runs Elliott as an independent observer/predictor. Wave Score remains experimental and is never presented as a calibrated probability.
 
 ## Integrity
 
-- Base commit: `22587d0ec29e0d5aa9042429edd4c2af67c41605`.
-- `backup-before-change` points to that commit before edits. Locked backup untouched.
-- `v2.js`, `v3.js`, `v31.js` unchanged.
-- `v33-base.js` is the exact 3.1 execution copy with version/display/export identity substitutions only. Elliott never changes entry gates, thresholds, signals or Execution Fib.
-- Default engine remains 3.1; select **ARIS V3.3 · Elliott Wave** in the existing version selector.
+- ARIS 3.1 remains the default engine.
+- `v31.js` is unchanged.
+- `v33-base.js` preserves 3.1 execution behaviour and human execution reasons; only 3.3 version/storage identity is separate.
+- Elliott does not alter entry gates, thresholds, signals or Execution Fib.
+- Deterministic 400-bar / 1,080-evaluation regression produced 15 signals in both 3.1 and 3.3 with matching status, reason, event, signal core, V3 story and Execution Fib.
+- Backup before this hardening pass: `backup-before-v33-final-fixes-20261006`.
 
-## Runnable
+## Elliott engine
 
-- Isolated 3.3 config/engine and historical training loader.
-- Separate bounded candle history, closed pivots, provisional endpoints, three degrees using duration/child pivots/magnitude/significance, contained parent/child links.
-- Multiple motive/corrective candidates; impulse hard rules; candidate-level diagonal geometry/position; zigzag/flat external rules; contracting triangle requires parent 4/B/X.
-- Internal 5/3 subdivision validation and bounded recursion. Unresolved internals remain candidates, never presented as fully validated patterns. Extended-third/truncated-fifth annotations.
-- Heuristic score, pruning, preferred/alternate and ambiguity/complex/insufficient states. No percentage/probability label.
-- Candidate-anchored Wave Fib; channel/zone/swing/HTF confluence when available; primary/extended target ranges and duration ranges.
-- Conditional boxes: trigger, invalidation, hit, expired and extended lifecycle; only unambiguous working counts activate a box.
-- Independent Elliott overlay switch, degree selection, wave paths/labels and forming highlight, invalidation line, conditional rectangle and soft path.
-- Compact current/next summary, expandable details, Elliott JSON download, signal-time snapshot and separate evaluation output.
-- Symbol/timeframe keys, 5s persistence cadence via existing journal, state reconstruction, no in-place rewrite of saved audit records.
+- Separate bounded candle/pivot history.
+- Confirmed pivots plus live/provisional endpoints.
+- Micro / Working / Structural degrees.
+- Degree timing distributions are stored separately; Micro/Structural no longer reuse Working duration history.
+- Stable Candidate IDs and Wave IDs by degree.
+- Parent/child links with explicit promotion/reclassification audit events.
+- Multiple motive/corrective candidates, pruning, Preferred/Alternate and ambiguity/Unknown states.
+- Impulse hard rules.
+- Diagonal candidate handling with overlap exception/geometry.
+- Zigzag 5-3-5 internal validation.
+- Flat 3-3-5 internal validation and regular/expanded/running external classification.
+- Contracting Triangle candidate requires valid parent position.
+- Extension and truncated-fifth annotations.
+- Complex/combination structures can remain unresolved instead of being forced into a false count.
+- Recursive subwave validation is bounded for performance.
 
-## Known limits / acceptance work remains
+## Projection
 
-- Heuristic degree selection and parent links need real-chart validation. Promotion/reclassification is basic; not an exhaustive recursive Elliott grammar.
-- Diagonals are explicitly candidates; leading/ending variants are not fully classified. Triangle support is contracting + known position, not every triangle variant.
-- Extended subwave handling is bounded and deliberately conservative. Complex/combination corrections can remain unresolved, rather than falsely validating W-X-Y.
-- Projection can have only one source when independent confluence is absent (shown in details). Time ranges are experimental, not calibrated.
-- Prediction results use observed prices; unobserved intra-bar ordering is not inferred. Evaluation is a bounded dataset summary, not a completed walk-forward research study. Current boxes are emitted for Working degree; degree breakdown is available but other degree prediction cohorts need expansion.
-- History is bounded at 2,400 candles, 320 pivots per degree, 300 boxes/context, 1,200 audit records/context. Evicted audit count is disclosed. Export for long-term research; not unlimited archival storage.
-- Browser visual/mobile acceptance and live-feed accuracy remain for user testing. Do not describe this as fully acceptance-tested.
+- Candidate-anchored Wave Fib is separate from 3.1 Execution Fib.
+- Elliott Channel, structural swing, zone and HTF references can contribute to target confluence.
+- A Fib-only level is shown only as an unconfirmed provisional reference.
+- **Primary Target / Prediction Box requires at least one independent confluence source in addition to Wave Fib.**
+- Price target and time target are ranges.
+- Trigger and structural invalidation are attached to each active prediction.
+- Box lifecycle: ACTIVE / HIT / EXPIRED / INVALIDATED / EXTENDED.
+- Count disappearance/replacement invalidates the corresponding active box.
+- Wave-state reprojection closes the old box before creating the new one, preventing duplicate active boxes.
 
-## Verification
+## No-repaint / persistence
 
-`node tests/v33-smoke.cjs`
+- Count snapshots are append-only.
+- Hard-rule failures create explicit `COUNT_INVALIDATED` records.
+- Recounts retain the previous count and reason code.
+- Degree promotion/reclassification is audited.
+- Count stability in bars is recorded.
+- `v33Memory` is restored across reloads.
+- Journal/local fallback memories are merged without rewriting existing audit records.
+- Symbol and timeframe state are isolated.
+- Closed candle history is treated as immutable inside Elliott audit state.
+- History/audit/box storage remains bounded and discloses evictions.
 
-Checks parse, impulse both directions, W2 origin, W4 overlap, diagonal overlap, extension/truncation outline, zigzag/flat, triangle position, box lifecycle, reload audit, observer integration. A deterministic 400-bar stream produced 15 signals: 3.1 and 3.3 matched status/direction/entry price and Execution Fib at every step.
+## Evaluation / training
 
-Existing `tests/v2-regression.cjs` has an unrelated legacy version-mapping assertion (`6.5.0` expected but app maps to `6.6.0`). It is not reported as a passing full suite.
+Evaluation output includes:
+
+- Direction accuracy
+- Target hit rate
+- Time hit rate
+- Invalidation rate
+- Recount rate
+- Count stability (average/median bars)
+- Coverage
+- Unknown rate
+- Score buckets
+- Wave breakdown
+- Pattern breakdown
+- Degree breakdown
+- Regime breakdown
+- Timeframe breakdown
+- Symbol breakdown
+
+3.3 signal-time Elliott snapshots remain separate from the original trading outcome labels. Elliott still has no influence on entry decisions.
+
+## Tests
+
+`tests/v33-smoke.cjs` now covers:
+
+- bullish/bearish impulse
+- Wave 2 origin invalidation
+- Wave 4 overlap
+- diagonal overlap/position handling
+- Wave 3 extension
+- truncated Wave 5
+- Zigzag 5-3-5
+- Flat 3-3-5
+- Triangle parent position
+- insufficient/complex/ambiguous states
+- stable Count/Wave IDs
+- Fib-only target rejection
+- real target confluence
+- prediction hit/expiry/invalidation
+- evaluation metrics
+- missing volume / flat / shock / duplicate pivots
+- symbol/timeframe isolation
+- stale/reconnect input
+- reload audit preservation
+- responsive integration guards
+- Training-engine integration
+- strict 3.1 vs 3.3 execution regression
+- recount / invalidation / degree-reclassification lifecycle events
+
+GitHub Actions workflow: `.github/workflows/aris-v33-regression.yml`.
+
+## Responsive UI
+
+- Working degree remains the default user-facing layer.
+- Micro and Structural can be selected without changing the engine.
+- Mobile/iPad-safe width/overflow rules are isolated in `v33.css`.
+- Desktop can expose more detail without a different Elliott engine.
+- Current/Next copy uses human-readable “Wave …” wording.
+- When target confluence is insufficient, the UI says the target is not confirmed and does not draw a Prediction Box.
+
+## Deliberate experimental limits
+
+These are research limits, not hidden implementation claims:
+
+- Degree classification is heuristic and must be calibrated on real market data.
+- Diagonal and complex-correction grammar is intentionally conservative rather than exhaustive.
+- Wave Score is **not** a win probability until real score-bucket calibration exists.
+- Time projection is experimental until sufficient forward samples exist.
+- Browser/device visual acceptance still requires live viewing on the target iPhone/iPad/desktop; static responsive guards are in place, but no code review can replace that final visual acceptance.
+- Real walk-forward/forward performance must be collected before Elliott is ever allowed to influence entries.
+
+## Current release identity
+
+- Engine: `ARIS-3.3.0`
+- Revision: `elliott-observer-v33-r2-final-lock`
+- Live/Training cache revision: `20261006-r2`
+- Trading influence: **OFF**
