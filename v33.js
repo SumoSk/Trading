@@ -217,7 +217,8 @@ class Observer{
  record(s,type,data,ts){s.audit.push({id:'EA-'+(++this.sequence),timestamp:ts,symbol:s.symbol,timeframe:s.timeframe,type,...clone(data)});if(s.audit.length>this.cfg.auditLimit){s.audit.shift();s.evictedAudit++;}}
  observe(x,view={}){
   const seconds=x.timeframeSeconds||({ '1m':60,'5m':300,'15m':900,'1h':3600 }[x.timeframe]||60),symbol=x.symbol||'UNSPECIFIED',timeframe=x.timeframe||seconds+'s',key=symbol+'|'+timeframe;
-  let s=this.contexts[key];if(!s)s=this.contexts[key]={symbol,timeframe,seconds,bars:[],audit:[],boxes:[],durations:[],lastTs:0,samples:0,known:0,recounts:0,evictedAudit:0,degreeSignatures:{}};
+  let s=this.contexts[key];if(!s)s=this.contexts[key]={symbol,timeframe,seconds,bars:[],audit:[],boxes:[],durationsByDegree:{Micro:[],Working:[],Structural:[]},lastTs:0,samples:0,known:0,recounts:0,evictedAudit:0,degreeSignatures:{},degreeLinks:{},stabilityBars:[],preferredSinceTs:null};
+  s.durationsByDegree=s.durationsByDegree||{Micro:[],Working:Array.isArray(s.durations)?s.durations:[],Structural:[]};s.degreeLinks=s.degreeLinks||{};s.stabilityBars=s.stabilityBars||[];
   if(!finite(x.ts)||!finite(x.price)||x.ts<s.lastTs||!x.fresh)return s.output||{unknown:'INSUFFICIENT_STRUCTURE',degrees:{}};
   for(const box of s.boxes){const update=updateBox(box,x);if(update){Object.assign(box,update);if(['HIT','EXPIRED','INVALIDATED'].includes(box.state)){box.terminalPrice=x.price;box.directionCorrect=box.direction*(x.price-box.originPrice)>0;}this.record(s,'BOX_'+update.reason,{box},x.ts);}}
   const incoming=barsOnly(x.bars,x.ts/1000,seconds),last=incoming.at(-1),rebuild=last&&last.time!==s.lastBarTime;
@@ -230,21 +231,28 @@ class Observer{
   const b=s.bars,cached=this.cache.get(key),sets=cached?.barTime===s.lastBarTime?cached.sets:{};let lower=[];
   for(const spec of (cached?.barTime===s.lastBarTime?[]:this.cfg.degrees)){const p=spec.name==='Micro'?feed(b,spec.radius).slice(-this.cfg.pivotLimit):degreePivots(b,lower,spec,a,this.cfg.pivotLimit);sets[spec.name]=p;lower=p;}
   this.cache.set(key,{barTime:s.lastBarTime,sets});
-  if(rebuild&&sets.Working.length>1){const pairs=sets.Working;s.durations=pairs.slice(1).map((p,i)=>(p.time-pairs[i].time)/seconds).slice(-60);}
-  const ctx={...this.cfg,atr:a,bars:b,price:x.price,time:x.ts/1000,seconds,zones:view.z||[],htf:view.v3Story?.htf||{},behavior:view.v3Story?.behavior||{},features:view.f||{},momentum:view.f?.mom||0,flow:x.flow,durations:s.durations};
+  if(rebuild)for(const degree of ['Micro','Working','Structural']){const pairs=sets[degree]||[];if(pairs.length>1)s.durationsByDegree[degree]=pairs.slice(1).map((p,i)=>(p.time-pairs[i].time)/seconds).filter(finite).slice(-60);}
+  const baseCtx={...this.cfg,atr:a,bars:b,price:x.price,time:x.ts/1000,seconds,zones:view.z||[],htf:view.v3Story?.htf||{},behavior:view.v3Story?.behavior||{},features:view.f||{},momentum:view.f?.mom||0,flow:x.flow};
   const degrees={};let parent=null;
   for(const degree of ['Structural','Working','Micro']){
-   const layers=degree==='Structural'?[sets.Working,sets.Micro]:degree==='Working'?[sets.Micro]:[];
-   const candidates=generate(sets[degree],degree,layers,ctx,parent);
+   const layers=degree==='Structural'?[sets.Working,sets.Micro]:degree==='Working'?[sets.Micro]:[],degreeCtx={...baseCtx,durations:s.durationsByDegree[degree]||[]};
+   const candidates=generate(sets[degree],degree,layers,degreeCtx,parent);
    const selected=selectCounts(candidates,this.cfg);degrees[degree]={...selected,candidates,pivots:sets[degree]};parent=selected.preferred;
    const signature=sets[degree].map(p=>p.id+':'+p.price).join('|');if(signature!==s.degreeSignatures[degree]){this.record(s,'NEW_PIVOT',{degree,pivotSet:sets[degree].slice(-12)},x.ts);s.degreeSignatures[degree]=signature;}
   }
-  // Link actual contained child structures, recording promotions without rewriting older snapshots.
+  const ctx={...baseCtx,durations:s.durationsByDegree.Working||[]};
+  // Link contained child structures and audit promotion/reclassification without rewriting prior snapshots.
   for(const [outer,inner] of [['Structural','Working'],['Working','Micro']]){
    const p=degrees[outer].preferred,c=degrees[inner].preferred;
    if(p&&c){const leg=p.pivots.findIndex((q,i)=>i>0&&c.pivots[0].time>=p.pivots[i-1].time&&c.pivots.at(-1).time<=q.time);
-    if(leg>0){c.parentWave={key:p.key,wave:p.pivots[leg].label,degree:outer};p.childCounts=[c.key];}
+    if(leg>0){c.parentWave={id:p.id,key:p.key,wave:p.pivots[leg].label,degree:outer};p.childCounts=[c.id];}
     else{c.parentWave=null;c.parentConflict=true;}
+   }
+   const link=c?.parentWave?c.id+'>'+c.parentWave.id+':'+c.parentWave.wave:null,previousLink=s.degreeLinks[inner]??null;
+   if(link!==previousLink){
+    if(link)this.record(s,previousLink?'DEGREE_RECLASSIFIED':'DEGREE_PROMOTED',{degree:inner,childId:c.id,parent:c.parentWave,previousLink},x.ts);
+    else if(previousLink)this.record(s,'DEGREE_RECLASSIFIED',{degree:inner,childId:c?.id||null,parent:null,previousLink,reason:'PARENT_RELATION_NO_LONGER_VALID'},x.ts);
+    s.degreeLinks[inner]=link;
    }
   }
   const selected=degrees.Working,p=selected.preferred,old=s.output?.preferred,previousStatus=previousCountStatus(old,sets,ctx);
@@ -253,8 +261,11 @@ class Observer{
   else if(old&&!p)reason=previousStatus.invalid?(previousStatus.reasons[0]||'HARD_RULE_INVALIDATED'):'NO_VALID_CURRENT_COUNT';
   else if(old&&p&&old.key!==p.key)reason=previousStatus.invalid?(previousStatus.reasons[0]||'HARD_RULE_INVALIDATED'):'NEW_CONFIRMED_STRUCTURE_OR_RECLASSIFICATION';
   if(p&&old?.key===p.key&&old.id){p.id=old.id;p.waveId=old.waveId||p.waveId;}
-  if(!old&&p)this.record(s,'NEW_CANDIDATE',{reason,count:p},x.ts);
+  if(!old&&p){s.preferredSinceTs=x.ts;this.record(s,'NEW_CANDIDATE',{reason,count:p},x.ts);}
+  if(old&&!s.preferredSinceTs)s.preferredSinceTs=s.output?.timestamp||x.ts;
   if(old&&reason&&old.key!==p?.key){
+   if(finite(s.preferredSinceTs)){s.stabilityBars.push(Math.max(0,(x.ts-s.preferredSinceTs)/(seconds*1000)));s.stabilityBars=s.stabilityBars.slice(-240);}
+   s.preferredSinceTs=p?x.ts:null;
    s.recounts++;
    this.record(s,previousStatus.invalid?'COUNT_INVALIDATED':'RECOUNT',{replaces:old.id||null,previous:{id:old.id||null,key:old.key,degree:old.degree,pattern:old.pattern,wave:old.currentWave,state:'INVALIDATED'},replacement:p?{id:p.id,key:p.key,degree:p.degree,pattern:p.pattern,wave:p.currentWave}:null,reason,reasons:previousStatus.reasons},x.ts);
   }
@@ -273,7 +284,7 @@ class Observer{
    }
   }
   if(p&&!unknown&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
-   const box={id:'BOX-'+(++this.sequence),candidateId:p.id,candidateKey:p.key,currentState:p.state,degree:'Working',pattern:p.pattern,currentWave:p.currentWave,...clone(p.next),createdAt:x.ts,originPrice:x.price,symbol,timeframe,regime:view.v3Story?.state||'UNKNOWN',state:'ACTIVE',triggered:false};
+   const box={id:'BOX-'+(++this.sequence),candidateId:p.id,candidateKey:p.key,currentState:p.state,degree:'Working',pattern:p.pattern,currentWave:p.currentWave,...clone(p.next),createdAt:x.ts,originPrice:x.price,symbol,timeframe,seconds,regime:view.v3Story?.state||'UNKNOWN',state:'ACTIVE',triggered:false};
    s.boxes.push(box);if(s.boxes.length>300)s.boxes.shift();this.record(s,'PREDICTION_CREATED',{box},x.ts);
   }
   if(old&&p&&old.key===p.key&&old.state!==p.state)this.record(s,'WAVE_STATE_CHANGED',{candidateId:p.id,from:old.state,to:p.state},x.ts);
@@ -290,12 +301,13 @@ class Observer{
  }
  report(){
   const rows=Object.values(this.contexts).flatMap(s=>s.boxes),terminal=rows.filter(q=>['HIT','EXPIRED','INVALIDATED'].includes(q.state));
-  const stats=a=>({n:a.length,directionAccuracy:a.filter(q=>q.directionCorrect===true).length/(a.filter(q=>typeof q.directionCorrect==='boolean').length||1),targetHitRate:a.filter(q=>q.state==='HIT'||q.priceHitAt).length/(a.length||1),timeHitRate:a.filter(q=>q.state==='HIT').length/(a.length||1),invalidationRate:a.filter(q=>q.state==='INVALIDATED').length/(a.length||1)});
+  const lifeBars=q=>Math.max(0,((q.at||q.createdAt)-q.createdAt)/(1000*(q.seconds||({'1m':60,'5m':300,'15m':900,'1h':3600}[q.timeframe]||60))));
+  const stats=a=>{const directionRows=a.filter(q=>typeof q.directionCorrect==='boolean'),stability=a.map(lifeBars).filter(finite);return {n:a.length,directionAccuracy:a.filter(q=>q.directionCorrect===true).length/(directionRows.length||1),targetHitRate:a.filter(q=>q.state==='HIT'||q.priceHitAt).length/(a.length||1),timeHitRate:a.filter(q=>q.state==='HIT').length/(a.length||1),invalidationRate:a.filter(q=>q.state==='INVALIDATED').length/(a.length||1),recountRate:a.filter(q=>q.recounted).length/(a.length||1),countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null};};
   const group=k=>{const map={};for(const q of terminal){const v=k(q);(map[v]||(map[v]=[])).push(q);}return Object.fromEntries(Object.entries(map).map(([k,v])=>[k,stats(v)]));};
-  return {schema:'elliott-evaluation-1',experimental:true,scoresAreProbabilities:false,metricPolicy:'Fixed at creation: trigger required; target overlap on observed prices; invalidation first; time window inclusive; missing feed is not a hit. Direction evaluated at terminal observation; no unobserved intra-bar ordering inferred.',
+  return {schema:'elliott-evaluation-1',experimental:true,scoresAreProbabilities:false,metricPolicy:'Fixed at creation: trigger required; target overlap on observed prices; invalidation first; time window inclusive; missing feed is not a hit. Direction evaluated at terminal observation; no unobserved intra-bar ordering inferred. Recounts and count-stability are measured from append-only lifecycle events.',
    totalPredictions:rows.length,completed:stats(terminal),scoreBuckets:group(q=>q.score<50?'0–49':q.score>=90?'90–100':Math.floor(q.score/10)*10+'–'+(Math.floor(q.score/10)*10+9)),
    byWave:group(q=>q.wave),byPattern:group(q=>q.pattern),byDegree:group(q=>q.degree),byRegime:group(q=>q.regime),byTimeframe:group(q=>q.timeframe),bySymbol:group(q=>q.symbol),
-   contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>[k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,samples:s.samples,evictedAudit:s.evictedAudit}]))};
+   contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>{const stability=(s.stabilityBars||[]).filter(finite);return [k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null,samples:s.samples,evictedAudit:s.evictedAudit}];}))};
  }
 }
 const api={Observer,DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,project,previousCountStatus,updateBox,candidateIdentity,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
