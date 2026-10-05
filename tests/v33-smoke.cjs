@@ -44,6 +44,21 @@ const lowerZ=[
 const zigSub=api.subdivision(parentZ,'ZIGZAG',[lowerZ],0,2);
 assert.equal(zigSub.state,'VALID');assert.equal(zigSub.validLegs,3);
 
+// Flat must validate its 3-3-5 internal structure.
+const parentF=[
+ {id:'F0',time:0,i:0,price:100,type:'L',provisional:false},
+ {id:'FA',time:6000,i:10,price:110,type:'H',provisional:false},
+ {id:'FB',time:12000,i:20,price:100,type:'L',provisional:false},
+ {id:'FC',time:18000,i:30,price:112,type:'H',provisional:false}
+];
+const lowerF=[
+ {id:'FA1',time:2000,price:104,type:'H'},{id:'FA2',time:4000,price:102,type:'L'},
+ {id:'FB1',time:8000,price:106,type:'L'},{id:'FB2',time:10000,price:108,type:'H'},
+ {id:'FC1',time:13000,price:104,type:'H'},{id:'FC2',time:14000,price:102,type:'L'},{id:'FC3',time:15000,price:108,type:'H'},{id:'FC4',time:16000,price:105,type:'L'}
+];
+const flatSub=api.subdivision(parentF,'FLAT',[lowerF],0,2);
+assert.equal(flatSub.state,'VALID');assert.equal(flatSub.validLegs,3);
+
 // Primary target must require independent confluence; Fib-only remains provisional and cannot open a box.
 const projectionCandidate={pivots:piv([100,110,104]),direction:1,pattern:'IMPULSE',degree:'Working',score:60};
 const projectionBase={...api.DEFAULTS,atr:2,bars:[],price:104,time:3600,seconds:60,htf:{},behavior:{},features:{},momentum:0,flow:0,durations:[8,10,12]};
