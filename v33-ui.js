@@ -20,17 +20,19 @@ function render(out,version){
  const state=root.ArisV33?.STATE_TH||{},unknownText=root.ArisV33?.UNKNOWN_TH||{};
  if(!c){$('elliott-current').textContent=unknownText[unknown]||'กำลังรวบรวมโครงสร้างคลื่น';for(const id of ['elliott-next','elliott-target','elliott-risk'])$(id).textContent='';$('elliott-detail').textContent=out?.error?'ส่วนวิเคราะห์คลื่นมีข้อผิดพลาด · จุดเข้าเดิมยังทำงาน':'ข้อมูลยังไม่พอสำหรับนับคลื่น';return;}
  const n=c.next;
- $('elliott-current').textContent=(unknown?(unknownText[unknown]||'ยังไม่ชัด')+' · สมมติฐาน ':'ตอนนี้ ')+c.currentWave+' '+direction(c.currentDirection)+' · '+(state[c.state]||c.state);
- $('elliott-next').textContent='ถัดไป '+n.wave+' '+direction(n.direction)+' · Wave Score '+c.score+'/100';
- $('elliott-target').textContent='โซน '+number(n.targetLow)+'–'+number(n.targetHigh)+' · '+n.fromBars+'–'+n.toBars+' แท่ง'+(out?.seconds?' ('+(n.fromBars*out.seconds/60)+'–'+(n.toBars*out.seconds/60)+' นาที)':'');
+ $('elliott-current').textContent=(unknown?(unknownText[unknown]||'ยังไม่ชัด')+' · สมมติฐาน ':'ตอนนี้ ')+'Wave '+c.currentWave+' '+direction(c.currentDirection)+' · '+(state[c.state]||c.state);
+ $('elliott-next').textContent='ถัดไป Wave '+n.wave+' '+direction(n.direction)+' · Wave Score '+c.score+'/100';
+ $('elliott-target').textContent=n.projectionReady
+  ?'โซน '+number(n.targetLow)+'–'+number(n.targetHigh)+' · '+n.fromBars+'–'+n.toBars+' แท่ง'+(out?.seconds?' ('+(n.fromBars*out.seconds/60)+'–'+(n.toBars*out.seconds/60)+' นาที)':'')
+  :'เป้าหมายยังไม่ยืนยัน · Wave Fib '+number(n.fibOnlyTarget?.low)+'–'+number(n.fibOnlyTarget?.high)+' รอ confluence เพิ่ม';
  $('elliott-risk').textContent='Trigger '+(n.trigger.direction>0?'ยืนเหนือ ':'ยืนใต้ ')+number(n.trigger.price)+' · ยกเลิกเมื่อ'+(n.invalidationDirection>0?'ต่ำกว่า ':'สูงกว่า ')+number(n.invalidation);
  const detail=$('elliott-detail');detail.replaceChildren();
- const rows=['Pattern: '+(patterns[c.pattern]||c.pattern)+(c.variant?' · '+c.variant:''),'ลักษณะ: '+(c.personality?.notes?.join(' · ')||'รอตรวจแรงและโครงสร้างย่อย'),
+ const rows=['ประเภท: '+(c.category==='MOTIVE'?'Motive':'Corrective'),'Pattern: '+(patterns[c.pattern]||c.pattern)+(c.variant?' · '+c.variant:''),'ลักษณะ: '+(c.personality?.notes?.join(' · ')||'รอตรวจแรงและโครงสร้างย่อย'),
  'คลื่นย่อย: ผ่าน '+c.subwaves.validLegs+'/'+c.subwaves.totalLegs+' ขา · '+(c.subwaves.state==='VALID'?'ตรวจ subdivision ผ่าน':'ยังยืนยัน pattern ไม่ครบ'),
  'Parent: '+(c.parentWave?c.parentWave.degree+' Wave '+c.parentWave.wave:'ยังเชื่อมโครงสร้างใหญ่ไม่ได้'),
  'Alternate: '+(alt?(patterns[alt.pattern]||alt.pattern)+' '+alt.currentWave+' → '+alt.next.wave+' '+direction(alt.next.direction)+' · '+alt.score+'/100':'ยังไม่มี count สำรองที่ผ่านกฎ'),
  'Wave Fib: '+n.waveFib.sourceWave+' → '+n.waveFib.targetWave+' · ฐาน '+number(n.waveFib.projectionBase),
- 'แหล่งเป้า: '+n.primary.sources.join(' + ')+(n.primary.sources.length<2?' · ยังไม่มี confluence จากแหล่งอื่น':''),
+ 'แหล่งเป้า: '+(n.primary?.sources?.join(' + ')||'ยังไม่มี independent confluence · ไม่เปิด Prediction Box'),
  'กล่อง: '+(out?.box?.state||'ยังไม่เปิด prediction เพราะ count ไม่ชัด'),
  'ประวัติ '+(out?.historyBars||0)+' แท่ง · Audit '+(out?.auditCount||0)+' · EXPERIMENTAL: คะแนนไม่ใช่โอกาสชนะ'];
  if(c.extension)rows.push('พบ Wave 3 ยืด · ตรวจคลื่นย่อยก่อนถือว่าคลื่นใหญ่จบ');if(c.truncated)rows.push('Wave 5 ไม่ทำ extreme ใหม่ · '+(c.subwaves.legs[4]?.state==='VALID'?'คลื่นย่อยผ่าน':'ยังเป็น truncation candidate'));
@@ -54,7 +56,7 @@ function overlay(svg,make,w,h,out,chart,series){
   const a=xy({time:box.startTime,price:box.targetHigh}),b=xy({time:box.endTime,price:box.targetLow});
   if([a.x,a.y,b.x,b.y].every(Number.isFinite)){
    const left=Math.max(0,a.x),right=Math.min(w-55,b.x),top=Math.max(24,Math.min(a.y,b.y)),bottom=Math.min(h-8,Math.max(a.y,b.y));
-   if(right>left&&bottom>top){g.append(make('rect',{x:left,y:top,width:right-left,height:bottom-top,rx:3,fill:'#b9ee6130',stroke:'#d3f77d','stroke-width':1,'stroke-dasharray':'5 3'}));const t=make('text',{x:left+4,y:top+12,fill:'#e6ffb3','font-size':9});t.textContent='W'+box.wave+' · '+box.fromBars+'–'+box.toBars+' แท่ง';g.append(t);
+   if(right>left&&bottom>top){g.append(make('rect',{x:left,y:top,width:right-left,height:bottom-top,rx:3,fill:'#b9ee6130',stroke:'#d3f77d','stroke-width':1,'stroke-dasharray':'5 3'}));const t=make('text',{x:left+4,y:top+12,fill:'#e6ffb3','font-size':9});t.textContent='Wave '+box.wave+' · '+box.fromBars+'–'+box.toBars+' แท่ง';g.append(t);
     const origin=points.at(-1);g.append(make('line',{x1:origin.x,y1:origin.y,x2:(left+right)/2,y2:(top+bottom)/2,stroke:'#dbf9a3','stroke-dasharray':'2 5',opacity:.55}));}
   }
  }
