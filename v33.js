@@ -374,7 +374,9 @@ if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
      const sig=view.signal,e=sig.dataset?.entry;
      if(e&&!e.v33Elliott)e.v33Elliott=clone({schema:elliott.schema,symbol:elliott.symbol,timeframe:elliott.timeframe,timestamp:elliott.timestamp,unknown:elliott.unknown,preferred:elliott.preferred,alternate:elliott.alternate,box:elliott.box,experimental:true});
      if(e)e.v33EntryContext=clone(decision);
-     if(!decision.allow){
+     if(decision.state==='OFF'){
+      // Strict A/B mode: keep the frozen 3.1-style signal/view untouched.
+     }else if(!decision.allow){
       const blockedId=sig.id;
       this.signals=preSignals;
       for(let i=this.audit.length-1;i>=0;i--){const q=this.audit[i];if(q?.type==='issued'&&q?.id===blockedId){this.audit.splice(i,1);break;}}
