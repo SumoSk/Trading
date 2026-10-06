@@ -60,15 +60,38 @@ function hardRules(p,pattern='IMPULSE',opts={}){
    }
   }
  }else if(pattern==='ZIGZAG'){
+  const aLen=v[1]-v[0];
   if(n>=2&&v[2]<=v[0])fail.push('ZIGZAG_B_ORIGIN_BROKEN');
   if(n>=3&&v[3]<=v[1])fail.push('ZIGZAG_C_NOT_BEYOND_A');
+  if(n>=3&&aLen>0&&(v[3]-v[2])/aLen<.382)fail.push('ZIGZAG_C_TOO_SMALL');
  }else if(pattern==='FLAT'){
-  if(n>=2&&(v[1]-v[2])/(v[1]-v[0])<.9)fail.push('FLAT_B_TOO_SHALLOW');
+  const aLen=v[1]-v[0],bRetrace=n>=2&&aLen>0?(v[1]-v[2])/aLen:null;
+  if(n>=2&&(!finite(bRetrace)||bRetrace<.9))fail.push('FLAT_B_TOO_SHALLOW');
+  if(n>=3&&aLen>0){
+   const cLen=(v[3]-v[2])/aLen,cBeyondA=(v[3]-v[1])/aLen;
+   if(cLen<.382)fail.push('FLAT_C_TOO_SMALL');
+   if(bRetrace<=1.05&&cBeyondA<-.10)fail.push('FLAT_REGULAR_C_TOO_SHORT');
+  }
  }else if(pattern==='TRIANGLE'){
   if(!['4','B','X'].includes(opts.parentWave))fail.push('TRIANGLE_POSITION_UNCONFIRMED');
   if(n>=5&&!(v[3]<v[1]&&v[4]>v[2]&&v[5]<v[3]&&v[5]>v[4]))fail.push('TRIANGLE_NOT_CONTRACTING');
  }
  return {valid:!fail.length,reasons:[...new Set(fail)]};
+}
+function correctionGeometry(p,pattern){
+ if(!['ZIGZAG','FLAT'].includes(pattern)||p.length<3)return null;
+ const d=Math.sign(p[1]?.price-p[0]?.price),a=Math.abs((p[1]?.price??0)-(p[0]?.price??0));
+ if(!d||!finite(a)||a<=0)return null;
+ const bRetrace=Math.abs(p[2].price-p[1].price)/a,n=p.length-1;
+ let cLengthRatio=null,cBeyondA=null,variant=null;
+ if(n>=3){
+  cLengthRatio=Math.abs(p[3].price-p[2].price)/a;
+  cBeyondA=d*(p[3].price-p[1].price)/a;
+  if(pattern==='ZIGZAG')variant='ZIGZAG';
+  else if(bRetrace>1.05)variant=cBeyondA>=0?'EXPANDED':'RUNNING';
+  else variant='REGULAR';
+ }
+ return {direction:d,bRetrace,cLengthRatio,cBeyondA,variant};
 }
 function subdivision(p,pattern,layers,depth=0,maxDepth=2){
  const n=p.length-1,expected=pattern==='IMPULSE'?[5,3,5,3,5]:pattern==='ZIGZAG'?[5,3,5]:pattern==='FLAT'?[3,3,5]:[3,3,3,3,3];
@@ -155,7 +178,8 @@ function makeCandidate(p,pattern,degree,layers,ctx,parent){
  const w1=Math.abs(p[1].price-p[0].price),w3=n>=3?Math.abs(p[3].price-p[2].price):0;
  c.extension=motive&&n>=3&&w3>w1*1.618;c.truncated=motive&&n===5&&d*(p[5].price-p[3].price)<=0;
  if(c.truncated&&sub.legs[4]?.state!=='VALID')c.state='CANDIDATE';
- if(pattern==='FLAT'&&n>=3){const ratio=Math.abs(p[2].price-p[1].price)/w1;c.variant=ratio>1.05?(d*(p[3].price-p[1].price)>0?'EXPANDED':'RUNNING'):'REGULAR';}
+ c.correctionGeometry=correctionGeometry(p,pattern);
+ if(c.correctionGeometry?.variant)c.variant=c.correctionGeometry.variant;
  const behavior=personality(c,ctx);c.personality=behavior;
  const durations=p.slice(1).map((q,i)=>q.time-p[i].time),durationConsistency=median(durations)?clip(5-(Math.max(...durations)/median(durations)),0,4):0;
  const ratio=n>=2?Math.abs(p[2].price-p[1].price)/w1:0,fibFit=ratio>=.236&&ratio<=.786?4:0;
@@ -190,7 +214,8 @@ function generate(p,degree,layers,ctx,parent){
 function selectCounts(candidates,cfg=DEFAULTS){
  const preferred=candidates[0]||null;
  const alternate=candidates.find(q=>preferred&&q.key!==preferred.key&&(q.next.direction!==preferred.next.direction||q.pattern!==preferred.pattern||q.currentWave!==preferred.currentWave))||null;
- const unknown=!preferred?'INSUFFICIENT_STRUCTURE':preferred.score<cfg.minScore?'UNRESOLVED':alternate&&preferred.score-alternate.score<cfg.ambiguityGap?'MULTIPLE_COUNTS_CLOSE':null;
+ const unconfirmed=preferred&&preferred.state!=='CONFIRMED_COMPLETE';
+ const unknown=!preferred?'INSUFFICIENT_STRUCTURE':preferred.score<cfg.minScore||unconfirmed?'UNRESOLVED':alternate&&preferred.score-alternate.score<cfg.ambiguityGap?'MULTIPLE_COUNTS_CLOSE':null;
  return {preferred,alternate,unknown};
 }
 function resolveUnknown(preferred,microPivotCount,selectedUnknown){return !preferred&&microPivotCount>8?'COMPLEX_CORRECTION':selectedUnknown;}
@@ -288,7 +313,7 @@ class Observer{
     this.record(s,'BOX_INVALIDATED',{box},x.ts);
    }
   }
-  if(p&&!unknown&&p.next.projectionReady&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
+  if(p?.state==='CONFIRMED_COMPLETE'&&!unknown&&p.next.projectionReady&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
    const box={id:'BOX-'+(++this.sequence),candidateId:p.id,candidateKey:p.key,currentState:p.state,degree:'Working',pattern:p.pattern,currentWave:p.currentWave,...clone(p.next),createdAt:x.ts,originPrice:x.price,symbol,timeframe,seconds,regime:view.v3Story?.state||'UNKNOWN',state:'ACTIVE',triggered:false};
    s.boxes.push(box);if(s.boxes.length>300)s.boxes.shift();this.record(s,'PREDICTION_CREATED',{box},x.ts);
   }
@@ -333,7 +358,7 @@ function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={
   if(finite(edge))targetRoomAtr=d*(edge-price)/atrValue;
  }
  const nearTarget=finite(targetRoomAtr)&&targetRoomAtr<c.minTargetRoomAtr;
- const countClear=!unknown&&!ambiguous&&p.state!=='CANDIDATE';
+ const countClear=!unknown&&!ambiguous&&p.state==='CONFIRMED_COMPLETE';
  const strongOpposition=opposed&&score>=c.oppositionScore&&countClear&&!!n.projectionReady;
  const hardTargetCrowding=aligned&&score>=c.oppositionScore&&countClear&&!!n.projectionReady&&finite(targetRoomAtr)&&targetRoomAtr<c.hardTargetRoomAtr;
  const common={candidateId:p.id||null,candidateKey:p.key||null,pattern:p.pattern||null,currentWave:p.currentWave||null,waveState:p.state||null,nextWave:n.wave||null,nextDirection,score,unknown,targetRoomAtr,mode,countClear};
@@ -341,7 +366,7 @@ function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={
  if(strongOpposition)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ชัดและ Next Wave สวนจุดเข้าแรงพอ จึงรอ'};
  if(hardTargetCrowding)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave หนุนทิศ แต่เหลือพื้นที่ถึง Target น้อยมากและ Count ชัด จึงไม่ไล่'};
  if(c.ambiguousEarlyBlock&&ambiguous&&mode==='EARLY')return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ยังไม่ชัด จึงไม่อนุญาตจุดเข้า EARLY'};
- if(aligned&&score>=c.supportScore&&!unknown&&!nearTarget)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
+ if(aligned&&score>=c.supportScore&&countClear&&!nearTarget)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
  if(aligned&&nearTarget)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-4,reason:'Wave หนุนทิศ แต่เริ่มเข้าใกล้ Target Zone จึงลดความมั่นใจแทนการบล็อก'};
  if(aligned)return {...common,allow:true,state:'PASS',entryScoreDelta:4,reason:'ทิศของ Next Wave สอดคล้องกับจุดเข้า แต่คะแนนยังไม่สูงมาก'};
  if(opposed)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'Elliott เอนสวนจุดเข้า แต่หลักฐานยังไม่ครบเงื่อนไข Strong Opposition จึงไม่บล็อก'};
@@ -349,7 +374,7 @@ function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={
  return {...common,allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มีข้อมูลที่ควรเปลี่ยนจุดเข้า'};
 }
 
-const api={Observer,DEFAULTS,ENTRY_DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,resolveUnknown,project,previousCountStatus,updateBox,candidateIdentity,elliottEntryDecision,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
+const api={Observer,DEFAULTS,ENTRY_DEFAULTS,feed,degreePivots,hardRules,correctionGeometry,subdivision,makeCandidate,generate,selectCounts,resolveUnknown,project,previousCountStatus,updateBox,candidateIdentity,elliottEntryDecision,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 const core=root.EventSignalV6;
 if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
