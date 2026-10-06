@@ -2602,7 +2602,7 @@ const ARIS_V31_CONFIG=Object.freeze({...ARIS_V3_CONFIG,
  version:'ARIS-3.1.0',arisRevision:'observer-v3.1-r1-htf-newleg',
  v31DualHtfNewLegGuard:true
 });
-const ARIS_V33_CONFIG=Object.freeze({...ARIS_V31_CONFIG,version:'ARIS-3.3.0',arisRevision:'elliott-observer-v33-r2-final-lock',elliottInfluence:false});
+const ARIS_V33_CONFIG=Object.freeze({...ARIS_V31_CONFIG,version:'ARIS-3.3.0',arisRevision:'elliott-entry-v33-r3',elliottInfluence:true});
 const ARIS_V32_CONFIG=Object.freeze({...ARIS_V31_CONFIG,
  version:'ARIS-3.2.0',arisRevision:'stage-adaptive-v3.2-r1'
 });
@@ -2757,7 +2757,7 @@ const ARIS_V12_PROFILE=Object.freeze({
 const ARIS_V2_PROFILE=Object.freeze({name:'ARIS V2 · Market Observer',basis:'เครื่องยนต์ใหม่: Observe → Memory → State → Story → Hypothesis → Playbook → Entry → Re-plan → Learning',change:Object.freeze({observer:'เฝ้าพฤติกรรมตลาดต่อเนื่อง ไม่รอ setup อย่างเดียว',sideway:'แยก Fresh/Balance/Compression/Edge pressure/Fake break/Range failure',candle:'อ่าน candle sequence, shock, rejection, compression, failed expansion',fib:'ใช้ Fibonacci 23.6/38.2/50/61.8/78.6 และ extension เป็น confluence',zones:'เฝ้าแนวรับแนวต้านและ trend-change risk',planning:'ทุกบริบทมี Trigger + Invalidation + Next plan',ui:'ใช้ Block 1/2/3 เดิมผ่าน adapter'})});
 const ARIS_V3_PROFILE=Object.freeze({name:'ARIS V3 · Episode-Gated Structure',basis:'ต่อยอดบทเรียนจาก ARIS V2 โดยแยก Market Episode และบังคับ Structure → Location → Behavior → Micro เป็น independent gates',source:Object.freeze({version:'ARIS-2.0.0',kind:'recorded_entry_research',warning:'ผลย้อนหลังเป็น exploratory/in-sample ต้อง replay + validation + forward shadow'}),change:Object.freeze({episode:'หนึ่งเรื่องตลาดไม่ควรสร้างไม้ใหม่ทุกครั้งที่ Volume/Playbook เปลี่ยน',structure:'Structure เป็น boss gate และคะแนนอื่นชดเชยไม่ได้',volume:'Volume เป็น Event Detector ไม่ใช่ Trigger',playbooks:'เริ่มด้วย Breakout Continuation / Shock Resolution / Pullback-Reclaim / Confirmed Reversal',reentry:'ปกติหนึ่ง entry ต่อ structural leg; ต้องเกิดฐาน/leg ใหม่จึงออกเพิ่ม',micro:'Flow/Book ใช้ confirm หลังมี thesis แล้ว',causality:'ใช้เฉพาะ entry-time data เป็น predictor; follow-up/outcome เป็น labels เท่านั้น'})});
 const ARIS_V31_PROFILE=Object.freeze({name:'ARIS V3.1 · HTF New-Leg Guard',basis:'ต่อยอดจาก V3.0 โดยแก้เฉพาะ failure cluster ของ trend_continuation หลังมี entry ก่อนหน้าใน Episode เดิม',source:Object.freeze({version:'ARIS-3.0.0',kind:'recorded_entry_research',observation:'ในข้อมูล r4 กลุ่ม new_structural_leg + trend_continuation ที่สวนทั้ง 5m และ 15m พร้อมกันแพ้ 6/6; ตัวอย่างยังน้อยจึงใช้เป็น experimental guard ไม่แก้ V3.0'}),change:Object.freeze({scope:'เฉพาะ trend_continuation หลัง Episode นี้เคยออก entry แล้ว',rule:'ถ้า 5m และ 15m พร้อมกันชี้สวนทิศ entry ให้คงเป็น WATCH; ปลด block เมื่ออย่างน้อยหนึ่งกรอบหยุดสวน',gates:'คง 4 independent gates ของ V3.0 เดิม ไม่เพิ่มเป็น gate ที่ 5',causality:'ใช้เฉพาะ higher-timeframe context ที่มีอยู่ตอนตัดสินใจ'}),validation:Object.freeze({status:'experimental',warning:'ต้องเก็บ forward data แยกจาก V3.0 ก่อนสรุปความแม่น'})});
-const ARIS_V33_PROFILE=Object.freeze({name:'ARIS V3.3 · Elliott Wave',basis:'Frozen 3.1 execution + independent Elliott observer',experimental:true,elliottInfluence:false});
+const ARIS_V33_PROFILE=Object.freeze({name:'ARIS V3.3 · Elliott Wave',basis:'Frozen 3.1 execution + Elliott entry-context gate',experimental:true,elliottInfluence:true});
 const ARIS_V32_PROFILE=Object.freeze({name:'ARIS V3.2 · Stage-Adaptive Brain',basis:'Standalone rewrite: Stage → adaptive weights → stage-specific trigger → family re-arm',source:Object.freeze({version:'ARIS-3.2.0',kind:'stage_adaptive_rewrite',warning:'design-prior weights; replay/out-of-sample/forward validation required'}),change:Object.freeze({stage:'แยก Trend / Range / Compression / Breakout / Failed Breakout / Pullback / Exhaustion / Reversal / Transition',weighting:'น้ำหนักเปลี่ยนตาม Stage',trigger:'แต่ละ Stage ใช้ Trigger คนละชุด',entry:'family-specific threshold + re-arm ไม่ใช้ one-entry-per-leg แบบตายตัว',training:'เก็บ predictor ตอนเข้าแยกจาก post-entry labels'})});
 const ARIS_V4_PROFILE=Object.freeze({name:'ARIS V4 · Sideway Specialist',basis:'เครื่องยนต์แยกสำหรับตลาด Sideway เท่านั้น ไม่แชร์ Entry Logic กับ V3',source:Object.freeze({version:'ARIS-4.0.0',kind:'sideway_only_blueprint',warning:'ต้อง replay + validation + forward test ก่อนสรุปความแม่น'}),change:Object.freeze({regime:'เปิดงานเฉพาะกรอบ Sideway ที่มีคุณภาพและไม่อยู่ใน compression/trend threat',location:'ไม่เล่นกลางกรอบ เล่นเฉพาะขอบแบบ ATR-adaptive',rejection:'ต้องเห็น rejection หรือ failed breakout และ reclaim กลับเข้ากรอบ',breakout:'No Breakout เป็น hard gate; ถ้าตลาดยอมรับราคานอกกรอบจะยกเลิกการสวนทันที',entry:'ต้องผ่าน Range + Edge + Rejection + No Breakout ครบ 4/4 ไม่มี EARLY',reentry:'ขอบเดิมยิงได้ครั้งเดียวจนกว่าราคาจะหมุนกลับกลางกรอบแล้ว re-arm',horizon:'ตัดสินผลที่ T+10 นาทีจากราคาจุดเข้า'})});
 const V65_PROFILE=Object.freeze({
@@ -4245,7 +4245,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="v3.js?v=20261001-r6"></script>
 <script src="v31.js?v=20261001-r1"></script>
 <script src="v33-base.js?v=20261006-r2"></script>
-<script src="v33.js?v=20261006-r2"></script>
+<script src="v33.js?v=20261006-r3-entry"></script>
 <script src="v33-ui.js?v=20261006-r4-compact"></script>
 <script src="v32.js?v=20261002-r1"></script>
 <script src="v32-direction.js?v=20261002-r1"></script>
@@ -4257,7 +4257,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="entry-score.js?v=20261001-r1"></script>
 <script src="audit-calibration.js?v=20261001-r2"></script>
 <script src="audit-engine.js?v=20261001-r4"></script>\n<script src="historical-data.js?v=20261003-r4"></script>
-<script src="training-engine-registry.js?v=20261006-r2"></script>
+<script src="training-engine-registry.js?v=20261006-r3-entry"></script>
 <script src="replay-engine.js?v=20261001-r7"></script>
 <script src="training-analytics.js?v=20261001-r1"></script>\n<script src="10-candle-challenge.js?v=20261003-r10"></script>\n<script src="training-lab.js?v=20261004-r18"></script>\n<script src="training-validation.js?v=20261001-r5"></script>
 <script>

@@ -1,16 +1,16 @@
-# ARIS 3.3 Elliott — r2 final-lock hardening
+# ARIS 3.3 Elliott — r3 entry-context integration
 
 Target specification: **ARIS 3.3 Elliott Wave FINAL MASTER SPECIFICATION / FINAL LOCK**.
 
-This revision keeps ARIS 3.1 as the trading engine and runs Elliott as an independent observer/predictor. Wave Score remains experimental and is never presented as a calibrated probability.
+This revision keeps ARIS 3.1 frozen and unchanged, but **ARIS 3.3 now uses Elliott as an additional entry-context gate**. Wave Score remains experimental and is never presented as a calibrated probability.
 
 ## Integrity
 
 - ARIS 3.1 remains the default engine.
 - `v31.js` is unchanged.
 - `v33-base.js` preserves 3.1 execution behaviour and human execution reasons; only 3.3 version/storage identity is separate.
-- Elliott does not alter entry gates, thresholds, signals or Execution Fib.
-- Deterministic 400-bar / 1,080-evaluation regression produced 15 signals in both 3.1 and 3.3 with matching status, reason, event, signal core, V3 story and Execution Fib.
+- ARIS 3.1 itself remains untouched. In ARIS 3.3 only, Elliott can now PASS / BOOST / CAUTION / BLOCK an otherwise-valid 3.1-style entry. Execution Fib remains unchanged.
+- Deterministic 400-bar / 1,080-evaluation regression still compares frozen 3.1 against the 3.3 base with Elliott influence explicitly disabled. This protects the baseline while allowing live 3.3 to use Elliott.
 - Backup before this hardening pass: `backup-before-v33-final-fixes-20261006`.
 
 ## Elliott engine
@@ -76,7 +76,7 @@ Evaluation output includes:
 - Timeframe breakdown
 - Symbol breakdown
 
-3.3 signal-time Elliott snapshots remain separate from the original trading outcome labels. Elliott still has no influence on entry decisions.
+3.3 signal-time Elliott snapshots remain separate from outcome labels. Elliott now influences entry decisions only in ARIS 3.3, and every PASS/BLOCK decision is stored for later evaluation.
 
 ## Tests
 
@@ -103,7 +103,9 @@ Evaluation output includes:
 - reload audit preservation
 - responsive integration guards
 - Training-engine integration
-- strict 3.1 vs 3.3 execution regression
+- strict 3.1 vs 3.3 base regression with Elliott influence disabled
+- Elliott entry gate PASS / BOOST / CAUTION / BLOCK behavior
+- strong-opposition veto rollback without storing a false signal
 - recount / invalidation / degree-reclassification lifecycle events
 
 GitHub Actions workflow: `.github/workflows/aris-v33-regression.yml`.
@@ -126,11 +128,11 @@ These are research limits, not hidden implementation claims:
 - Wave Score is **not** a win probability until real score-bucket calibration exists.
 - Time projection is experimental until sufficient forward samples exist.
 - Browser/device visual acceptance still requires live viewing on the target iPhone/iPad/desktop; static responsive guards are in place, but no code review can replace that final visual acceptance.
-- Real walk-forward/forward performance must be collected before Elliott is ever allowed to influence entries.
+- Real walk-forward/forward performance must now be collected to prove whether the new Elliott entry gate improves EV; current thresholds are experimental.
 
 ## Current release identity
 
 - Engine: `ARIS-3.3.0`
-- Revision: `elliott-observer-v33-r2-final-lock`
-- Live/Training cache revision: `20261006-r2`
-- Trading influence: **OFF**
+- Revision: `elliott-entry-v33-r3`
+- Live/Training cache revision: `20261006-r3-entry`
+- Trading influence: **ON in ARIS 3.3 only**

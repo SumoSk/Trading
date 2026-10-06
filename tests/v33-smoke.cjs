@@ -81,6 +81,22 @@ assert.equal(close.unknown,'MULTIPLE_COUNTS_CLOSE');assert.equal(close.alternate
 assert.equal(api.resolveUnknown(null,9,'INSUFFICIENT_STRUCTURE'),'COMPLEX_CORRECTION');
 assert.equal(api.resolveUnknown(candidate('A',70,1),12,null),null);
 
+
+// Elliott now participates in ARIS 3.3 entry as a fifth context gate.
+const waveAligned={unknown:null,preferred:{id:'COUNT-E1',key:'E1',score:78,pattern:'IMPULSE',currentWave:'2',state:'PROBABLE_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:112,targetHigh:116,invalidation:98,invalidationDirection:1}}};
+const waveOpposed={unknown:null,preferred:{id:'COUNT-E2',key:'E2',score:76,pattern:'IMPULSE',currentWave:'4',state:'FORMING',next:{wave:'5',direction:-1,projectionReady:true,targetLow:94,targetHigh:97,invalidation:108,invalidationDirection:-1}}};
+const waveAmbiguous={unknown:'MULTIPLE_COUNTS_CLOSE',preferred:{id:'COUNT-E3',key:'E3',score:70,pattern:'ZIGZAG',currentWave:'B',state:'FORMING',next:{wave:'C',direction:1,projectionReady:false,invalidation:98,invalidationDirection:1}}};
+const entryBoost=api.elliottEntryDecision(waveAligned,'HIGH',104,2,'EARLY');
+assert.equal(entryBoost.allow,true);assert.equal(entryBoost.state,'BOOST');
+const entryBlock=api.elliottEntryDecision(waveOpposed,'HIGH',104,2,'FULL');
+assert.equal(entryBlock.allow,false);assert.equal(entryBlock.state,'BLOCK');
+const ambiguityEarly=api.elliottEntryDecision(waveAmbiguous,'HIGH',104,2,'EARLY');
+assert.equal(ambiguityEarly.allow,false);
+const ambiguityFull=api.elliottEntryDecision(waveAmbiguous,'HIGH',104,2,'FULL');
+assert.equal(ambiguityFull.allow,true);
+const nearTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E4',key:'E4',score:80,pattern:'IMPULSE',currentWave:'2',state:'FORMING',next:{wave:'3',direction:1,projectionReady:true,targetLow:104.4,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
+assert.equal(nearTarget.allow,false,'do not chase when Elliott target room is too small');
+
 // Previous preferred count can be invalidated by the new live endpoint.
 const oldCount={id:'COUNT-OLD',degree:'Working',pattern:'IMPULSE',pivots:piv([100,110,104]),parentWave:null};
 const status=api.previousCountStatus(oldCount,{Working:piv([100,110])},{bars:[],price:99,time:1800});
@@ -153,7 +169,8 @@ function runtime(v){
 }
 const defaultRuntime=runtime(undefined);assert.equal(defaultRuntime.EventSignalV6.CFG.version,'ARIS-3.1.0');
 const a=runtime('ARIS-3.1.0'),c=runtime('ARIS-3.3.0');assert.equal(c.EventSignalV6.CFG.version,'ARIS-3.3.0');assert(c.ArisV33BaseEngine);
-const ea=new a.EventSignalV6.Engine(),ec=new c.EventSignalV6.Engine();ea.session=ec.session='TEST';
+const ea=new a.EventSignalV6.Engine(),ec=new c.EventSignalV6.Engine({v33EntryConfig:{enabled:false}});ea.session=ec.session='TEST';
+assert.equal(new c.EventSignalV6.Engine().v33EntryCfg.enabled,true,'live 3.3 must enable Elliott entry influence by default');
 let bars=[],previous=1000,signals=0;
 const signalCore=s=>s?{entryPrice:s.entryPrice,direction:s.direction,type:s.type,playbook:s.playbook,status:s.status,result:s.result}:null;
 for(let i=0;i<400;i++){
@@ -184,4 +201,23 @@ const last=ec.lastView.v33Elliott;assert(last.historyBars>=390);assert(last.degr
 assert.equal(ea.signals.length,ec.signals.length);
 assert.equal(JSON.stringify(ec.elliott.serialize().contexts['BTCUSDT|1m'].audit.slice(0,10)),JSON.stringify(history.contexts['BTCUSDT|1m'].audit.slice(0,10)));
 
-console.log(JSON.stringify({checks:'hard rules, pattern position, stable ids, ambiguity, complex/insufficient unknown, invalidation, box lifecycle, metrics, edge cases, context isolation, reload audit, responsive integration, training integration, strict 3.1 regression',matchedSignalCount:signals,storedSignals:ec.signals.length,history:last.historyBars,pivots:last.degrees.Working.pivots.length,unknown:last.unknown,preferred:last.preferred?.currentWave,boxes:history.contexts['BTCUSDT|1m'].boxes.length}));
+
+// Integration: a strong opposite Elliott count must veto a base 3.3 signal and roll it back from stored signals.
+const gatedRuntime=runtime('ARIS-3.3.0'),gated=new gatedRuntime.EventSignalV6.Engine();gated.session='GATE';
+const forcedOpposite={schema:'aris-elliott-1',symbol:'BTCUSDT',timeframe:'1m',timestamp:0,unknown:null,degrees:{Working:{unknown:null,preferred:{id:'COUNT-FORCED',key:'FORCED',score:90,pattern:'IMPULSE',currentWave:'4',state:'FORMING',next:{wave:'5',direction:-1,projectionReady:true,targetLow:900,targetHigh:930,invalidation:1100,invalidationDirection:-1}}}},preferred:null,alternate:null,box:null};
+forcedOpposite.preferred=forcedOpposite.degrees.Working.preferred;
+gated.elliott.observe=()=>structuredClone(forcedOpposite);
+let gb=[],gp=1000,blockedSeen=false;
+for(let i=0;i<400&&!blockedSeen;i++){
+ const close=1000+i*.1+12*Math.sin(i/14)+3*Math.sin(i/3);
+ gb.push({time:6000+i*60,open:gp,high:Math.max(gp,close)+.6,low:Math.min(gp,close)-.6,close,volume:100+i%20,closed:true});gp=close;
+ if(i<40)continue;
+ for(let j=0;j<3&&!blockedSeen;j++){
+  const x={symbol:'BTCUSDT',timeframe:'1m',timeframeSeconds:60,id:i*3+j,ts:(6060+i*60)*1000+j*400,price:close+.1*j,bars:structuredClone(gb),fresh:true,flow:Math.sign(close-gb[i-1].close)*.15,coverage:60,bookValid:false,current:{...gb.at(-1),time:6060+i*60,closed:false}};
+  const before=gated.signals.length,v=gated.step(structuredClone(x));
+  if(v.v33EntryContext?.state==='BLOCK'){blockedSeen=true;assert.equal(v.signal,null);assert.equal(gated.signals.length,before);assert(gated.audit.some(q=>q.type==='v33_elliott_entry_blocked'));}
+ }
+}
+assert(blockedSeen,'forced opposite Elliott context must block at least one otherwise-valid 3.3 entry');
+
+console.log(JSON.stringify({checks:'hard rules, pattern position, stable ids, ambiguity, complex/insufficient unknown, invalidation, box lifecycle, metrics, edge cases, context isolation, reload audit, responsive integration, training integration, strict 3.1 regression with Elliott influence disabled + active Elliott entry gate tests',matchedSignalCount:signals,storedSignals:ec.signals.length,history:last.historyBars,pivots:last.degrees.Working.pivots.length,unknown:last.unknown,preferred:last.preferred?.currentWave,boxes:history.contexts['BTCUSDT|1m'].boxes.length}));

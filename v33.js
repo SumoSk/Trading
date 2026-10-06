@@ -315,18 +315,102 @@ class Observer{
    contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>{const stability=(s.stabilityBars||[]).filter(finite);return [k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null,samples:s.samples,evictedAudit:s.evictedAudit}];}))};
  }
 }
-const api={Observer,DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,resolveUnknown,project,previousCountStatus,updateBox,candidateIdentity,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
+
+const ENTRY_DEFAULTS=Object.freeze({enabled:true,oppositionScore:64,supportScore:55,minTargetRoomAtr:.28,ambiguousEarlyBlock:true});
+function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={}){
+ const c={...ENTRY_DEFAULTS,...(cfg||{})},d=direction==='HIGH'?1:direction==='LOW'?-1:Math.sign(Number(direction)||0);
+ if(!c.enabled)return {allow:true,state:'OFF',entryScoreDelta:0,reason:'Elliott entry influence ปิดอยู่'};
+ const working=elliott?.degrees?.Working||{},p=working.preferred||elliott?.preferred||null,unknown=working.unknown||elliott?.unknown||null;
+ if(!d)return {allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'ยังไม่มีทิศของจุดเข้าให้ Elliott ประเมิน',unknown};
+ if(!p)return {allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มี Preferred Count จึงไม่บล็อกจุดเข้าเดิม',unknown};
+ const n=p.next||{},nextDirection=Math.sign(Number(n.direction)||0),score=Number(p.score)||0;
+ const aligned=nextDirection===d,opposed=!!nextDirection&&nextDirection!==d;
+ const ambiguous=['MULTIPLE_COUNTS_CLOSE','UNRESOLVED','COMPLEX_CORRECTION'].includes(unknown);
+ const structurallyInvalid=finite(n.invalidation)&&finite(n.invalidationDirection)&&n.invalidationDirection*(price-n.invalidation)<0;
+ let targetRoomAtr=null;
+ if(aligned&&n.projectionReady&&finite(price)&&finite(atrValue)&&atrValue>0){
+  const edge=d>0?n.targetLow:n.targetHigh;
+  if(finite(edge))targetRoomAtr=d*(edge-price)/atrValue;
+ }
+ const nearTarget=finite(targetRoomAtr)&&targetRoomAtr<c.minTargetRoomAtr;
+ const common={candidateId:p.id||null,candidateKey:p.key||null,pattern:p.pattern||null,currentWave:p.currentWave||null,waveState:p.state||null,nextWave:n.wave||null,nextDirection,score,unknown,targetRoomAtr,mode};
+ if(structurallyInvalid)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Preferred Count ทะลุ Elliott invalidation แล้ว'};
+ if(opposed&&score>=c.oppositionScore&&(!ambiguous||mode==='EARLY'))return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave หลักคาดทางตรงข้ามกับจุดเข้า และ Wave Score สูงพอให้รอ'};
+ if(nearTarget&&score>=c.supportScore)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'ทิศตรงกับ Wave แต่ราคาใกล้ Target Zone เกินไป ไม่ไล่จุดเข้า'};
+ if(c.ambiguousEarlyBlock&&ambiguous&&mode==='EARLY')return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ยังไม่ชัด จึงไม่อนุญาตจุดเข้า EARLY'};
+ if(aligned&&score>=c.supportScore&&!unknown)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
+ if(aligned)return {...common,allow:true,state:'PASS',entryScoreDelta:4,reason:'ทิศของ Next Wave สอดคล้องกับจุดเข้า แต่คะแนนยังไม่สูงมาก'};
+ if(opposed)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'Elliott เอนสวนจุดเข้า แต่หลักฐานยังไม่มากพอให้บล็อก'};
+ if(ambiguous)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-5,reason:'Wave Count ยังไม่ชัด ใช้ 3.1 เป็นหลักและลดความมั่นใจ'};
+ return {...common,allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มีข้อมูลที่ควรเปลี่ยนจุดเข้า'};
+}
+
+const api={Observer,DEFAULTS,ENTRY_DEFAULTS,feed,degreePivots,hardRules,subdivision,makeCandidate,generate,selectCounts,resolveUnknown,project,previousCountStatus,updateBox,candidateIdentity,elliottEntryDecision,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 const core=root.EventSignalV6;
 if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
  const Base=core.Engine;
  core.Engine=class V33Engine extends Base{
-  constructor(saved={}){super(saved);this.elliott=new Observer(saved.v33Memory||{});}
-  serialize(){return {...super.serialize(),v33Memory:this.elliott.serialize()};}
+  constructor(saved={}){
+   super(saved);
+   this.elliott=new Observer(saved.v33Memory||{});
+   this.v33EntryCfg={...ENTRY_DEFAULTS,...(saved.v33EntryConfig||{})};
+   if(saved.v33EntryConfig?.enabled===undefined)this.v33EntryCfg.enabled=core.CFG.elliottInfluence!==false;
+   this.v33EntryMemory=clone(saved.v33EntryMemory||{blocks:{}});
+  }
+  serialize(){return {...super.serialize(),v33Memory:this.elliott.serialize(),v33EntryConfig:clone(this.v33EntryCfg),v33EntryMemory:clone(this.v33EntryMemory)};}
   step(x){
+   const preSignals=this.signals.slice(),preLastSignal=this.v3LastSignal;
+   const preEpisode=this.v3Episode?{id:this.v3Episode.id,lastEntryAt:this.v3Episode.lastEntryAt,baseConfirmed:this.v3Episode.baseConfirmed,issuedLegKeys:[...(this.v3Episode.issuedLegKeys||[])]}:null;
    const view=super.step(x);
-   try{const elliott=this.elliott.observe(x,view);view.v33Elliott=elliott;if(view.signal?.dataset?.entry&&!view.signal.dataset.entry.v33Elliott)view.signal.dataset.entry.v33Elliott=clone({schema:elliott.schema,symbol:elliott.symbol,timeframe:elliott.timeframe,timestamp:elliott.timestamp,unknown:elliott.unknown,preferred:elliott.preferred,alternate:elliott.alternate,box:elliott.box,experimental:true});}
-   catch(error){view.v33Elliott={unknown:'UNRESOLVED',error:String(error.message),degrees:{}};}
+   try{
+    const elliott=this.elliott.observe(x,view);view.v33Elliott=elliott;
+    const direction=view.signal?.direction||view.gate?.direction||view.watch?.direction||null;
+    const mode=view.signal?.dataset?.entry?.v3EntryMode||view.gate?.metrics?.entryMode||'WAIT';
+    const decision=elliottEntryDecision(elliott,direction,x.price,view.f?.atr||view.signal?.features?.atr||null,mode,this.v33EntryCfg);
+    view.v33EntryContext=decision;
+    if(view.gate)view.gate={...view.gate,metrics:{...(view.gate.metrics||{}),v33ElliottGate:decision.state,v33ElliottScore:decision.score??null,v33ElliottNextWave:decision.nextWave??null,v33ElliottNextDirection:decision.nextDirection??null},elliott:clone(decision)};
+    if(view.signal){
+     const sig=view.signal,e=sig.dataset?.entry;
+     if(e&&!e.v33Elliott)e.v33Elliott=clone({schema:elliott.schema,symbol:elliott.symbol,timeframe:elliott.timeframe,timestamp:elliott.timestamp,unknown:elliott.unknown,preferred:elliott.preferred,alternate:elliott.alternate,box:elliott.box,experimental:true});
+     if(e)e.v33EntryContext=clone(decision);
+     if(!decision.allow){
+      const blockedId=sig.id;
+      this.signals=preSignals;
+      for(let i=this.audit.length-1;i>=0;i--){const q=this.audit[i];if(q?.type==='issued'&&q?.id===blockedId){this.audit.splice(i,1);break;}}
+      const ep=this.v3Episode,entry=e||{},leg=entry.v3StructuralLegKey;
+      if(ep&&entry.v3EpisodeId===ep.id){
+       ep.issuedLegKeys=preEpisode?.id===ep.id?[...preEpisode.issuedLegKeys]:(ep.issuedLegKeys||[]).filter(k=>k!==leg);
+       ep.lastEntryAt=preEpisode?.id===ep.id?preEpisode.lastEntryAt:0;
+       ep.baseConfirmed=preEpisode?.id===ep.id?preEpisode.baseConfirmed:false;
+      }
+      const cand=view.event?clone(view.event):(sig.event?clone(sig.event):null);
+      if(cand){delete cand.issued;delete cand.type;cand.logged=true;this.v3Candidate=cand;}
+      this.v3LastSignal=preLastSignal;
+      const blockKey=(entry.v3EpisodeId||'EP')+'|'+(leg||decision.candidateKey||'COUNT');
+      const signature=[decision.candidateKey,decision.nextWave,decision.nextDirection,decision.score,decision.unknown,decision.reason].join('|');
+      const prior=this.v33EntryMemory.blocks[blockKey];
+      if(!prior||prior.signature!==signature){
+       this.log('v33_elliott_entry_blocked',x.ts,{signalId:blockedId,episodeId:entry.v3EpisodeId||null,legKey:leg||null,direction,elliott:clone(decision)});
+       this.v33EntryMemory.blocks[blockKey]={signature,ts:x.ts,reason:decision.reason};
+      }
+      view.signal=null;view.status='confirming';view.reason='ARIS 3.3 · Elliott รอจุดเข้า · '+decision.reason;
+      view.event=cand?{...cand,issued:false}:view.event;
+      view.gate={...(view.gate||{}),state:'WAIT',code:'v33_elliott_gate',blocker:decision.reason,waitingFor:['รอ Wave Count/Next Wave กลับมาหนุน หรือรอ structural leg ใหม่'],metrics:{...(view.gate?.metrics||{}),v33ElliottGate:'BLOCK'}};
+     }else{
+      sig.decisionPolicy='aris_v33_elliott_entry_context';
+      if(e)e.decisionPolicy='aris_v33_elliott_entry_context';
+      const label=decision.state==='BOOST'?'Elliott หนุนแรง':decision.state==='PASS'?'Elliott หนุน':decision.state==='CAUTION'?'Elliott ระวัง':'Elliott เป็นกลาง';
+      sig.reason='ARIS 3.3 · '+label+' · '+decision.reason+' · '+String(sig.reason||'').replace(/^ARIS V3\.1 · /,'');
+      view.reason=sig.reason;
+      this.log('v33_elliott_entry_pass',x.ts,{signalId:sig.id,direction:sig.direction,elliott:clone(decision)});
+      const blockKey=(e?.v3EpisodeId||'EP')+'|'+(e?.v3StructuralLegKey||decision.candidateKey||'COUNT');delete this.v33EntryMemory.blocks[blockKey];
+     }
+    }else if(view.signal?.dataset?.entry&&!view.signal.dataset.entry.v33Elliott){
+     view.signal.dataset.entry.v33Elliott=clone({schema:elliott.schema,symbol:elliott.symbol,timeframe:elliott.timeframe,timestamp:elliott.timestamp,unknown:elliott.unknown,preferred:elliott.preferred,alternate:elliott.alternate,box:elliott.box,experimental:true});
+    }
+    this.lastView=view;
+   }catch(error){view.v33Elliott={unknown:'UNRESOLVED',error:String(error.message),degrees:{}};view.v33EntryContext={allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott entry context error — ใช้ 3.1 ต่อเพื่อ fail-safe'};}
    return view;
   }
  };
