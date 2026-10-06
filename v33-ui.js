@@ -56,8 +56,12 @@ function overlay(svg,make,w,h,out,chart,series){
   const a=xy({time:box.startTime,price:box.targetHigh}),b=xy({time:box.endTime,price:box.targetLow});
   if([a.x,a.y,b.x,b.y].every(Number.isFinite)){
    const left=Math.max(0,a.x),right=Math.min(w-55,b.x),top=Math.max(24,Math.min(a.y,b.y)),bottom=Math.min(h-8,Math.max(a.y,b.y));
-   if(right>left&&bottom>top){g.append(make('rect',{x:left,y:top,width:right-left,height:bottom-top,rx:3,fill:'#b9ee6130',stroke:'#d3f77d','stroke-width':1,'stroke-dasharray':'5 3'}));const t=make('text',{x:left+4,y:top+12,fill:'#e6ffb3','font-size':9});t.textContent='Wave '+box.wave+' · '+box.fromBars+'–'+box.toBars+' แท่ง';g.append(t);
-    const origin=points.at(-1);g.append(make('line',{x1:origin.x,y1:origin.y,x2:(left+right)/2,y2:(top+bottom)/2,stroke:'#dbf9a3','stroke-dasharray':'2 5',opacity:.55}));}
+   if(right>left&&bottom>top){
+    // Prediction Box is a destination zone only: price target × expected arrival window.
+    g.append(make('rect',{x:left,y:top,width:right-left,height:bottom-top,rx:4,fill:'#b9ee6130',stroke:'#d3f77d','stroke-width':1.2,'stroke-dasharray':'5 3'}));
+    const mid=(top+bottom)/2;g.append(make('line',{x1:left,y1:mid,x2:right,y2:mid,stroke:'#e6ffb3','stroke-width':.7,opacity:.45,'stroke-dasharray':'2 4'}));
+    const t=make('text',{x:left+4,y:top+12,fill:'#e6ffb3','font-size':9});t.textContent='เป้า Wave '+box.wave+' · '+number(box.targetLow)+'–'+number(box.targetHigh)+' · '+box.fromBars+'–'+box.toBars+' แท่ง';g.append(t);
+   }
   }
  }
  svg.append(g);
