@@ -6,7 +6,7 @@ for(const f of ['v33-base.js','v33.js','v33-ui.js','training-engine-core.js','tr
 const api=require('../v33.js');
 
 const piv=prices=>prices.map((price,i)=>({id:'P'+i,time:i*600,i:i*10,price,type:i%2?'H':'L',provisional:false}));
-const candidate=(key,score,direction,pattern='IMPULSE',wave='2')=>({key,score,pattern,currentWave:wave,next:{direction}});
+const candidate=(key,score,direction,pattern='IMPULSE',wave='2',state='CONFIRMED_COMPLETE')=>({key,score,pattern,currentWave:wave,state,next:{direction}});
 
 // Hard rules and pattern position.
 assert(api.hardRules(piv([100,110,104,125,115,130])).valid);
@@ -17,7 +17,13 @@ assert(api.hardRules(piv([100,120,110,125,118,128]),'DIAGONAL_CANDIDATE').valid)
 assert(api.hardRules(piv([100,110,104,140,120,135])).valid);
 assert(api.hardRules(piv([100,110,104,135,120,130])).valid);
 assert(api.hardRules(piv([100,110,105,120]),'ZIGZAG').valid);
+assert(!api.hardRules(piv([100,110,109,111]),'ZIGZAG').valid,'tiny C that barely clears A must not validate as Zigzag');
 assert(api.hardRules(piv([100,110,99,112]),'FLAT').valid);
+assert(!api.hardRules(piv([100,110,100.5,108]),'FLAT').valid,'regular Flat C cannot terminate materially short of A');
+assert(api.hardRules(piv([100,110,98,108]),'FLAT').valid,'running Flat geometry must remain valid');
+assert(api.hardRules(piv([100,110,98,113]),'FLAT').valid,'expanded Flat geometry must remain valid');
+assert.equal(api.correctionGeometry(piv([100,110,98,108]),'FLAT').variant,'RUNNING');
+assert.equal(api.correctionGeometry(piv([100,110,98,113]),'FLAT').variant,'EXPANDED');
 assert(!api.hardRules(piv([100,120,105,116,108,113]),'TRIANGLE').valid);
 assert(api.hardRules(piv([100,120,105,116,108,113]),'TRIANGLE',{parentWave:'4'}).valid);
 assert(!api.hardRules(piv([100,110,110])).valid,'duplicate/equal pivot must not validate');
@@ -78,24 +84,28 @@ assert.match(idA.id,/^COUNT-/);assert.match(idA.waveId,/^W33-WRK-/);assert.match
 assert.equal(api.selectCounts([]).unknown,'INSUFFICIENT_STRUCTURE');
 const close=api.selectCounts([candidate('A',69,1),candidate('B',66,-1,'ZIGZAG','C')],{...api.DEFAULTS,ambiguityGap:6,minScore:48});
 assert.equal(close.unknown,'MULTIPLE_COUNTS_CLOSE');assert.equal(close.alternate.key,'B');
+const formingCount=api.selectCounts([candidate('U',88,1,'IMPULSE','3','FORMING')],{...api.DEFAULTS,ambiguityGap:6,minScore:48});
+assert.equal(formingCount.unknown,'UNRESOLVED','high score alone must not turn a forming count into confirmed structure');
 assert.equal(api.resolveUnknown(null,9,'INSUFFICIENT_STRUCTURE'),'COMPLEX_CORRECTION');
 assert.equal(api.resolveUnknown(candidate('A',70,1),12,null),null);
 
 
 // Elliott now participates in ARIS 3.3 entry as a fifth context gate.
-const waveAligned={unknown:null,preferred:{id:'COUNT-E1',key:'E1',score:78,pattern:'IMPULSE',currentWave:'2',state:'PROBABLE_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:112,targetHigh:116,invalidation:98,invalidationDirection:1}}};
-const waveOpposed={unknown:null,preferred:{id:'COUNT-E2',key:'E2',score:76,pattern:'IMPULSE',currentWave:'4',state:'FORMING',next:{wave:'5',direction:-1,projectionReady:true,targetLow:94,targetHigh:97,invalidation:108,invalidationDirection:-1}}};
+const waveAligned={unknown:null,preferred:{id:'COUNT-E1',key:'E1',score:78,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:112,targetHigh:116,invalidation:98,invalidationDirection:1}}};
+const waveOpposed={unknown:null,preferred:{id:'COUNT-E2',key:'E2',score:82,pattern:'IMPULSE',currentWave:'4',state:'CONFIRMED_COMPLETE',next:{wave:'5',direction:-1,projectionReady:true,targetLow:94,targetHigh:97,invalidation:108,invalidationDirection:-1}}};
 const waveAmbiguous={unknown:'MULTIPLE_COUNTS_CLOSE',preferred:{id:'COUNT-E3',key:'E3',score:70,pattern:'ZIGZAG',currentWave:'B',state:'FORMING',next:{wave:'C',direction:1,projectionReady:false,invalidation:98,invalidationDirection:1}}};
 const entryBoost=api.elliottEntryDecision(waveAligned,'HIGH',104,2,'EARLY');
 assert.equal(entryBoost.allow,true);assert.equal(entryBoost.state,'BOOST');
 const entryBlock=api.elliottEntryDecision(waveOpposed,'HIGH',104,2,'FULL');
 assert.equal(entryBlock.allow,false);assert.equal(entryBlock.state,'BLOCK');
 const ambiguityEarly=api.elliottEntryDecision(waveAmbiguous,'HIGH',104,2,'EARLY');
-assert.equal(ambiguityEarly.allow,false);
+assert.equal(ambiguityEarly.allow,true);assert.equal(ambiguityEarly.state,'CAUTION');
 const ambiguityFull=api.elliottEntryDecision(waveAmbiguous,'HIGH',104,2,'FULL');
 assert.equal(ambiguityFull.allow,true);
-const nearTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E4',key:'E4',score:80,pattern:'IMPULSE',currentWave:'2',state:'FORMING',next:{wave:'3',direction:1,projectionReady:true,targetLow:104.4,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
-assert.equal(nearTarget.allow,false,'do not chase when Elliott target room is too small');
+const nearTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E4',key:'E4',score:80,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:104.2,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
+assert.equal(nearTarget.allow,true);assert.equal(nearTarget.state,'CAUTION','near target should reduce confidence instead of vetoing');
+const hardTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E5',key:'E5',score:82,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:104.1,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
+assert.equal(hardTarget.allow,false,'confirmed count may veto only when target room is extremely small');
 
 // Previous preferred count can be invalidated by the new live endpoint.
 const oldCount={id:'COUNT-OLD',degree:'Working',pattern:'IMPULSE',pivots:piv([100,110,104]),parentWave:null};
@@ -204,7 +214,7 @@ assert.equal(JSON.stringify(ec.elliott.serialize().contexts['BTCUSDT|1m'].audit.
 
 // Integration: a strong opposite Elliott count must veto a base 3.3 signal and roll it back from stored signals.
 const gatedRuntime=runtime('ARIS-3.3.0'),gated=new gatedRuntime.EventSignalV6.Engine();gated.session='GATE';
-const forcedOpposite={schema:'aris-elliott-1',symbol:'BTCUSDT',timeframe:'1m',timestamp:0,unknown:null,degrees:{Working:{unknown:null,preferred:{id:'COUNT-FORCED',key:'FORCED',score:90,pattern:'IMPULSE',currentWave:'4',state:'FORMING',next:{wave:'5',direction:-1,projectionReady:true,targetLow:900,targetHigh:930,invalidation:1100,invalidationDirection:-1}}}},preferred:null,alternate:null,box:null};
+const forcedOpposite={schema:'aris-elliott-1',symbol:'BTCUSDT',timeframe:'1m',timestamp:0,unknown:null,degrees:{Working:{unknown:null,preferred:{id:'COUNT-FORCED',key:'FORCED',score:90,pattern:'IMPULSE',currentWave:'4',state:'CONFIRMED_COMPLETE',next:{wave:'5',direction:-1,projectionReady:true,targetLow:900,targetHigh:930,invalidation:1100,invalidationDirection:-1}}}},preferred:null,alternate:null,box:null};
 forcedOpposite.preferred=forcedOpposite.degrees.Working.preferred;
 gated.elliott.observe=()=>structuredClone(forcedOpposite);
 let gb=[],gp=1000,blockedSeen=false;
