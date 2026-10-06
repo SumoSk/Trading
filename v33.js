@@ -368,7 +368,7 @@ function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={
  if(c.ambiguousEarlyBlock&&ambiguous&&mode==='EARLY')return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ยังไม่ชัด จึงไม่อนุญาตจุดเข้า EARLY'};
  if(aligned&&score>=c.supportScore&&countClear&&!nearTarget)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
  if(aligned&&nearTarget)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-4,reason:'Wave หนุนทิศ แต่เริ่มเข้าใกล้ Target Zone จึงลดความมั่นใจแทนการบล็อก'};
- if(aligned)return {...common,allow:true,state:'PASS',entryScoreDelta:4,reason:'ทิศของ Next Wave สอดคล้องกับจุดเข้า แต่คะแนนยังไม่สูงมาก'};
+ if(aligned&&!ambiguous)return {...common,allow:true,state:'PASS',entryScoreDelta:4,reason:'ทิศของ Next Wave สอดคล้องกับจุดเข้า แต่คะแนนยังไม่สูงมาก'};
  if(opposed)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'Elliott เอนสวนจุดเข้า แต่หลักฐานยังไม่ครบเงื่อนไข Strong Opposition จึงไม่บล็อก'};
  if(ambiguous)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-5,reason:'Wave Count ยังไม่ชัด ใช้ 3.1 เป็นหลักและลดความมั่นใจ'};
  return {...common,allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มีข้อมูลที่ควรเปลี่ยนจุดเข้า'};
