@@ -316,7 +316,7 @@ class Observer{
  }
 }
 
-const ENTRY_DEFAULTS=Object.freeze({enabled:true,oppositionScore:64,supportScore:55,minTargetRoomAtr:.28,ambiguousEarlyBlock:true});
+const ENTRY_DEFAULTS=Object.freeze({enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,ambiguousEarlyBlock:false});
 function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={}){
  const c={...ENTRY_DEFAULTS,...(cfg||{})},d=direction==='HIGH'?1:direction==='LOW'?-1:Math.sign(Number(direction)||0);
  if(!c.enabled)return {allow:true,state:'OFF',entryScoreDelta:0,reason:'Elliott entry influence ปิดอยู่'};
@@ -333,14 +333,18 @@ function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={
   if(finite(edge))targetRoomAtr=d*(edge-price)/atrValue;
  }
  const nearTarget=finite(targetRoomAtr)&&targetRoomAtr<c.minTargetRoomAtr;
- const common={candidateId:p.id||null,candidateKey:p.key||null,pattern:p.pattern||null,currentWave:p.currentWave||null,waveState:p.state||null,nextWave:n.wave||null,nextDirection,score,unknown,targetRoomAtr,mode};
+ const countClear=!unknown&&!ambiguous&&p.state!=='CANDIDATE';
+ const strongOpposition=opposed&&score>=c.oppositionScore&&countClear&&!!n.projectionReady;
+ const hardTargetCrowding=aligned&&score>=c.oppositionScore&&countClear&&!!n.projectionReady&&finite(targetRoomAtr)&&targetRoomAtr<c.hardTargetRoomAtr;
+ const common={candidateId:p.id||null,candidateKey:p.key||null,pattern:p.pattern||null,currentWave:p.currentWave||null,waveState:p.state||null,nextWave:n.wave||null,nextDirection,score,unknown,targetRoomAtr,mode,countClear};
  if(structurallyInvalid)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Preferred Count ทะลุ Elliott invalidation แล้ว'};
- if(opposed&&score>=c.oppositionScore&&(!ambiguous||mode==='EARLY'))return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave หลักคาดทางตรงข้ามกับจุดเข้า และ Wave Score สูงพอให้รอ'};
- if(nearTarget&&score>=c.supportScore)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'ทิศตรงกับ Wave แต่ราคาใกล้ Target Zone เกินไป ไม่ไล่จุดเข้า'};
+ if(strongOpposition)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ชัดและ Next Wave สวนจุดเข้าแรงพอ จึงรอ'};
+ if(hardTargetCrowding)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave หนุนทิศ แต่เหลือพื้นที่ถึง Target น้อยมากและ Count ชัด จึงไม่ไล่'};
  if(c.ambiguousEarlyBlock&&ambiguous&&mode==='EARLY')return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ยังไม่ชัด จึงไม่อนุญาตจุดเข้า EARLY'};
- if(aligned&&score>=c.supportScore&&!unknown)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
+ if(aligned&&score>=c.supportScore&&!unknown&&!nearTarget)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
+ if(aligned&&nearTarget)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-4,reason:'Wave หนุนทิศ แต่เริ่มเข้าใกล้ Target Zone จึงลดความมั่นใจแทนการบล็อก'};
  if(aligned)return {...common,allow:true,state:'PASS',entryScoreDelta:4,reason:'ทิศของ Next Wave สอดคล้องกับจุดเข้า แต่คะแนนยังไม่สูงมาก'};
- if(opposed)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'Elliott เอนสวนจุดเข้า แต่หลักฐานยังไม่มากพอให้บล็อก'};
+ if(opposed)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'Elliott เอนสวนจุดเข้า แต่หลักฐานยังไม่ครบเงื่อนไข Strong Opposition จึงไม่บล็อก'};
  if(ambiguous)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-5,reason:'Wave Count ยังไม่ชัด ใช้ 3.1 เป็นหลักและลดความมั่นใจ'};
  return {...common,allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มีข้อมูลที่ควรเปลี่ยนจุดเข้า'};
 }
