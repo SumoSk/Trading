@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id),number=x=>Number.isFinite(x)?x.toLocaleString(undefined,{maximumFractionDigits:3}):'—';
 let degree='Working',visible=true,last=null,initialized=false;
-try{degree=localStorage.getItem('aris-elliott-degree')||'Working';visible=localStorage.getItem('aris-elliott-visible')!=='off';}catch{}
+try{degree=localStorage.getItem('aris-elliott-degree')||'Working';}catch{}
 if(!['Micro','Working','Structural'].includes(degree))degree='Working';
 const direction=d=>d>0?'ขึ้น':d<0?'ลง':'ยังไม่ชัด';
 const patterns={IMPULSE:'Impulse',DIAGONAL_CANDIDATE:'Diagonal Candidate',ZIGZAG:'Zigzag',FLAT:'Flat',TRIANGLE:'Triangle'};
@@ -10,8 +10,7 @@ function render(out,version){
  const panel=$('elliott-panel');if(!panel)return;
  panel.hidden=version!=='ARIS-3.3.0';if(panel.hidden)return;
  if(!initialized){
-  initialized=true;$('elliott-degree').value=degree;$('elliott-toggle').checked=visible;
-  $('elliott-toggle').addEventListener('change',e=>{visible=e.target.checked;try{localStorage.setItem('aris-elliott-visible',visible?'on':'off');}catch{}document.dispatchEvent(new Event('elliott-redraw'));});
+  initialized=true;$('elliott-degree').value=degree;
   $('elliott-degree').addEventListener('change',e=>{degree=e.target.value;try{localStorage.setItem('aris-elliott-degree',degree);}catch{}render(last,'ARIS-3.3.0');document.dispatchEvent(new Event('elliott-redraw'));});
   $('elliott-export').addEventListener('click',()=>document.dispatchEvent(new Event('elliott-export')));
  }

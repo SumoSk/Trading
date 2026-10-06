@@ -2060,7 +2060,7 @@ body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
 }
 </style>
 
-<link rel="stylesheet" href="v33.css?v=20261006-r2">
+<link rel="stylesheet" href="v33.css?v=20261006-r4-compact">
 </head>
 <body data-feed="syncing" class="toolbar-floating">
 <header class="app-header">
@@ -2162,9 +2162,9 @@ body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
         <p id="event-detail"></p>
       </div>
       <section id="elliott-panel" class="elliott-panel" hidden>
-       <div class="elliott-head"><strong>ELLIOTT · <span id="elliott-degree-title">WORKING</span></strong><label><input id="elliott-toggle" type="checkbox" checked> Elliott</label><select id="elliott-degree" aria-label="ระดับคลื่น"><option value="Working">Working</option><option value="Micro">Micro</option><option value="Structural">Structural</option></select></div>
+       <div class="elliott-head"><strong>ELLIOTT · <span id="elliott-degree-title">WORKING</span></strong><select id="elliott-degree" aria-label="ระดับคลื่น"><option value="Working">Working</option><option value="Micro">Micro</option><option value="Structural">Structural</option></select></div>
        <p id="elliott-current">กำลังรวบรวมโครงสร้างคลื่น</p><p id="elliott-next"></p><p id="elliott-target"></p><p id="elliott-risk"></p>
-       <details><summary>รายละเอียด Elliott</summary><div id="elliott-detail"></div><button type="button" id="elliott-export">บันทึกข้อมูล Elliott</button></details>
+       <details><summary>รายละเอียด</summary><div id="elliott-detail"></div><button type="button" id="elliott-export">บันทึกข้อมูลคลื่น</button></details>
       </section>
       <section class="v3-entry-checklist" id="v3-entry-checklist" hidden aria-live="polite" data-role="entry-checklist">
         <div class="v3-check-head">
@@ -4246,7 +4246,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="v31.js?v=20261001-r1"></script>
 <script src="v33-base.js?v=20261006-r2"></script>
 <script src="v33.js?v=20261006-r2"></script>
-<script src="v33-ui.js?v=20261006-r3-target-zone"></script>
+<script src="v33-ui.js?v=20261006-r4-compact"></script>
 <script src="v32.js?v=20261002-r1"></script>
 <script src="v32-direction.js?v=20261002-r1"></script>
 <script src="v32-triggers.js?v=20261002-r1"></script>
