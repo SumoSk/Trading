@@ -316,7 +316,7 @@ class Observer{
  }
 }
 
-const ENTRY_DEFAULTS=Object.freeze({enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,ambiguousEarlyBlock:false});
+const ENTRY_DEFAULTS=Object.freeze({profile:'balanced-r5',enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,ambiguousEarlyBlock:false});
 function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={}){
  const c={...ENTRY_DEFAULTS,...(cfg||{})},d=direction==='HIGH'?1:direction==='LOW'?-1:Math.sign(Number(direction)||0);
  if(!c.enabled)return {allow:true,state:'OFF',entryScoreDelta:0,reason:'Elliott entry influence ปิดอยู่'};
@@ -358,7 +358,8 @@ if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
   constructor(saved={}){
    super(saved);
    this.elliott=new Observer(saved.v33Memory||{});
-   this.v33EntryCfg={...ENTRY_DEFAULTS,...(saved.v33EntryConfig||{})};
+   const savedEntryCfg=saved.v33EntryConfig||{};
+   this.v33EntryCfg=savedEntryCfg.profile===ENTRY_DEFAULTS.profile?{...ENTRY_DEFAULTS,...savedEntryCfg}:{...ENTRY_DEFAULTS,enabled:savedEntryCfg.enabled??(core.CFG.elliottInfluence!==false)};
    if(saved.v33EntryConfig?.enabled===undefined)this.v33EntryCfg.enabled=core.CFG.elliottInfluence!==false;
    this.v33EntryMemory=clone(saved.v33EntryMemory||{blocks:{}});
   }
