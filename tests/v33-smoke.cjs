@@ -215,7 +215,8 @@ for(let i=0;i<400&&!blockedSeen;i++){
  for(let j=0;j<3&&!blockedSeen;j++){
   const x={symbol:'BTCUSDT',timeframe:'1m',timeframeSeconds:60,id:i*3+j,ts:(6060+i*60)*1000+j*400,price:close+.1*j,bars:structuredClone(gb),fresh:true,flow:Math.sign(close-gb[i-1].close)*.15,coverage:60,bookValid:false,current:{...gb.at(-1),time:6060+i*60,closed:false}};
   const before=gated.signals.length,v=gated.step(structuredClone(x));
-  if(v.v33EntryContext?.state==='BLOCK'){blockedSeen=true;assert.equal(v.signal,null);assert.equal(gated.signals.length,before);assert(gated.audit.some(q=>q.type==='v33_elliott_entry_blocked'));}
+  const veto=gated.audit.find(q=>q.type==='v33_elliott_entry_blocked');
+  if(veto){blockedSeen=true;assert.equal(v.signal,null);assert.equal(gated.signals.length,before);assert.equal(v.status,'confirming');}
  }
 }
 assert(blockedSeen,'forced opposite Elliott context must block at least one otherwise-valid 3.3 entry');
