@@ -100,6 +100,8 @@
     engine.v4Candidate=null;engine.v4LastSignal=null;engine.v4Armed={HIGH:true,LOW:true};
     engine.watchState=null;engine.lastWatchRecorded={HIGH:0,LOW:0};engine.lastId=null;
     engine.consumed=new Map();engine.session=0;
+    engine.elliott?.resetEvaluation?.();
+    if(engine.v33EntryMemory)engine.v33EntryMemory={blocks:{}};
   }
 
   function replayMeta(run,barIndex){
@@ -117,7 +119,7 @@
   function inputFor(run,bar,engineBar,ts,id){
     const flow=minuteFlow(bar);
     return {
-      ts,id,price:Number(bar.close),bars:run.recentBars,
+      ts,id,price:Number(bar.close),bars:run.recentBars,symbol:run.session.symbol||'UNSPECIFIED',timeframe:'1m',timeframeSeconds:60,
       five:run.agg5.closed,fifteen:run.agg15.closed,
       flow,coverage:60,book:0,bookValid:false,fresh:true,
       micro:{source:'historical_1m_adapter',replay:true,coverageSeconds:60,flow15s:null,flow60s:flow,flow180s:null,
@@ -177,13 +179,16 @@
     const e=signal?.dataset?.entry||{},o=signal?.dataset?.outcome||{},review=signal?.dataset?.review||{},a=e.auditV2||{},ev=signal?.dataset?.auditEvaluationV2||null;
     return {
       id:signal.id,version:signal.version,type:signal.type,direction:signal.direction,
-      episodeSequence:signal.dataset?.episodeSequence||1,
-      entryTime:signal.entryTime,entryPrice:signal.entryPrice,result:signal.result,
+      episodeSequence:signal.dataset?.episodeSequence||1,episodeId:signal.dataset?.episodeId||e.v3EpisodeId||null,
+      entryTime:signal.entryTime,entryPrice:signal.entryPrice,expiresAt:signal.expiresAt,result:signal.result,
       exitTime:signal.exitTime??null,exitPrice:signal.exitPrice??null,
       entry:{
         state:e.v4State||e.v3State||e.v3MarketState||e.v2State||null,stateLabel:e.v3StateLabel||null,playbook:e.v4Setup||e.v3Playbook||e.v2Playbook||null,playbookLabel:e.v3PlaybookLabel||null,family:e.v3EpisodeFamily||e.v2Family||null,
         evidence:e.v2EntryEvidence??null,gatePassCount:e.v4GateStates?Object.values(e.v4GateStates).filter(v=>v==='PASS').length:(e.v3GatePassCount??null),stateConfidence:e.v2StateConfidence??null,
         gateStates:e.v4GateStates??e.v3GateStates??null,thesis:e.v3Thesis?.code??null,
+        revision:e.arisRevision||null,entryMode:e.v3EntryMode||null,
+        v33EntryContext:e.v33EntryContext?clone(e.v33EntryContext):null,
+        v33Elliott:e.v33Elliott?{unknown:e.v33Elliott.unknown,candidateId:e.v33Elliott.preferred?.id,score:e.v33Elliott.preferred?.score,nextWave:e.v33Elliott.preferred?.next?.wave,nextDirection:e.v33Elliott.preferred?.next?.direction}:null,
         rangeQuality:e.v4RangeQuality??null,breakoutRisk:e.v4BreakoutRisk??null,
         atr:e.atr??null,trend:e.trend??null,momentum:e.momentum??null,flow:e.flow??null,
         rangePosition:e.rangePosition??null,relativeVolume:e.relativeVolume??null,
@@ -222,14 +227,15 @@
     await globalThis.HistoricalDataV1.putMany('audit',[audit]);
   }
 
-  async function settleAtBar(run,meta,bar){
+  async function settleAtBar(run,meta,bar,barIndex){
     const sig=meta.signal,exit=Number(bar.close),exitTime=Number(bar.time)+MINUTE;
     sig.exitPrice=exit;sig.exitTime=exitTime;sig.lastObserved=exitTime;
-    sig.result=exit===sig.entryPrice?'equal':((exit>sig.entryPrice)===(sig.direction==='HIGH')?'correct':'incorrect');
+    sig.result=exitTime!==sig.expiresAt?'missing':exit===sig.entryPrice?'equal':((exit>sig.entryPrice)===(sig.direction==='HIGH')?'correct':'incorrect');
+    if(sig.result==='missing'){sig.exitPrice=null;sig.dataset.replay.missingReason='NO_CANDLE_CLOSE_AT_T_PLUS_10';}
     run.engine.finalizeReview(sig);
     globalThis.AuditCalibrationV2?.ensureEvaluation?.(sig);
-    sig.dataset.replay.settledBy='bar_index_plus_10';
-    sig.dataset.replay.exitBarIndex=meta.exitIndex;
+    sig.dataset.replay.settledBy='timestamp_plus_10m';
+    sig.dataset.replay.exitBarIndex=barIndex;
     sig.dataset.replay.exitResolution='1m_close';
     run.stats.settled++;
     if(sig.result==='correct')run.stats.correct++;
@@ -244,8 +250,8 @@
     for(const meta of rows){
       if(barIndex<=meta.entryIndex)continue;
       appendOutcomeBar(meta,bar,barIndex,view,flow);
-      if(barIndex>=meta.exitIndex){
-        await settleAtBar(run,meta,bar);
+      if(Number(bar.time)+MINUTE>=meta.signal.expiresAt){
+        await settleAtBar(run,meta,bar,barIndex);
         run.pending.delete(meta.signal.id);
       }
     }
@@ -271,7 +277,7 @@
 
   function checkpointPayload(run,nextIndex){
     return {
-      schema:'replay-checkpoint-v1',mode:MODE,nextIndex,engineVersion:run.engineVersion,
+      schema:'replay-checkpoint-v1',mode:MODE,nextIndex,engineVersion:run.engineVersion,engineRevision:run.core.CFG.arisRevision||null,
       engineState:clone(run.engine.serialize()),runtime:runtimeSnapshot(run.engine),
       pending:[...run.pending.values()].map(x=>({signalId:x.signal.id,entryIndex:x.entryIndex,exitIndex:x.exitIndex})),
       recentBars:clone(run.recentBars),agg5:clone(run.agg5),agg15:clone(run.agg15),previousClose:run.previousClose,
@@ -287,6 +293,7 @@
   function hydrateFromCheckpoint(run,cp){
     const Core=run.core;
     if(cp?.engineVersion&&cp.engineVersion!==run.engineVersion)throw new Error('Checkpoint เป็นคนละเวอร์ชันกับที่เลือกเทรน');
+    if(run.engineVersion==='ARIS-3.3.0'&&cp.engineRevision!==Core.CFG.arisRevision)throw new Error('Checkpoint 3.3 เป็นรุ่นก่อนแก้ กรุณาเริ่ม Replay ใหม่');
     run.engine=new Core.Engine(cp.engineState||{});
     restoreRuntime(run.engine,cp.runtime||{});
     run.recentBars=cp.recentBars||[];
@@ -312,7 +319,8 @@
     return {
       schema:'replay-report-v1',phase:2,status,sessionId:run.session.id,datasetId:run.session.datasetId,
       mode:MODE,generatedAt:new Date().toISOString(),noLookahead:true,
-      engineVersion:run.session.engineVersion,engineBlobSha:run.session.engineBlobSha,auditSchema:globalThis.AuditEngineV2?.schema||run.session.auditSchema,
+      engineVersion:run.engineVersion,engineRevision:run.core.CFG.arisRevision||null,engineBlobSha:run.session.engineBlobSha,auditSchema:globalThis.AuditEngineV2?.schema||run.session.auditSchema,
+      elliottEvaluation:run.engine.elliott?.report?.()||null,
       resolution:{market:'1m closed candles',entry:'bar-close confirmation adapter',outcome:'close of bar +10',intrabarOrder:'not reconstructed'},
       dataQuality:run.session.quality?.grade||null,
       counts:{signals:signals.length,settled:settled.length,correct,incorrect,equal,missing:signals.filter(s=>s.result==='missing').length,pending:signals.filter(s=>s.result==='pending').length},
@@ -335,7 +343,7 @@
     const started=performance.now(),total=run.bars.length;
     await updateSession(run,{
       status:'replaying',phase:2,replaySchema:SCHEMA,replayMode:MODE,replayStartedAt:run.session.replayStartedAt||Date.now(),
-      replayResolution:'1m_close',replayNoLookahead:true,replayEngineVersion:run.engineVersion,engineVersion:run.engineVersion
+      replayResolution:'1m_close',replayNoLookahead:true,replayEngineVersion:run.engineVersion,engineVersion:run.engineVersion,engineRevision:run.core.CFG.arisRevision||null
     });
 
     for(let i=run.nextIndex;i<total;i++){
@@ -434,6 +442,7 @@
 
     const requestedResume=!!options.resume;
     const storedCp=requestedResume?await globalThis.HistoricalDataV1.getCheckpoint(sessionId):null;
+    if(storedCp&&requestedVersion==='ARIS-3.3.0'&&storedCp.engineRevision!==Core.CFG.arisRevision)throw new Error('Checkpoint 3.3 เป็นรุ่นก่อนแก้ กรุณาเริ่ม Replay ใหม่');
     const resume=!!storedCp&&(!storedCp.engineVersion||storedCp.engineVersion===requestedVersion);
     const cp=resume?storedCp:null;
     if(cp){
@@ -442,7 +451,7 @@
       run.boundaryResetDone=run.nextIndex>run.testStartIndex;
     }else{
       await globalThis.HistoricalDataV1.clearReplayArtifacts(sessionId);
-      run.session={...session,status:'ready',replayReport:null,replayWinRate:null};
+      run.session={...session,engineVersion:requestedVersion,engineRevision:Core.CFG.arisRevision||null,status:'ready',replayReport:null,replayWinRate:null};
       await globalThis.HistoricalDataV1.saveSession(run.session);
     }
     state.run=run;

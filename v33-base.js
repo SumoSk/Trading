@@ -1,4 +1,4 @@
-/* Frozen 3.1 execution copy from 22587d0; only version/display/export identity changed. */
+/* 3.1 execution baseline with optional 3.3 pre-entry hooks. OFF mode preserves baseline behaviour. */
 /* ARIS 3.1 — V3 experimental HTF new-leg guard
    Separate plugin. ARIS 2.0 is intentionally untouched.
    Pipeline: Market Reader -> Episode -> Structure -> Location -> Behavior -> Micro -> Thesis -> Playbook -> Entry. */
@@ -576,7 +576,11 @@ class V3Engine extends BaseEngine{
   const prev=this.previous;this.lastId=x.id;this.previous={price:x.price,ts:x.ts};
   const z=zones(x.bars||[],f.atr),regime=this.trackRegime(f,x.price),phase=marketPhase(f,x,regime);x.phase=phase;
   const reader=readMarket(f,x,z,phase);reader._f=f;reader.eff=f.eff;
-  const ep=updateEpisode(this,reader,x),thesis=buildThesis(reader,ep),bundle=entryBundle(reader,thesis,z,x,ep),st=story(reader,ep,thesis,bundle);
+  const ep=updateEpisode(this,reader,x);let thesis=buildThesis(reader,ep);
+  if(this.v33PrepareThesis)thesis=this.v33PrepareThesis(x,{f,z,v3Story:story(reader,ep,thesis,null)},thesis,reader,ep)||thesis;
+  let bundle=entryBundle(reader,thesis,z,x,ep);
+  if(this.v33ApplyEntryBundle)bundle=this.v33ApplyEntryBundle(x,{f,z,v3Story:story(reader,ep,thesis,bundle)},bundle,thesis,reader,ep)||bundle;
+  const st=story(reader,ep,thesis,bundle);
   ep.thesis={code:thesis.code,d:thesis.d,playbook:thesis.playbook,updatedAt:x.ts};
   const lastThesis=ep.thesisHistory.at(-1);if(!lastThesis||lastThesis.code!==thesis.code||lastThesis.playbook!==thesis.playbook){
    ep.thesisHistory.push({ts:x.ts,code:thesis.code,d:thesis.d,playbook:thesis.playbook});if(ep.thesisHistory.length>20)ep.thesisHistory.shift();
@@ -636,7 +640,7 @@ class V3Engine extends BaseEngine{
     candidate:{schema:'aris-v3-candidate-v3',episodeId:ep.id,legKey:ep.legKey,thesis:thesis.code,playbook:thesis.playbook,entryMode:bundle.mode,gateStates:gateStates(bundle)}});}
   const confirmTicks=bundle.fullReady?(CFG.v3ConfirmTicks||2):(CFG.v3EarlyConfirmTicks||2),confirmMs=bundle.fullReady?(CFG.v3ConfirmMs||500):(CFG.v3EarlyConfirmMs||650);
   if(cand.ticks<confirmTicks||x.ts-cand.evidenceSince<confirmMs){
-   const readyText=bundle.fullReady?'4/4 ผ่านครบ':'3/4 แบบมีคุณภาพ · โครงสร้างและตำแหน่งผ่าน';
+   const readyText=bundle.fullReady?'4/4 ผ่านครบ':bundle.mode==='WAVE_EARLY'?'Elliott หนุนจุดเข้าเร็ว · โครงสร้างและตำแหน่งผ่าน':'3/4 แบบมีคุณภาพ · โครงสร้างและตำแหน่งผ่าน';
    return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook)},status:'confirming',reason:'ARIS V3.1 · '+readyText+' · กำลังยืนยันข้อมูลสดแบบสั้น',
     gate:{state:'READY',direction:dirLabel(d),code:bundle.fullReady?'v3_live_confirm':'v3_early_confirm',blocker:'รอการยืนยันจากข้อมูลสด',waitingFor:['ยืนยัน '+confirmTicks+' ครั้ง และ '+confirmMs+' ms'],metrics:gateMetrics(st,bundle,ep)}};
   }
@@ -658,13 +662,13 @@ class V3Engine extends BaseEngine{
     v3GateStates:gateStates(bundle),v3GateDetails:bundle.gates,v3GatePassCount:bundle.passed,v31PolicyGuard:bundle.policyGuard||null,v3Higher:reader.htf,v3Fib:reader.fib,v3MarketState:st.state,v3Structure:reader.structure,
     v3Behavior:behaviorForDataset(reader.behavior),v3Micro:microForDataset(bundle.gates.micro),v3ShockState:ep.shock?.state||null,v3InvalidationPrice:invalid,
     v3Trigger:thesis.trigger,v3Invalidation:thesis.invalidation,v3NextPlan:thesis.nextPlan,v3ReasonNewEntry:(ep.issuedLegKeys||[]).length?'new_structural_leg':'first_entry_in_episode'
-   }},reason:'ARIS V3.1 · '+st.stateLabel+' · '+playbookLabel(thesis.playbook)+' · '+((cand.entryMode||bundle.mode)==='EARLY'?'เข้าเร็วจาก 3/4 ที่มีคุณภาพ':'เงื่อนไข 4/4 ผ่านครบ')};
+   }},reason:'ARIS V3.1 · '+st.stateLabel+' · '+playbookLabel(thesis.playbook)+' · '+((cand.entryMode||bundle.mode)==='WAVE_EARLY'?'เข้าเร็วจากคลื่นยืนยันและเงื่อนไขหลัก':(cand.entryMode||bundle.mode)==='EARLY'?'เข้าเร็วจาก 3/4 ที่มีคุณภาพ':'เงื่อนไข 4/4 ผ่านครบ')};
   this.signals.push(signal);if(this.signals.length>CFG.maxHistory){const i=this.signals.findIndex(q=>q.result!=='pending');if(i>=0)this.signals.splice(i,1);}
   ep.issuedLegKeys=[...(ep.issuedLegKeys||[]),ep.legKey].slice(-12);ep.lastEntryAt=x.ts;ep.baseConfirmed=false;
   this.v3Candidate=null;this.v3LastSignal=signal;
   this.log('issued',x.ts,{id,episodeId:ep.id,legKey:ep.legKey,legIndex:ep.legIndex,revision:CFG.arisRevision,setupType:typeFor(thesis.playbook),direction:out,price:x.price,v3Playbook:thesis.playbook,entryMode:cand.entryMode||bundle.mode,gateStates:gateStates(bundle)});
   return this.lastView={...base,event:{...cand,type:typeFor(thesis.playbook),issued:true},watch,status:'new',reason:signal.reason,signal,
-   gate:{state:'ENTER',direction:out,code:(cand.entryMode||bundle.mode)==='EARLY'?'v3_enter_early':'v3_enter_full',blocker:(cand.entryMode||bundle.mode)==='EARLY'?'โครงสร้างและตำแหน่งผ่าน · อีกหนึ่งหลักฐานยืนยัน · ไม่มีหลักฐานสวน':'โครงสร้าง / ตำแหน่งราคา / พฤติกรรมราคา / แรงซื้อขายระยะสั้น ผ่านครบ',waitingFor:[],metrics:gateMetrics(st,bundle,ep)}};
+   gate:{state:'ENTER',direction:out,code:(cand.entryMode||bundle.mode)==='WAVE_EARLY'?'v33_enter_wave_early':(cand.entryMode||bundle.mode)==='EARLY'?'v3_enter_early':'v3_enter_full',blocker:(cand.entryMode||bundle.mode)!=='FULL'?'โครงสร้างและตำแหน่งผ่าน · อีกหนึ่งหลักฐานยืนยัน · ไม่มีหลักฐานสวน':'โครงสร้าง / ตำแหน่งราคา / พฤติกรรมราคา / แรงซื้อขายระยะสั้น ผ่านครบ',waitingFor:[],metrics:gateMetrics(st,bundle,ep)}};
  }
 }
 function typeFor(p){return ({breakout_continuation:'v3_breakout_continuation',trend_continuation:'v3_trend_continuation',shock_resolution:'v3_shock_resolution',pullback_reclaim:'v3_pullback_reclaim',confirmed_reversal:'v3_confirmed_reversal'})[p]||'v3_observer';}

@@ -91,20 +91,20 @@ assert.equal(api.resolveUnknown(candidate('A',70,1),12,null),null);
 
 
 // Elliott now participates in ARIS 3.3 entry as a fifth context gate.
-const waveAligned={unknown:null,preferred:{id:'COUNT-E1',key:'E1',score:78,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:112,targetHigh:116,invalidation:98,invalidationDirection:1}}};
-const waveOpposed={unknown:null,preferred:{id:'COUNT-E2',key:'E2',score:82,pattern:'IMPULSE',currentWave:'4',state:'CONFIRMED_COMPLETE',next:{wave:'5',direction:-1,projectionReady:true,targetLow:94,targetHigh:97,invalidation:108,invalidationDirection:-1}}};
+const waveAligned={unknown:null,preferred:{id:'COUNT-E1',key:'E1',score:78,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,fromBars:2,toBars:12,trigger:{direction:1,price:103},projectionReady:true,targetLow:112,targetHigh:116,invalidation:98,invalidationDirection:1}}};
+const waveOpposed={unknown:null,preferred:{id:'COUNT-E2',key:'E2',score:82,pattern:'IMPULSE',currentWave:'4',state:'CONFIRMED_COMPLETE',next:{wave:'5',direction:-1,fromBars:2,toBars:12,trigger:{direction:-1,price:105},projectionReady:true,targetLow:94,targetHigh:97,invalidation:108,invalidationDirection:-1}}};
 const waveAmbiguous={unknown:'MULTIPLE_COUNTS_CLOSE',preferred:{id:'COUNT-E3',key:'E3',score:70,pattern:'ZIGZAG',currentWave:'B',state:'FORMING',next:{wave:'C',direction:1,projectionReady:false,invalidation:98,invalidationDirection:1}}};
 const entryBoost=api.elliottEntryDecision(waveAligned,'HIGH',104,2,'EARLY');
 assert.equal(entryBoost.allow,true);assert.equal(entryBoost.state,'BOOST');
 const entryBlock=api.elliottEntryDecision(waveOpposed,'HIGH',104,2,'FULL');
 assert.equal(entryBlock.allow,false);assert.equal(entryBlock.state,'BLOCK');
 const ambiguityEarly=api.elliottEntryDecision(waveAmbiguous,'HIGH',104,2,'EARLY');
-assert.equal(ambiguityEarly.allow,true);assert.equal(ambiguityEarly.state,'CAUTION');
+assert.equal(ambiguityEarly.allow,true);assert.equal(ambiguityEarly.state,'NEUTRAL');
 const ambiguityFull=api.elliottEntryDecision(waveAmbiguous,'HIGH',104,2,'FULL');
 assert.equal(ambiguityFull.allow,true);
-const nearTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E4',key:'E4',score:80,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:104.2,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
+const nearTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E4',key:'E4',score:80,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,fromBars:2,toBars:12,trigger:{direction:1,price:103},projectionReady:true,targetLow:104.2,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
 assert.equal(nearTarget.allow,true);assert.equal(nearTarget.state,'CAUTION','near target should reduce confidence instead of vetoing');
-const hardTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E5',key:'E5',score:82,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,projectionReady:true,targetLow:104.1,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
+const hardTarget=api.elliottEntryDecision({unknown:null,preferred:{id:'COUNT-E5',key:'E5',score:82,pattern:'IMPULSE',currentWave:'2',state:'CONFIRMED_COMPLETE',next:{wave:'3',direction:1,fromBars:2,toBars:12,trigger:{direction:1,price:103},projectionReady:true,targetLow:104.1,targetHigh:105,invalidation:98,invalidationDirection:1}}},'HIGH',104,2,'FULL');
 assert.equal(hardTarget.allow,false,'confirmed count may veto only when target room is extremely small');
 
 // Previous preferred count can be invalidated by the new live endpoint.
@@ -212,9 +212,9 @@ assert.equal(ea.signals.length,ec.signals.length);
 assert.equal(JSON.stringify(ec.elliott.serialize().contexts['BTCUSDT|1m'].audit.slice(0,10)),JSON.stringify(history.contexts['BTCUSDT|1m'].audit.slice(0,10)));
 
 
-// Integration: a strong opposite Elliott count must veto a base 3.3 signal and roll it back from stored signals.
+// Integration: a strong opposite Elliott count must veto before issuing or storing a base 3.3 signal.
 const gatedRuntime=runtime('ARIS-3.3.0'),gated=new gatedRuntime.EventSignalV6.Engine();gated.session='GATE';
-const forcedOpposite={schema:'aris-elliott-1',symbol:'BTCUSDT',timeframe:'1m',timestamp:0,unknown:null,degrees:{Working:{unknown:null,preferred:{id:'COUNT-FORCED',key:'FORCED',score:90,pattern:'IMPULSE',currentWave:'4',state:'CONFIRMED_COMPLETE',next:{wave:'5',direction:-1,projectionReady:true,targetLow:900,targetHigh:930,invalidation:1100,invalidationDirection:-1}}}},preferred:null,alternate:null,box:null};
+const forcedOpposite={schema:'aris-elliott-1',symbol:'BTCUSDT',timeframe:'1m',timestamp:0,unknown:null,degrees:{Working:{unknown:null,preferred:{id:'COUNT-FORCED',key:'FORCED',score:90,pattern:'IMPULSE',currentWave:'4',state:'CONFIRMED_COMPLETE',next:{wave:'5',direction:-1,fromBars:2,toBars:12,trigger:{direction:-1,price:1060},projectionReady:true,targetLow:900,targetHigh:930,invalidation:1100,invalidationDirection:-1}}}},preferred:null,alternate:null,box:null};
 forcedOpposite.preferred=forcedOpposite.degrees.Working.preferred;
 gated.elliott.observe=()=>structuredClone(forcedOpposite);
 let gb=[],gp=1000,blockedSeen=false;
@@ -226,7 +226,7 @@ for(let i=0;i<400&&!blockedSeen;i++){
   const x={symbol:'BTCUSDT',timeframe:'1m',timeframeSeconds:60,id:i*3+j,ts:(6060+i*60)*1000+j*400,price:close+.1*j,bars:structuredClone(gb),fresh:true,flow:Math.sign(close-gb[i-1].close)*.15,coverage:60,bookValid:false,current:{...gb.at(-1),time:6060+i*60,closed:false}};
   const before=gated.signals.length,v=gated.step(structuredClone(x));
   const veto=gated.audit.find(q=>q.type==='v33_elliott_entry_blocked');
-  if(veto){blockedSeen=true;assert.equal(v.signal,null);assert.equal(gated.signals.length,before);assert.equal(v.status,'confirming');}
+  if(veto){blockedSeen=true;assert.equal(v.signal,null);assert.equal(gated.signals.length,before);assert.equal(v.status,'tracking');assert.equal(v.gate.elliott.state,'BLOCK');}
  }
 }
 assert(blockedSeen,'forced opposite Elliott context must block at least one otherwise-valid 3.3 entry');

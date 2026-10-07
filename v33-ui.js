@@ -18,11 +18,12 @@ function render(out,version){
  const selection=out?.degrees?.[degree],c=selection?.preferred,alt=selection?.alternate,unknown=selection?.unknown||out?.unknown;
  const state=root.ArisV33?.STATE_TH||{},unknownText=root.ArisV33?.UNKNOWN_TH||{};
  if(!c){$('elliott-current').textContent=unknownText[unknown]||'กำลังรวบรวมโครงสร้างคลื่น';for(const id of ['elliott-next','elliott-target','elliott-risk'])$(id).textContent='';$('elliott-detail').textContent=out?.error?'ส่วนวิเคราะห์คลื่นมีข้อผิดพลาด · จุดเข้าเดิมยังทำงาน':'ข้อมูลยังไม่พอสำหรับนับคลื่น';return;}
- const n=c.next,confirmed=c.state==='CONFIRMED_COMPLETE'&&!unknown;
+ const frozen=degree==='Working'&&out?.box?.candidateKey===c.key&&out.box.currentState===c.state?out.box:null;
+ const n=frozen||c.next,confirmed=c.state==='CONFIRMED_COMPLETE'&&!unknown;
  $('elliott-current').textContent=(confirmed?'ยืนยันแล้ว ':'สมมติฐาน ')+'Wave '+c.currentWave+(confirmed?' ':'? ')+direction(c.currentDirection)+' · '+(state[c.state]||c.state)+(unknown?' · '+(unknownText[unknown]||'ยังไม่ชัด'):'');
  $('elliott-next').textContent=(confirmed?'ถัดไป ':'ถ้าสมมติฐานนี้ถูก → ')+'Wave '+n.wave+' '+direction(n.direction)+' · Wave Score '+c.score+'/100';
  $('elliott-target').textContent=n.projectionReady
-  ?(confirmed?'โซน ':'โซนสมมติฐาน ')+number(n.targetLow)+'–'+number(n.targetHigh)+' · '+n.fromBars+'–'+n.toBars+' แท่ง'+(out?.seconds?' ('+(n.fromBars*out.seconds/60)+'–'+(n.toBars*out.seconds/60)+' นาที)':'')
+  ?(confirmed?'โซน ':'โซนสมมติฐาน ')+number(n.targetLow)+'–'+number(n.targetHigh)+' · '+n.fromBars+'–'+n.toBars+' แท่ง'+(out?.seconds?' ('+(n.fromBars*out.seconds/60)+'–'+(n.toBars*out.seconds/60)+' นาที)':'')+(frozen?' · เวลานับจากสร้างกล่อง':'')
   :'เป้าหมายยังไม่ยืนยัน · Wave Fib '+number(n.fibOnlyTarget?.low)+'–'+number(n.fibOnlyTarget?.high)+' รอ confluence เพิ่ม';
  $('elliott-risk').textContent=(confirmed?'Trigger ':'ระดับอ้างอิงสมมติฐาน · Trigger ')+(n.trigger.direction>0?'ยืนเหนือ ':'ยืนใต้ ')+number(n.trigger.price)+' · ยกเลิกเมื่อ'+(n.invalidationDirection>0?'ต่ำกว่า ':'สูงกว่า ')+number(n.invalidation);
  const detail=$('elliott-detail');detail.replaceChildren();
@@ -35,6 +36,7 @@ function render(out,version){
  'กล่อง: '+(out?.box?.state||'ยังไม่เปิด prediction เพราะ count ไม่ชัด'),
  'ประวัติ '+(out?.historyBars||0)+' แท่ง · Audit '+(out?.auditCount||0)+' · EXPERIMENTAL: คะแนนไม่ใช่โอกาสชนะ'];
  if(c.correctionGeometry){const g=c.correctionGeometry;rows.push('ABC geometry: B retrace '+number(g.bRetrace*100)+'%'+(Number.isFinite(g.cLengthRatio)?' · C/A '+number(g.cLengthRatio*100)+'%':'')+(g.variant?' · '+g.variant:''));}
+ if(unknown==='MULTIPLE_COUNTS_CLOSE'&&selection?.consensus?.count>=2&&selection.consensus.agreement===1)rows.push('Count ยังไม่ชัด แต่ '+selection.consensus.count+' สมมติฐานที่ยืนยันเห็นทิศถัดไป'+direction(selection.consensus.direction)+'เหมือนกัน');
  if(c.extension)rows.push('พบ Wave 3 ยืด · ตรวจคลื่นย่อยก่อนถือว่าคลื่นใหญ่จบ');if(c.truncated)rows.push('Wave 5 ไม่ทำ extreme ใหม่ · '+(c.subwaves.legs[4]?.state==='VALID'?'คลื่นย่อยผ่าน':'ยังเป็น truncation candidate'));
  for(const text of rows){const el=document.createElement('p');el.textContent=text;detail.append(el);}
 }

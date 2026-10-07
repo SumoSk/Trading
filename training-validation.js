@@ -1,19 +1,29 @@
 (() => {
   'use strict';
 
-  const SCHEMA='training-validation-v1';
+  const SCHEMA='training-validation-v2-purged';
   const MIN_TOTAL=30;
   const DEFAULT_SPLIT={train:.60,validation:.20,holdout:.20};
   const AUDIT_THRESHOLDS=[null,60,65,70,75,80,85,90];
   const FOLDS=4;
-  const num=v=>Number.isFinite(Number(v))?Number(v):null;
+  const num=v=>v===null||v===undefined||v===''?null:Number.isFinite(Number(v))?Number(v):null;
   const pct=(w,n)=>n?Math.round(w/n*1000)/10:null;
-  const r1=v=>Number.isFinite(Number(v))?Math.round(Number(v)*10)/10:null;
+  const r1=v=>num(v)===null?null:Math.round(Number(v)*10)/10;
   const avg=arr=>{
     const a=(arr||[]).map(num).filter(v=>v!==null);
     return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
   };
   const scored=s=>s&&['correct','incorrect'].includes(s.result);
+  const entryScore=s=>num(s.version==='ARIS-3.3.0'?s.entry?.v33EntryContext?.entryQuality:s.entry?.audit?.score);
+  const labelEnd=s=>Math.max(num(s.expiresAt)??Number(s.entryTime)+600000,num(s.exitTime)??0);
+  const episodeKey=s=>{const id=s.episodeId||s.entry?.episodeId||s.dataset?.episodeId;return id?String(s.replay?.sessionId||s.symbol||'')+'|'+id:null;};
+  function purgeEarlier(earlier,later){
+    if(!later.length)return {rows:earlier,purged:0,labelOverlap:0,episodeOverlap:0};
+    const cutoff=Math.min(...later.map(s=>Number(s.entryTime))),episodes=new Set(later.map(episodeKey).filter(Boolean));
+    let labelOverlap=0,episodeOverlap=0;
+    const rows=earlier.filter(s=>{const label=labelEnd(s)>=cutoff,episode=episodes.has(episodeKey(s));if(label)labelOverlap++;if(episode)episodeOverlap++;return !label&&!episode;});
+    return {rows,purged:earlier.length-rows.length,labelOverlap,episodeOverlap,cutoff};
+  }
 
   function stats(rows){
     const a=(rows||[]).filter(scored);
@@ -24,7 +34,7 @@
       avgMfeAtr:r1(avg(a.map(x=>x.outcome?.mfeAtr))),
       avgMaeAtr:r1(avg(a.map(x=>x.outcome?.maeAtr))),
       avgMoveAtr:r1(avg(a.map(x=>x.outcome?.directionalMoveAtr))),
-      avgAudit:r1(avg(a.map(x=>x.entry?.audit?.score)))
+      avgAudit:r1(avg(a.map(x=>x.entry?.audit?.score))),avgEntryScore:r1(avg(a.map(entryScore)))
     };
   }
 
@@ -59,7 +69,7 @@
 
   function calibration(rows){
     const order=['90-100','80-89','70-79','60-69','0-59'];
-    const raw=groupStats(rows.filter(s=>num(s.entry?.audit?.score)!==null),s=>auditBand(s.entry.audit.score));
+    const raw=groupStats(rows.filter(s=>entryScore(s)!==null),s=>auditBand(entryScore(s)));
     const by=new Map(raw.map(x=>[x.key,x]));
     const bands=order.map(key=>by.get(key)||{key,n:0,w:0,l:0,winRate:null});
     const usable=bands.filter(x=>x.n>=3&&Number.isFinite(x.winRate));
@@ -92,8 +102,11 @@
       train=a.slice(0,n1);validation=a.slice(n1,n2);holdout=a.slice(n2);
       mode='count_ratio_fallback';
     }
+    const trainPurge=purgeEarlier(train,[...validation,...holdout]),validationPurge=purgeEarlier(validation,holdout);
+    train=trainPurge.rows;validation=validationPurge.rows;
     return {
       train,validation,holdout,mode,
+      purge:{policy:'outcome_known_before_next_slice_and_no_shared_episode',train:trainPurge.purged,validation:validationPurge.purged,total:trainPurge.purged+validationPurge.purged,labelOverlap:trainPurge.labelOverlap+validationPurge.labelOverlap,episodeOverlap:trainPurge.episodeOverlap+validationPurge.episodeOverlap},
       bounds:{
         start:first,end:last,
         trainEnd:train.at(-1)?.entryTime||null,
@@ -114,7 +127,7 @@
   }
   function rulesLabel(r){
     const parts=[];
-    if(num(r.auditMin)!==null)parts.push('Audit ≥ '+Number(r.auditMin));
+    if(num(r.auditMin)!==null)parts.push('คะแนนก่อนเข้า ≥ '+Number(r.auditMin));
     if(r.excludeState)parts.push('ตัดสถานะ '+displayRuleKey(r.excludeState));
     if(r.excludePlaybook)parts.push('ตัดแผน '+displayRuleKey(r.excludePlaybook));
     return parts.length?parts.join(' · '):'กติกาเดิม · ไม่เพิ่มตัวกรอง';
@@ -122,7 +135,7 @@
 
   function applyRules(rows,rules={}){
     return (rows||[]).filter(s=>{
-      const score=num(s.entry?.audit?.score);
+      const score=entryScore(s);
       if(num(rules.auditMin)!==null&&(score===null||score<Number(rules.auditMin)))return false;
       if(rules.excludeState&&String(s.entry?.state??'UNKNOWN')===rules.excludeState)return false;
       if(rules.excludePlaybook&&String(s.entry?.playbook??s.type??'UNKNOWN')===rules.excludePlaybook)return false;
@@ -144,7 +157,7 @@
     const weakPlaybook=weakestGroup(train,s=>s.entry?.playbook||s.type);
     const states=[null,weakState?.key||null].filter((x,i,a)=>i===0||x!==null&&a.indexOf(x)===i);
     const plays=[null,weakPlaybook?.key||null].filter((x,i,a)=>i===0||x!==null&&a.indexOf(x)===i);
-    const auditAvailable=(train||[]).some(s=>num(s.entry?.audit?.score)!==null);
+    const auditAvailable=(train||[]).some(s=>entryScore(s)!==null);
     const auditThresholds=auditAvailable?AUDIT_THRESHOLDS:[null];
     const out=[];
     for(const auditMin of auditThresholds){
@@ -213,11 +226,11 @@
     for(let i=0;i<folds;i++){
       const testStart=baseTrain+i*step;
       const testEnd=i===folds-1?a.length:Math.min(a.length,testStart+step);
-      const train=a.slice(0,testStart),test=a.slice(testStart,testEnd);
+      const test=a.slice(testStart,testEnd),purge=purgeEarlier(a.slice(0,testStart),test),train=purge.rows;
       if(train.length<12||test.length<3)continue;
       const cand=deriveCandidate(train),cmp=compareSlice(test,cand.rules);
       out.push({
-        fold:i+1,trainN:train.length,testN:test.length,
+        fold:i+1,trainN:train.length,testN:test.length,purged:purge.purged,labelOverlap:purge.labelOverlap,episodeOverlap:purge.episodeOverlap,
         trainStart:train[0]?.entryTime||null,trainEnd:train.at(-1)?.entryTime||null,
         testStart:test[0]?.entryTime||null,testEnd:test.at(-1)?.entryTime||null,
         rules:cand.rules,rulesLabel:rulesLabel(cand.rules),
@@ -305,13 +318,13 @@
       datasetId:session.datasetId,engineVersion:session.engineVersion,engineBlobSha:session.engineBlobSha,
       auditSchema:session.auditSchema,dataQuality:session.quality?.grade||null,
       methodology:{
-        split:'chronological_60_20_20',splitMode:split.mode,
+        split:'chronological_60_20_20',splitMode:split.mode,purge:split.purge,
         candidateSelection:'train_only_wilson_lower_bound',
-        auditThresholdSearch:split.train.some(s=>num(s.entry?.audit?.score)!==null),
+        auditThresholdSearch:split.train.some(s=>entryScore(s)!==null),entryScoreSource:session.engineVersion==='ARIS-3.3.0'?'3.3 entry quality captured before outcome (experimental, not probability)':'entry audit',
         validationUsedForSelection:false,holdoutUsedForSelection:false,
         walkForward:'expanding_window',folds:FOLDS,noLiveMutation:true,noLookahead:true
       },
-      counts:{all:all.length,train:split.train.length,validation:split.validation.length,holdout:split.holdout.length},
+      counts:{all:all.length,train:split.train.length,validation:split.validation.length,holdout:split.holdout.length,purged:split.purge?.total||0},
       bounds:split.bounds,
       candidate:{
         rules:candidate.rules,label:rulesLabel(candidate.rules),complexity:candidate.complexity,
@@ -332,6 +345,7 @@
       notes:[
         'Candidate is selected from Train only; Validation and Holdout do not participate in rule selection.',
         'Walk-forward uses expanding historical windows and derives each fold candidate only from earlier observations.',
+        'Earlier slices purge labels that finish at/after the next slice starts and episodes shared with a later slice. Purged rows do not return through count-ratio fallback.',
         'This validates a research filter over replay entries; it does not rewrite live engine logic.',
         'A supported candidate should still be forward/shadow tested before any live promotion.'
       ]
@@ -379,7 +393,7 @@
 
   globalThis.TrainingValidationV1={
     schema:SCHEMA,phase:4,build,get,download,exportBundle,
-    chronologicalSplit,deriveCandidate,compareSlice,walkForward,rulesLabel
+    chronologicalSplit,deriveCandidate,compareSlice,walkForward,rulesLabel,purgeEarlier,entryScore
   };
 
   const byId=id=>document.getElementById(id);

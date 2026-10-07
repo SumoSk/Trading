@@ -1,138 +1,57 @@
-# ARIS 3.3 Elliott — r3 entry-context integration
+# ARIS 3.3 Elliott — r8 pre-entry timing and fixed T+10
 
-Target specification: **ARIS 3.3 Elliott Wave FINAL MASTER SPECIFICATION / FINAL LOCK**.
+Release: `ARIS-3.3.0` / `elliott-entry-v33-r8-t10`.
+Live and Training asset revision: `20261007-r8-t10`.
 
-This revision keeps ARIS 3.1 frozen and unchanged, but **ARIS 3.3 now uses Elliott as an additional entry-context gate**. Wave Score remains experimental and is never presented as a calibrated probability.
+## Execution
 
-## Integrity
+- ARIS 3.1 remains the default. `v31.js` and `v2.js` are unchanged.
+- In 3.3, Elliott is evaluated before candidate confirmation and signal creation. There is no post-issuance rollback.
+- BOOST and CAUTION now change actual entry quality. The balanced experimental policy uses a quality threshold of 70 when Elliott changes eligibility.
+- Confirmed Wave 3/5/C resumption can supply a continuation thesis when the ordinary reader is observing a pullback/transition/trend advance. It still requires structure/location gates, micro coverage, aligned evidence, fresh confirmation, episode/leg deduplication and the dual-HTF guard.
+- `WAVE_EARLY` can use confirmed wave support before both soft gates have fully passed; it cannot override a hard or soft BLOCK.
+- Invalid, forming or unresolved counts are neutral. They cannot veto an otherwise-valid base entry simply because an unconfirmed count breaks.
+- Close confirmed counts with a unanimous next direction may provide bounded support. The count label stays Unknown; the system does not claim a unique confirmed count.
+- A wave outside the ten-minute horizon or without a held trigger cannot boost/block entry. Live trigger confirmation resets after reclaim or a continuity gap.
+- Disabling Elliott entry influence preserves the 3.1 baseline decisions, reasons and execution Fib in the deterministic regression.
 
-- ARIS 3.1 remains the default engine.
-- `v31.js` is unchanged.
-- `v33-base.js` preserves 3.1 execution behaviour and human execution reasons; only 3.3 version/storage identity is separate.
-- ARIS 3.1 itself remains untouched. In ARIS 3.3 only, Elliott can now PASS / BOOST / CAUTION / BLOCK an otherwise-valid 3.1-style entry. Execution Fib remains unchanged.
-- Deterministic 400-bar / 1,080-evaluation regression still compares frozen 3.1 against the 3.3 base with Elliott influence explicitly disabled. This protects the baseline while allowing live 3.3 to use Elliott.
-- Backup before this hardening pass: `backup-before-v33-final-fixes-20261006`.
+## Counts and prediction geometry
 
-## Elliott engine
+- Previous counts are invalidated against their original pivots, never against unrelated latest swings.
+- Wave-4 triggers depart from the completed Wave-3 endpoint, before the target and the Wave-1 overlap boundary. Both bullish and bearish cases are tested.
+- Primary targets require independent zone/swing/channel/HTF confluence in addition to Wave Fib. Fib-only levels remain provisional.
+- Each count/state has one immutable prediction clock. HIT/EXPIRED/INVALIDATED predictions do not restart on every recalculation.
+- Live entry and Working-degree UI use the frozen prediction window when available.
+- Existing impulse, diagonal candidate, Zigzag, Flat, parent-position Triangle, subdivision, extension and truncation checks remain in place. Complex corrections may stay unresolved.
 
-- Separate bounded candle/pivot history.
-- Confirmed pivots plus live/provisional endpoints.
-- Micro / Working / Structural degrees.
-- Degree timing distributions are stored separately; Micro/Structural no longer reuse Working duration history.
-- Stable Candidate IDs and Wave IDs by degree.
-- Parent/child links with explicit promotion/reclassification audit events.
-- Multiple motive/corrective candidates, pruning, Preferred/Alternate and ambiguity/Unknown states.
-- Impulse hard rules.
-- Diagonal candidate handling with overlap exception/geometry.
-- Zigzag 5-3-5 internal validation.
-- Flat 3-3-5 internal validation and regular/expanded/running external classification.
-- Contracting Triangle candidate requires valid parent position.
-- Extension and truncated-fifth annotations.
-- Complex/combination structures can remain unresolved instead of being forced into a false count.
-- Recursive subwave validation is bounded for performance.
+## Fixed ten-minute evaluation
 
-## Projection
+- Wave projections, issued entries and qualified blocked shadow opportunities freeze entry price, direction and expiry at creation.
+- T+10 labels continue after recount or prediction-box invalidation. Target hits and box lifecycle metrics are separate from T+10 direction results.
+- The first observed price at/after expiry is accepted only within 3 seconds. Later observations produce `missing`, excluded from the scored denominator.
+- Report schema `elliott-evaluation-2` includes counts, pending/equal/missing outcomes and breakdowns by kind, score, regime, symbol and timeframe.
+- Persisted forecast labels are merged without downgrading settled labels to pending. Entry settings and disabled influence survive journal fallback/reload.
+- Storage is bounded; eviction counts are disclosed. Reports describe retained observations, not an unlimited lifetime ledger.
 
-- Candidate-anchored Wave Fib is separate from 3.1 Execution Fib.
-- Elliott Channel, structural swing, zone and HTF references can contribute to target confluence.
-- A Fib-only level is shown only as an unconfirmed provisional reference.
-- **Primary Target / Prediction Box requires at least one independent confluence source in addition to Wave Fib.**
-- Price target and time target are ranges.
-- Trigger and structural invalidation are attached to each active prediction.
-- Box lifecycle: ACTIVE / HIT / EXPIRED / INVALIDATED / EXTENDED.
-- Count disappearance/replacement invalidates the corresponding active box.
-- Wave-state reprojection closes the old box before creating the new one, preventing duplicate active boxes.
+## Training
 
-## No-repaint / persistence
+- Live and Training use the same 3.3 revision and assets.
+- Replay carries symbol/timeframe identity and clears Elliott evaluation at the warmup/test boundary while retaining causal structural history.
+- Compact records retain pre-outcome entry quality, Elliott context, revision, episode, entry mode and expiry.
+- Outcomes use the actual T+10 candle timestamp. A missing expiry candle cannot shift the outcome to ten later available bars.
+- Checkpoints from an older 3.3 revision require a fresh replay; old and new engine decisions cannot be silently mixed.
+- Chronological 60/20/20 splits and expanding walk-forward folds purge earlier labels not yet known when the next slice starts, plus episodes shared with later slices. Purged samples are reported and never returned through the fallback split.
+- Validation uses captured 3.3 entry quality; it does not treat ARIS 2.0 Audit as the 3.3 predictor. Missing scores remain missing, not zero.
+- Replay is a one-minute candle-close adapter, not a reconstruction of live tick timing or order-book history.
 
-- Count snapshots are append-only.
-- Hard-rule failures create explicit `COUNT_INVALIDATED` records.
-- Recounts retain the previous count and reason code.
-- Degree promotion/reclassification is audited.
-- Count stability in bars is recorded.
-- `v33Memory` is restored across reloads.
-- Journal/local fallback memories are merged without rewriting existing audit records.
-- Symbol and timeframe state are isolated.
-- Closed candle history is treated as immutable inside Elliott audit state.
-- History/audit/box storage remains bounded and discloses evictions.
+## Verification
 
-## Evaluation / training
+- `node tests/v33-smoke.cjs`: existing Elliott rules, persistence, entry veto and strict 3.1 equivalence with influence disabled (400 synthetic bars / 1,080 observations / 15 matching entries).
+- `node tests/v33-timing.cjs`: wave-4 geometry, anchored invalidation, consensus, real quality eligibility, held trigger, immutable T+10, journal merge, purged validation, active stream and real Training-engine replay.
+- `node tests/v2-regression.cjs`: 41 checks protecting older engines; retired-version assertions now match the existing version migration.
+- `.github/workflows/aris-v33-regression.yml` runs all three suites.
+- Backup-before-change was advanced to `47b77a40bb62bcac82a8334d9e4057ceed4130ca` before editing. The locked backup branch is untouched.
 
-Evaluation output includes:
+## Remaining research limits
 
-- Direction accuracy
-- Target hit rate
-- Time hit rate
-- Invalidation rate
-- Recount rate
-- Count stability (average/median bars)
-- Coverage
-- Unknown rate
-- Score buckets
-- Wave breakdown
-- Pattern breakdown
-- Degree breakdown
-- Regime breakdown
-- Timeframe breakdown
-- Symbol breakdown
-
-3.3 signal-time Elliott snapshots remain separate from outcome labels. Elliott now influences entry decisions only in ARIS 3.3, and every PASS/BLOCK decision is stored for later evaluation.
-
-## Tests
-
-`tests/v33-smoke.cjs` now covers:
-
-- bullish/bearish impulse
-- Wave 2 origin invalidation
-- Wave 4 overlap
-- diagonal overlap/position handling
-- Wave 3 extension
-- truncated Wave 5
-- Zigzag 5-3-5
-- Flat 3-3-5
-- Triangle parent position
-- insufficient/complex/ambiguous states
-- stable Count/Wave IDs
-- Fib-only target rejection
-- real target confluence
-- prediction hit/expiry/invalidation
-- evaluation metrics
-- missing volume / flat / shock / duplicate pivots
-- symbol/timeframe isolation
-- stale/reconnect input
-- reload audit preservation
-- responsive integration guards
-- Training-engine integration
-- strict 3.1 vs 3.3 base regression with Elliott influence disabled
-- Elliott entry gate PASS / BOOST / CAUTION / BLOCK behavior
-- strong-opposition veto rollback without storing a false signal
-- recount / invalidation / degree-reclassification lifecycle events
-
-GitHub Actions workflow: `.github/workflows/aris-v33-regression.yml`.
-
-## Responsive UI
-
-- Working degree remains the default user-facing layer.
-- Micro and Structural can be selected without changing the engine.
-- Mobile/iPad-safe width/overflow rules are isolated in `v33.css`.
-- Desktop can expose more detail without a different Elliott engine.
-- Current/Next copy uses human-readable “Wave …” wording.
-- When target confluence is insufficient, the UI says the target is not confirmed and does not draw a Prediction Box.
-
-## Deliberate experimental limits
-
-These are research limits, not hidden implementation claims:
-
-- Degree classification is heuristic and must be calibrated on real market data.
-- Diagonal and complex-correction grammar is intentionally conservative rather than exhaustive.
-- Wave Score is **not** a win probability until real score-bucket calibration exists.
-- Time projection is experimental until sufficient forward samples exist.
-- Browser/device visual acceptance still requires live viewing on the target iPhone/iPad/desktop; static responsive guards are in place, but no code review can replace that final visual acceptance.
-- Real walk-forward/forward performance must now be collected to prove whether the new Elliott entry gate improves EV; current thresholds are experimental.
-
-## Current release identity
-
-- Engine: `ARIS-3.3.0`
-- Revision: `elliott-entry-v33-r3`
-- Live/Training cache revision: `20261006-r3-entry`
-- Trading influence: **ON in ARIS 3.3 only**
+Wave Score and entry quality are experimental heuristic scores, not calibrated win probabilities. The synthetic tests prove engineering behavior, not improved market accuracy or profitability. Real market replay, purged holdout, forward/shadow results and sufficient samples per bucket are still needed. Degree classification, complex/diagonal grammar and duration forecasts remain conservative and incomplete; this release does not claim exhaustive Elliott coverage.

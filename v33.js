@@ -1,5 +1,5 @@
-/* ARIS 3.3 Elliott observer. EXPERIMENTAL scores, never trade probabilities.
- * Closed-data decisions; append-only snapshots; execution delegated to frozen 3.1.
+/* ARIS 3.3 Elliott analysis and entry policy. EXPERIMENTAL scores, never probabilities.
+ * Confirmed structure, live timing, immutable forecasts and optional 3.1 execution baseline.
  */
 (function(root){
 'use strict';
@@ -12,6 +12,7 @@ const DEFAULTS=Object.freeze({historyLimit:2400,auditLimit:1200,pivotLimit:320,t
 const STATE_TH={CANDIDATE:'เริ่มเข้าข่าย',FORMING:'กำลังก่อตัว',PROBABLE_COMPLETE:'อาจจบแล้ว รอยืนยัน',CONFIRMED_COMPLETE:'ยืนยันจบแล้ว',INVALIDATED:'สมมติฐานยกเลิก'};
 const UNKNOWN_TH={INSUFFICIENT_STRUCTURE:'จุดสวิงยังไม่พอ',UNRESOLVED:'ยังจำแนกคลื่นไม่ได้',COMPLEX_CORRECTION:'การพักตัวซับซ้อน',MULTIPLE_COUNTS_CLOSE:'Wave Count ยังไม่ชัด'};
 const DEGREE_CODE={Micro:'MIC',Working:'WRK',Structural:'STR'};
+const HORIZON_MS=600000,MAX_SETTLEMENT_DELAY_MS=3000;
 function hashKey(value){let h=2166136261;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0).toString(36).toUpperCase().padStart(7,'0');}
 function candidateIdentity(c){if(!c)return c;const h=hashKey(c.key);c.id=c.id||'COUNT-'+h;c.waveId=c.waveId||'W33-'+(DEGREE_CODE[c.degree]||'UNK')+'-'+h;return c;}
 function atr(b){return mean(b.slice(-24).map((q,i,a)=>Math.max(q.high-q.low,Math.abs(q.high-(a[i-1]?.close??q.open)),Math.abs(q.low-(a[i-1]?.close??q.open)))));}
@@ -141,15 +142,19 @@ function project(c,ctx){
  for(const h of Object.values(ctx.htf||{}))if(finite(h?.obstacle?.price))references.push({price:h.obstacle.price,source:'HTF'});
  if(ch)references.push({price:ch.a.price+ch.slope*(targetTime-ch.a.time),source:'CHANNEL'},{price:ch.through.price+ch.slope*(targetTime-ch.through.time),source:'CHANNEL'});
  const tol=Math.max(a*.3,magnitude*.05),ranked=levels.map(l=>({...l,confluence:references.filter(q=>Math.abs(q.price-l.price)<=tol)})).sort((x,y)=>y.confluence.length-x.confluence.length||Math.abs(x.ratio-1)-Math.abs(y.ratio-1));
- const confirmed=ranked.find(l=>l.confluence.length>0)||null,best=confirmed||ranked[0],fibOnlyTarget=best?{low:best.price-tol,high:best.price+tol,ratio:best.ratio}:null;
+ // Depart from the completed endpoint, rather than requiring a break of the previous wave's origin.
+ // In particular, a Wave-4 trigger must occur above the Wave-1 overlap invalidation.
+ const smallestMove=Math.min(...levels.map(l=>Math.abs(l.price-base))),buffer=Math.min(a*.15,magnitude*.1,smallestMove*.25);
+ const triggerPrice=base+dir*buffer;
+ const confirmed=ranked.find(l=>l.confluence.length>0&&dir*(l.price-triggerPrice)>tol&&dir*(l.price-ctx.price)>-tol)||null;
+ const best=confirmed||ranked[0],fibOnlyTarget=best?{low:best.price-tol,high:best.price+tol,ratio:best.ratio}:null;
  const primary=confirmed?{low:confirmed.price-tol,high:confirmed.price+tol,sources:['WAVE_FIB',...new Set(confirmed.confluence.map(q=>q.source))],confluence:confirmed.confluence}:null;
  const extendedLevel=levels.at(-1),extended=primary&&ratios.at(-1)>1?{low:extendedLevel.price-tol,high:extendedLevel.price+tol}:null;
  // Origin for W2/W3; W4 cannot overlap W1 in ordinary impulse; W5 cannot undo W4 origin.
  const invalidation=motive?(n===1||n===2?p[0].price:n===3?(c.pattern==='IMPULSE'?p[1].price:p[2].price):n===4?p[2].price:p.at(-1).price):p.at(-1).price;
  const invalidationDirection=motive&&n<5?d:dir;
- const triggerPrice=dir>0?Math.max(...p.slice(-2).map(q=>q.price)):Math.min(...p.slice(-2).map(q=>q.price));
  return {wave:next,direction:dir,targetLow:primary?.low??null,targetHigh:primary?.high??null,primary,fibOnlyTarget,projectionReady:!!primary,targetStatus:primary?'CONFLUENT':'FIB_ONLY_UNCONFIRMED',extended,fromBars,toBars,startTime:ctx.time+fromBars*ctx.seconds,endTime:targetTime,
-  trigger:{price:triggerPrice,direction:dir,kind:'RECLAIM_AND_HOLD'},invalidation,invalidationDirection,score:c.score,
+  trigger:{price:triggerPrice,direction:dir,kind:'PIVOT_DEPARTURE_AND_HOLD',holdMs:350,minTicks:2},invalidation,invalidationDirection,score:c.score,
   waveFib:{degree:c.degree,sourceWave:motive&&n===3?'3':'1/A',targetWave:next,start:sourceStart.price,end:sourceEnd.price,projectionBase:base,ratios,levels},channel:ch,
   timing:{method:'same-degree duration distribution × speed-adjusted range',samples:duration.length+historical.length,experimental:true}};
 }
@@ -216,17 +221,34 @@ function selectCounts(candidates,cfg=DEFAULTS){
  const alternate=candidates.find(q=>preferred&&q.key!==preferred.key&&(q.next.direction!==preferred.next.direction||q.pattern!==preferred.pattern||q.currentWave!==preferred.currentWave))||null;
  const unconfirmed=preferred&&preferred.state!=='CONFIRMED_COMPLETE';
  const unknown=!preferred?'INSUFFICIENT_STRUCTURE':preferred.score<cfg.minScore||unconfirmed?'UNRESOLVED':alternate&&preferred.score-alternate.score<cfg.ambiguityGap?'MULTIPLE_COUNTS_CLOSE':null;
- return {preferred,alternate,unknown};
+ return {preferred,alternate,unknown,consensus:directionConsensus(candidates,cfg)};
+}
+function directionConsensus(candidates,cfg=DEFAULTS){
+ const top=candidates[0]?.score??0;
+ const eligible=candidates.filter(c=>c.state==='CONFIRMED_COMPLETE'&&c.score>=cfg.minScore&&top-c.score<cfg.ambiguityGap);
+ const directions=[...new Set(eligible.map(c=>Math.sign(c.next?.direction||0)).filter(Boolean))];
+ return {direction:directions.length===1?directions[0]:0,count:eligible.length,agreement:directions.length===1?1:0,
+  score:eligible.length?Math.min(...eligible.map(c=>c.score)):0,candidateIds:eligible.map(c=>c.id||c.key),structurallyConfirmed:eligible.length>0};
 }
 function resolveUnknown(preferred,microPivotCount,selectedUnknown){return !preferred&&microPivotCount>8?'COMPLEX_CORRECTION':selectedUnknown;}
 function previousCountStatus(previous,sets,ctx){
  if(!previous)return {invalid:false,reasons:[]};
- const pivots=sets?.[previous.degree]||[];
- if(!pivots.length)return {invalid:false,reasons:['NO_CURRENT_PIVOT_SET']};
- const end=liveEndpoint(pivots,ctx.bars,ctx.price,ctx.time),seq=end?pivots.concat(end):pivots,len=previous.pivots?.length||0;
- if(len>=2&&seq.length>=len){
-  const check=hardRules(seq.slice(-len),previous.pattern,{parentWave:previous.parentWave?.wave});
-  if(!check.valid)return {invalid:true,reasons:check.reasons};
+ // Validate the original anchors. A later, unrelated swing cannot invalidate an older count.
+ const pivots=previous.pivots||[],n=pivots.length-1;
+ if(n<1)return {invalid:false,reasons:['NO_ORIGINAL_PIVOT_SET']};
+ let seq=pivots;
+ if(pivots.at(-1).provisional){const end=liveEndpoint(pivots.slice(0,-1),ctx.bars||[],ctx.price,ctx.time);if(end)seq=pivots.slice(0,-1).concat(end);}
+ const check=hardRules(seq,previous.pattern,{parentWave:previous.parentWave?.wave});
+ if(!check.valid)return {invalid:true,reasons:check.reasons};
+ const d=Math.sign(pivots[1].price-pivots[0].price),motive=['IMPULSE','DIAGONAL_CANDIDATE'].includes(previous.pattern);
+ if(motive){
+  const forming=!!pivots.at(-1).provisional;
+  const level=forming?(n%2===1?pivots[n-1].price:pivots[n-2].price):
+   previous.next?.invalidation??(n<=2?pivots[0].price:n===3?(previous.pattern==='IMPULSE'?pivots[1].price:pivots[2].price):n===4?pivots[2].price:pivots.at(-1).price);
+  const invDir=forming||n<5?d:(previous.next?.invalidationDirection||-d);
+  if(finite(ctx.price)&&invDir*(ctx.price-level)<0)return {invalid:true,reasons:[n<=2?'W2_ORIGIN_BROKEN':n===3&&!forming?'IMPULSE_W4_OVERLAP':'ANCHORED_ORIGIN_BROKEN']};
+ }else if(previous.next&&finite(previous.next.invalidation)&&previous.next.invalidationDirection*(ctx.price-previous.next.invalidation)<0){
+  return {invalid:true,reasons:['ANCHORED_CORRECTION_INVALIDATED']};
  }
  return {invalid:false,reasons:[]};
 }
@@ -235,21 +257,50 @@ function updateBox(box,q){
  const invalid=box.invalidationDirection*(q.price-box.invalidation)<0;
  if(invalid)return {state:'INVALIDATED',reason:'STRUCTURAL_INVALIDATION',at:q.ts};
  if(q.ts>box.endTime*1000)return {state:'EXPIRED',reason:'TIME_BOX_EXPIRED',at:q.ts};
- if(!box.triggered&&box.trigger.direction*(q.price-box.trigger.price)>=0)return {state:box.state,triggered:true,at:q.ts,reason:'TRIGGER_RECLAIMED'};
- if(box.triggered&&q.ts>=box.startTime*1000&&q.price>=box.targetLow&&q.price<=box.targetHigh)return {state:'HIT',at:q.ts,reason:'TARGET_AND_TIME_HIT'};
- if(box.triggered&&q.price>=box.targetLow&&q.price<=box.targetHigh&&!box.priceHitAt)return {state:box.state,priceHitAt:q.ts,at:q.ts,reason:'PRICE_HIT_OUTSIDE_TIME'};
- if(box.triggered&&box.extended&&box.direction*(q.price-(box.direction>0?box.targetHigh:box.targetLow))>0&&box.state==='ACTIVE')return {state:'EXTENDED',at:q.ts,reason:'EXTENSION_IN_PROGRESS'};
+ let triggered=box.triggered,change={};
+ if(!triggered){
+  if(box.trigger.direction*(q.price-box.trigger.price)<0)return box.triggerSince!=null?{state:box.state,triggerSince:null,triggerTicks:0,at:q.ts,reason:'TRIGGER_RESET'}:null;
+  const since=box.triggerSince??q.ts,ticks=(box.triggerTicks||0)+1;
+  triggered=q.ts-since>=(box.trigger.holdMs||0)&&ticks>=(box.trigger.minTicks||1);
+  change={triggerSince:since,triggerTicks:ticks,triggered};
+  if(!triggered)return {...change,state:box.state,at:q.ts,reason:'TRIGGER_CONFIRMING'};
+  change.triggeredAt=q.ts;
+ }
+ const hit=q.price>=box.targetLow&&q.price<=box.targetHigh;
+ if(triggered&&hit&&q.ts>=box.startTime*1000)return {...change,state:'HIT',priceHitAt:q.ts,at:q.ts,reason:'TARGET_AND_TIME_HIT'};
+ if(triggered&&hit&&!box.priceHitAt)return {...change,state:box.state,priceHitAt:q.ts,at:q.ts,reason:'PRICE_HIT_OUTSIDE_TIME'};
+ if(triggered&&box.extended&&box.direction*(q.price-(box.direction>0?box.targetHigh:box.targetLow))>0&&box.state==='ACTIVE')return {...change,state:'EXTENDED',at:q.ts,reason:'EXTENSION_IN_PROGRESS'};
+ if(Object.keys(change).length)return {...change,state:box.state,at:q.ts,reason:'TRIGGER_RECLAIMED'};
  return null;
+}
+function settleForecast(f,q){
+ if(f.result!=='pending'||!finite(q.ts)||!finite(q.price)||q.ts<f.expiresAt)return null;
+ if(q.ts-f.expiresAt>MAX_SETTLEMENT_DELAY_MS)return {result:'missing',settledAt:q.ts,reason:'NO_OBSERVATION_AT_T_PLUS_10',exitPrice:null};
+ const move=f.direction*(q.price-f.entryPrice);
+ return {result:move===0?'equal':move>0?'correct':'incorrect',settledAt:q.ts,exitPrice:q.price,directionalMove:move};
 }
 class Observer{
  constructor(saved={},cfg={}){this.cfg={...DEFAULTS,...cfg};this.contexts=clone(saved.contexts||{});this.sequence=saved.sequence||0;this.cache=new Map();}
  serialize(){return {schema:'aris-elliott-1',sequence:this.sequence,contexts:clone(this.contexts)};}
  record(s,type,data,ts){s.audit.push({id:'EA-'+(++this.sequence),timestamp:ts,symbol:s.symbol,timeframe:s.timeframe,type,...clone(data)});if(s.audit.length>this.cfg.auditLimit){s.audit.shift();s.evictedAudit++;}}
+ addForecast(x,data){
+  const seconds=x.timeframeSeconds||60,key=(x.symbol||'UNSPECIFIED')+'|'+(x.timeframe||seconds+'s'),s=this.contexts[key];
+  if(!s||!data.direction||!finite(x.price)||!finite(x.ts))return null;
+  s.forecasts=s.forecasts||[];
+  const existing=s.forecasts.find(f=>f.id===data.id);if(existing)return existing;
+  if(s.forecasts.length>=800){const i=s.forecasts.findIndex(f=>f.result!=='pending');if(i<0){this.record(s,'FORECAST_CAPACITY_REACHED',{id:data.id},x.ts);return null;}s.forecasts.splice(i,1);s.evictedForecasts=(s.evictedForecasts||0)+1;}
+  const f={...clone(data),symbol:s.symbol,timeframe:s.timeframe,entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+HORIZON_MS,horizonMs:HORIZON_MS,result:'pending',inputScope:'decision_time_only'};
+  s.forecasts.push(f);this.record(s,'T10_FORECAST_CREATED',{forecast:f},x.ts);return f;
+ }
+ resetEvaluation(){
+  for(const s of Object.values(this.contexts)){s.audit=[];s.boxes=[];s.forecasts=[];s.samples=0;s.known=0;s.recounts=0;s.stabilityBars=[];s.preferredSinceTs=null;s.evictedAudit=0;s.evictedForecasts=0;s.output=null;}
+ }
  observe(x,view={}){
   const seconds=x.timeframeSeconds||({ '1m':60,'5m':300,'15m':900,'1h':3600 }[x.timeframe]||60),symbol=x.symbol||'UNSPECIFIED',timeframe=x.timeframe||seconds+'s',key=symbol+'|'+timeframe;
   let s=this.contexts[key];if(!s)s=this.contexts[key]={symbol,timeframe,seconds,bars:[],audit:[],boxes:[],durationsByDegree:{Micro:[],Working:[],Structural:[]},lastTs:0,samples:0,known:0,recounts:0,evictedAudit:0,degreeSignatures:{},degreeLinks:{},stabilityBars:[],preferredSinceTs:null};
-  s.durationsByDegree=s.durationsByDegree||{Micro:[],Working:Array.isArray(s.durations)?s.durations:[],Structural:[]};s.degreeLinks=s.degreeLinks||{};s.stabilityBars=s.stabilityBars||[];
+  s.durationsByDegree=s.durationsByDegree||{Micro:[],Working:Array.isArray(s.durations)?s.durations:[],Structural:[]};s.degreeLinks=s.degreeLinks||{};s.stabilityBars=s.stabilityBars||[];s.forecasts=s.forecasts||[];
   if(!finite(x.ts)||!finite(x.price)||x.ts<s.lastTs||!x.fresh)return s.output||{unknown:'INSUFFICIENT_STRUCTURE',degrees:{}};
+  for(const f of s.forecasts){const result=settleForecast(f,x);if(result){Object.assign(f,result);this.record(s,'T10_FORECAST_SETTLED',{id:f.id,...result},x.ts);}}
   for(const box of s.boxes){const update=updateBox(box,x);if(update){Object.assign(box,update);if(['HIT','EXPIRED','INVALIDATED'].includes(box.state)){box.terminalPrice=x.price;box.directionCorrect=box.direction*(x.price-box.originPrice)>0;}this.record(s,'BOX_'+update.reason,{box},x.ts);}}
   const incoming=barsOnly(x.bars,x.ts/1000,seconds),last=incoming.at(-1),rebuild=last&&last.time!==s.lastBarTime;
   if(rebuild){
@@ -257,9 +308,9 @@ class Observer{
    s.bars=[...map.values()].sort((a,b)=>a.time-b.time).slice(-this.cfg.historyLimit);s.lastBarTime=last.time;
   }
   const a=Math.max(atr(s.bars),x.price*.000001),meaningful=!s.output||rebuild||Math.abs(x.price-(s.lastCalcPrice??x.price))>=a*.35||s.boxes.some(q=>q.state==='INVALIDATED'&&q.at===x.ts);
-  s.lastTs=x.ts;if(!meaningful)return clone(s.output);
-  const b=s.bars,cached=this.cache.get(key),sets=cached?.barTime===s.lastBarTime?cached.sets:{};let lower=[];
-  for(const spec of (cached?.barTime===s.lastBarTime?[]:this.cfg.degrees)){const p=spec.name==='Micro'?feed(b,spec.radius).slice(-this.cfg.pivotLimit):degreePivots(b,lower,spec,a,this.cfg.pivotLimit);sets[spec.name]=p;lower=p;}
+  s.lastTs=x.ts;if(!meaningful){s.output.timestamp=x.ts;s.output.box=clone([...s.boxes].reverse().find(q=>q.candidateKey===s.output.preferred?.key)||null);return clone(s.output);}
+  const b=s.bars,cached=this.cache.get(key),sets=cached&&cached.barTime===s.lastBarTime?cached.sets:{};let lower=[];
+  for(const spec of (cached&&cached.barTime===s.lastBarTime?[]:this.cfg.degrees)){const p=spec.name==='Micro'?feed(b,spec.radius).slice(-this.cfg.pivotLimit):degreePivots(b,lower,spec,a,this.cfg.pivotLimit);sets[spec.name]=p;lower=p;}
   this.cache.set(key,{barTime:s.lastBarTime,sets});
   if(rebuild)for(const degree of ['Micro','Working','Structural']){const pairs=sets[degree]||[];if(pairs.length>1)s.durationsByDegree[degree]=pairs.slice(1).map((p,i)=>(p.time-pairs[i].time)/seconds).filter(finite).slice(-60);}
   const baseCtx={...this.cfg,atr:a,bars:b,price:x.price,time:x.ts/1000,seconds,zones:view.z||[],htf:view.v3Story?.htf||{},behavior:view.v3Story?.behavior||{},features:view.f||{},momentum:view.f?.mom||0,flow:x.flow};
@@ -313,14 +364,16 @@ class Observer{
     this.record(s,'BOX_INVALIDATED',{box},x.ts);
    }
   }
-  if(p?.state==='CONFIRMED_COMPLETE'&&!unknown&&p.next.projectionReady&&!s.boxes.some(q=>['ACTIVE','EXTENDED'].includes(q.state)&&q.candidateKey===p.key&&q.currentState===p.state)){
+  // One immutable prediction per count/state. A HIT/EXPIRED forecast must not restart its clock.
+  if(p?.state==='CONFIRMED_COMPLETE'&&!unknown&&p.next.projectionReady&&!s.boxes.some(q=>q.candidateKey===p.key&&q.currentState===p.state)){
    const box={id:'BOX-'+(++this.sequence),candidateId:p.id,candidateKey:p.key,currentState:p.state,degree:'Working',pattern:p.pattern,currentWave:p.currentWave,...clone(p.next),createdAt:x.ts,originPrice:x.price,symbol,timeframe,seconds,regime:view.v3Story?.state||'UNKNOWN',state:'ACTIVE',triggered:false};
    s.boxes.push(box);if(s.boxes.length>300)s.boxes.shift();this.record(s,'PREDICTION_CREATED',{box},x.ts);
+   this.addForecast(x,{id:'T10:'+box.id,kind:'WAVE',direction:box.direction,candidateId:p.id,wave:box.wave,pattern:p.pattern,score:p.score,regime:box.regime});
   }
   if(old&&p&&old.key===p.key&&old.state!==p.state)this.record(s,'WAVE_STATE_CHANGED',{candidateId:p.id,from:old.state,to:p.state},x.ts);
   s.lastCalcPrice=x.price;
   const activeBox=[...s.boxes].reverse().find(q=>q.candidateKey===p?.key)||null;
-  const output={schema:'aris-elliott-1',experimental:true,scoreIsProbability:false,symbol,timeframe,seconds,timestamp:x.ts,unknown,preferred:p,alternate:selected.alternate,degrees,box:activeBox,
+  const output={schema:'aris-elliott-1',experimental:true,scoreIsProbability:false,symbol,timeframe,seconds,timestamp:x.ts,unknown,preferred:p,alternate:selected.alternate,consensus:selected.consensus,degrees,box:activeBox,
    executionFib:clone(view.v3Story?.fib||null),auditCount:s.audit.length,historyBars:b.length,combinationCandidate:unknown&&sets.Micro.length>=9?'COMBINATION_CANDIDATE':null};
   s.output=clone(output);
   if(rebuild||reason||old?.state!==p?.state)this.record(s,'COUNT_SNAPSHOT',{degree:'Working',pattern:p?.pattern||null,currentWave:p?.currentWave||null,currentState:p?.state||null,preferredCount:p?.id||null,preferredScore:p?.score||null,
@@ -332,119 +385,154 @@ class Observer{
  report(){
   const rows=Object.values(this.contexts).flatMap(s=>s.boxes),terminal=rows.filter(q=>['HIT','EXPIRED','INVALIDATED'].includes(q.state));
   const lifeBars=q=>Math.max(0,((q.at||q.createdAt)-q.createdAt)/(1000*(q.seconds||({'1m':60,'5m':300,'15m':900,'1h':3600}[q.timeframe]||60))));
-  const stats=a=>{const directionRows=a.filter(q=>typeof q.directionCorrect==='boolean'),stability=a.map(lifeBars).filter(finite);return {n:a.length,directionAccuracy:a.filter(q=>q.directionCorrect===true).length/(directionRows.length||1),targetHitRate:a.filter(q=>q.state==='HIT'||q.priceHitAt).length/(a.length||1),timeHitRate:a.filter(q=>q.state==='HIT').length/(a.length||1),invalidationRate:a.filter(q=>q.state==='INVALIDATED').length/(a.length||1),recountRate:a.filter(q=>q.recounted).length/(a.length||1),countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null};};
+  const stats=a=>{const directionRows=a.filter(q=>typeof q.directionCorrect==='boolean'),stability=a.map(lifeBars).filter(finite);return {n:a.length,directionScored:directionRows.length,directionUnscored:a.length-directionRows.length,directionAccuracy:directionRows.length?a.filter(q=>q.directionCorrect===true).length/directionRows.length:null,targetHitRate:a.length?a.filter(q=>q.state==='HIT'||q.priceHitAt).length/a.length:null,timeHitRate:a.length?a.filter(q=>q.state==='HIT').length/a.length:null,invalidationRate:a.length?a.filter(q=>q.state==='INVALIDATED').length/a.length:null,recountRate:a.length?a.filter(q=>q.recounted).length/a.length:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null};};
   const group=k=>{const map={};for(const q of terminal){const v=k(q);(map[v]||(map[v]=[])).push(q);}return Object.fromEntries(Object.entries(map).map(([k,v])=>[k,stats(v)]));};
-  return {schema:'elliott-evaluation-1',experimental:true,scoresAreProbabilities:false,metricPolicy:'Fixed at creation: trigger required; target overlap on observed prices; invalidation first; time window inclusive; missing feed is not a hit. Direction evaluated at terminal observation; no unobserved intra-bar ordering inferred. Recounts and count-stability are measured from append-only lifecycle events.',
+  const forecasts=Object.values(this.contexts).flatMap(s=>s.forecasts||[]),t10=a=>{const wins=a.filter(f=>f.result==='correct').length,losses=a.filter(f=>f.result==='incorrect').length;return {n:a.length,wins,losses,equal:a.filter(f=>f.result==='equal').length,missing:a.filter(f=>f.result==='missing').length,pending:a.filter(f=>f.result==='pending').length,scored:wins+losses,winRate:wins+losses?wins/(wins+losses):null};};
+  const t10Group=fn=>{const m={};for(const f of forecasts){const k=String(fn(f)??'UNKNOWN');(m[k]||(m[k]=[])).push(f);}return Object.fromEntries(Object.entries(m).map(([k,a])=>[k,t10(a)]));};
+  return {schema:'elliott-evaluation-2',experimental:true,scoresAreProbabilities:false,metricPolicy:'Projection metrics measure box lifecycle only, not trade win probability. T+10 outcomes freeze direction/price/time at creation, are never cancelled by recount, and accept the first observed price within 3 seconds of expiry. Missing observations are excluded, never guessed.',
+   fixed10m:{horizonMs:HORIZON_MS,maxSettlementDelayMs:MAX_SETTLEMENT_DELAY_MS,overall:t10(forecasts),byKind:t10Group(f=>f.kind),byScore:t10Group(f=>f.kind+':'+Math.floor(f.score/10)*10),byRegime:t10Group(f=>f.regime),bySymbol:t10Group(f=>f.symbol),byTimeframe:t10Group(f=>f.timeframe)},
    totalPredictions:rows.length,completed:stats(terminal),scoreBuckets:group(q=>q.score<50?'0–49':q.score>=90?'90–100':Math.floor(q.score/10)*10+'–'+(Math.floor(q.score/10)*10+9)),
    byWave:group(q=>q.wave),byPattern:group(q=>q.pattern),byDegree:group(q=>q.degree),byRegime:group(q=>q.regime),byTimeframe:group(q=>q.timeframe),bySymbol:group(q=>q.symbol),
-   contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>{const stability=(s.stabilityBars||[]).filter(finite);return [k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null,samples:s.samples,evictedAudit:s.evictedAudit}];}))};
+   contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>{const stability=(s.stabilityBars||[]).filter(finite);return [k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null,samples:s.samples,evictedAudit:s.evictedAudit,evictedForecasts:s.evictedForecasts||0}];}))};
  }
 }
 
-const ENTRY_DEFAULTS=Object.freeze({profile:'balanced-r5',enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,ambiguousEarlyBlock:false});
+const ENTRY_DEFAULTS=Object.freeze({profile:'balanced-r8-t10',enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,entryMinQuality:70,waveEarlyMinEvidence:.06});
 function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={}){
  const c={...ENTRY_DEFAULTS,...(cfg||{})},d=direction==='HIGH'?1:direction==='LOW'?-1:Math.sign(Number(direction)||0);
  if(!c.enabled)return {allow:true,state:'OFF',entryScoreDelta:0,reason:'Elliott entry influence ปิดอยู่'};
- const working=elliott?.degrees?.Working||{},p=working.preferred||elliott?.preferred||null,unknown=working.unknown||elliott?.unknown||null;
- if(!d)return {allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'ยังไม่มีทิศของจุดเข้าให้ Elliott ประเมิน',unknown};
- if(!p)return {allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มี Preferred Count จึงไม่บล็อกจุดเข้าเดิม',unknown};
- const n=p.next||{},nextDirection=Math.sign(Number(n.direction)||0),score=Number(p.score)||0;
- const aligned=nextDirection===d,opposed=!!nextDirection&&nextDirection!==d;
- const ambiguous=['MULTIPLE_COUNTS_CLOSE','UNRESOLVED','COMPLEX_CORRECTION'].includes(unknown);
- const structurallyInvalid=finite(n.invalidation)&&finite(n.invalidationDirection)&&n.invalidationDirection*(price-n.invalidation)<0;
+ const working=elliott?.degrees?.Working||{},p=working.preferred||elliott?.preferred||null,unknown=working.unknown??elliott?.unknown??null;
+ const neutral=reason=>({allow:true,state:'NEUTRAL',entryScoreDelta:0,reason,unknown,structurallyUsable:false});
+ if(!d)return neutral('ยังไม่มีทิศของจุดเข้าให้ Elliott ประเมิน');
+ if(!p)return neutral('ยังไม่มีโครงสร้างคลื่นที่ยืนยัน ใช้หลักฐานจุดเข้าเดิม');
+ const frozen=elliott?.box?.candidateKey===p.key&&elliott.box.currentState===p.state?elliott.box:null;
+ const n=frozen||p.next||{},nextDirection=Math.sign(Number(n.direction)||0),score=Number(p.score)||0;
+ const consensus=working.consensus||elliott?.consensus||directionConsensus(working.candidates||[p]);
+ const countClear=!unknown&&p.state==='CONFIRMED_COMPLETE';
+ const consensusClear=unknown==='MULTIPLE_COUNTS_CLOSE'&&p.state==='CONFIRMED_COMPLETE'&&consensus.count>=2&&consensus.agreement===1&&consensus.direction===nextDirection;
+ const structurallyUsable=countClear||consensusClear;
+ const invalid=finite(n.invalidation)&&finite(n.invalidationDirection)&&n.invalidationDirection*(price-n.invalidation)<0;
+ const seconds=elliott?.seconds||60,horizonBars=HORIZON_MS/(seconds*1000);
+ const fromBars=finite(n.startTime)&&finite(elliott?.timestamp)?Math.max(0,(n.startTime-elliott.timestamp/1000)/seconds):n.fromBars;
+ const timeRelevant=finite(fromBars)&&fromBars<=horizonBars&&(!finite(n.endTime)||!finite(elliott?.timestamp)||n.endTime>=elliott.timestamp/1000);
+ const triggerReached=!!n.trigger&&finite(n.trigger.price)&&Math.sign(n.trigger.direction)===nextDirection&&nextDirection*(price-n.trigger.price)>=0&&(elliott?.entryTriggerConfirmed!==false);
+ const aligned=nextDirection===d,opposed=!!nextDirection&&!aligned;
  let targetRoomAtr=null;
- if(aligned&&n.projectionReady&&finite(price)&&finite(atrValue)&&atrValue>0){
-  const edge=d>0?n.targetLow:n.targetHigh;
-  if(finite(edge))targetRoomAtr=d*(edge-price)/atrValue;
- }
+ if(aligned&&n.projectionReady&&finite(price)&&finite(atrValue)&&atrValue>0){const edge=d>0?n.targetLow:n.targetHigh;if(finite(edge))targetRoomAtr=d*(edge-price)/atrValue;}
+ const common={candidateId:p.id||null,candidateKey:p.key||null,pattern:p.pattern||null,currentWave:p.currentWave||null,waveState:p.state||null,nextWave:n.wave||null,nextDirection,score,unknown,targetRoomAtr,mode,countClear,consensus:clone(consensus),structurallyUsable,timeRelevant,triggerReached,horizonBars};
+ if(invalid)return {...common,...neutral('สมมติฐานคลื่นเดิมเสียแล้ว ใช้โครงสร้างจุดเข้าและรอ Count ใหม่'),discardedCount:true};
+ if(frozen&&['EXPIRED','INVALIDATED'].includes(frozen.state))return {...common,...neutral('การคาดการณ์คลื่นเดิมจบแล้ว รอโครงสร้างใหม่')};
+ if(!structurallyUsable)return {...common,...neutral('ชื่อหรือโครงสร้างคลื่นยังไม่ยืนยัน จึงไม่เปลี่ยนจุดเข้า')};
+ if(!timeRelevant)return {...common,...neutral('เป้าคลื่นยังอยู่นอกช่วง 10 นาที ใช้เป็นบริบทระยะใหญ่')};
  const nearTarget=finite(targetRoomAtr)&&targetRoomAtr<c.minTargetRoomAtr;
- const countClear=!unknown&&!ambiguous&&p.state==='CONFIRMED_COMPLETE';
- const strongOpposition=opposed&&score>=c.oppositionScore&&countClear&&!!n.projectionReady;
- const hardTargetCrowding=aligned&&score>=c.oppositionScore&&countClear&&!!n.projectionReady&&finite(targetRoomAtr)&&targetRoomAtr<c.hardTargetRoomAtr;
- const common={candidateId:p.id||null,candidateKey:p.key||null,pattern:p.pattern||null,currentWave:p.currentWave||null,waveState:p.state||null,nextWave:n.wave||null,nextDirection,score,unknown,targetRoomAtr,mode,countClear};
- if(structurallyInvalid)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Preferred Count ทะลุ Elliott invalidation แล้ว'};
- if(strongOpposition)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ชัดและ Next Wave สวนจุดเข้าแรงพอ จึงรอ'};
- if(hardTargetCrowding)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave หนุนทิศ แต่เหลือพื้นที่ถึง Target น้อยมากและ Count ชัด จึงไม่ไล่'};
- if(c.ambiguousEarlyBlock&&ambiguous&&mode==='EARLY')return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'Wave Count ยังไม่ชัด จึงไม่อนุญาตจุดเข้า EARLY'};
- if(aligned&&score>=c.supportScore&&countClear&&!nearTarget)return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:n.projectionReady?12:7,reason:n.projectionReady?'Next Wave หนุนทิศและมี Target confluence':'Next Wave หนุนทิศจุดเข้า'};
- if(aligned&&nearTarget)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-4,reason:'Wave หนุนทิศ แต่เริ่มเข้าใกล้ Target Zone จึงลดความมั่นใจแทนการบล็อก'};
- if(aligned&&!ambiguous)return {...common,allow:true,state:'PASS',entryScoreDelta:4,reason:'ทิศของ Next Wave สอดคล้องกับจุดเข้า แต่คะแนนยังไม่สูงมาก'};
- if(opposed)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'Elliott เอนสวนจุดเข้า แต่หลักฐานยังไม่ครบเงื่อนไข Strong Opposition จึงไม่บล็อก'};
- if(ambiguous)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-5,reason:'Wave Count ยังไม่ชัด ใช้ 3.1 เป็นหลักและลดความมั่นใจ'};
- return {...common,allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott ยังไม่มีข้อมูลที่ควรเปลี่ยนจุดเข้า'};
+ if(opposed&&countClear&&triggerReached&&score>=c.oppositionScore&&n.projectionReady)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'คลื่นยืนยันและผ่าน Trigger ฝั่งสวนในช่วง 10 นาที'};
+ if(aligned&&countClear&&triggerReached&&score>=c.oppositionScore&&n.projectionReady&&finite(targetRoomAtr)&&targetRoomAtr<c.hardTargetRoomAtr)return {...common,allow:false,state:'BLOCK',entryScoreDelta:-100,reason:'เป้าคลื่นอยู่ใกล้มากแล้ว จึงรอจุดเข้าใหม่'};
+ if(aligned&&triggerReached&&score>=c.supportScore&&!nearTarget){
+  const delta=n.projectionReady?(consensusClear?8:12):4;
+  return {...common,allow:true,state:n.projectionReady?'BOOST':'PASS',entryScoreDelta:delta,allowWaveEarly:!!n.projectionReady,reason:consensusClear?'หลาย Count ที่ยืนยันเห็นทิศเดียวกันและผ่าน Trigger':'คลื่นยืนยันหนุนจุดเข้าและผ่าน Trigger ในช่วง 10 นาที'};
+ }
+ if(aligned&&nearTarget)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-4,reason:'เริ่มเข้าใกล้เป้าคลื่น จึงลดคะแนนจุดเข้า'};
+ if(opposed&&triggerReached)return {...common,allow:true,state:'CAUTION',entryScoreDelta:-8,reason:'คลื่นเอนสวนจุดเข้า แต่ยังไม่ครบเงื่อนไขบล็อก'};
+ return {...common,allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'รอ Trigger ของคลื่น ใช้หลักฐานจุดเข้าเดิม'};
+}
+function adjustEntryBundle(bundle,decision,thesis,cfg=ENTRY_DEFAULTS){
+ if(decision.state==='OFF'||!bundle.gates)return bundle;
+ const g=bundle.gates,weight=q=>q.state==='PASS'?20:q.state==='DEVELOPING'?10:0;
+ const baseQuality=clip(weight(g.structure)+weight(g.location)+weight(g.behavior)+weight(g.micro)+clip(bundle.alignedEvidence*15,0,10),0,100);
+ const quality=clip(baseQuality+(decision.entryScoreDelta||0),0,100),impacts=decision.structurallyUsable&&decision.entryScoreDelta!==0;
+ const continuation=['trend_continuation','breakout_continuation','pullback_reclaim'].includes(thesis.playbook);
+ const source=g.micro.source,coverageOK=source==='historical_1m_adapter'||g.micro.coverage>=(core?.CFG?.v3FlowCoverageSec||20);
+ const waveEarly=!!(decision.allowWaveEarly&&continuation&&bundle.hardReady&&!bundle.softBlocked&&!bundle.policyBlocked&&coverageOK&&bundle.alignedEvidence>=cfg.waveEarlyMinEvidence&&quality>=cfg.entryMinQuality);
+ const waveWaiting=thesis.v33WaveEntry&&!decision.allowWaveEarly;
+ const eligible=(bundle.entryReady||waveEarly)&&!waveWaiting,qualityOK=!impacts||quality>=cfg.entryMinQuality;
+ const entryReady=eligible&&decision.allow&&qualityOK&&!bundle.policyBlocked;
+ const reason=!decision.allow?decision.reason:waveWaiting?'แผนคลื่น 3.3 ยังรอ Trigger ที่ยืนได้และเป้าในช่วง 10 นาที':eligible&&!qualityOK?'คะแนนจุดเข้า 3.3 ยังไม่ถึงเกณฑ์หลังประเมินคลื่น':null;
+ return {...bundle,entryReady,earlyReady:entryReady&&!bundle.fullReady,mode:entryReady?(bundle.fullReady?'FULL':waveEarly&&!bundle.entryReady?'WAVE_EARLY':'EARLY'):'WAIT',
+  state:entryReady?'READY':reason?'BLOCKED':bundle.state,softBlocked:bundle.softBlocked||!!reason,
+  blocked:reason?[...bundle.blocked,reason]:bundle.blocked,v33:{decision:clone(decision),baseQuality,quality,threshold:impacts?cfg.entryMinQuality:null,waveEarly,baseEntryReady:bundle.entryReady},elliottBlocked:!!reason};
 }
 
-const api={Observer,DEFAULTS,ENTRY_DEFAULTS,feed,degreePivots,hardRules,correctionGeometry,subdivision,makeCandidate,generate,selectCounts,resolveUnknown,project,previousCountStatus,updateBox,candidateIdentity,elliottEntryDecision,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
+const api={Observer,DEFAULTS,ENTRY_DEFAULTS,HORIZON_MS,MAX_SETTLEMENT_DELAY_MS,feed,degreePivots,hardRules,correctionGeometry,subdivision,makeCandidate,generate,selectCounts,directionConsensus,resolveUnknown,project,previousCountStatus,updateBox,settleForecast,candidateIdentity,elliottEntryDecision,adjustEntryBundle,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 const core=root.EventSignalV6;
 if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
  const Base=core.Engine;
  core.Engine=class V33Engine extends Base{
   constructor(saved={}){
-   super(saved);
-   this.elliott=new Observer(saved.v33Memory||{});
-   const savedEntryCfg=saved.v33EntryConfig||{};
-   this.v33EntryCfg=savedEntryCfg.profile===ENTRY_DEFAULTS.profile?{...ENTRY_DEFAULTS,...savedEntryCfg}:{...ENTRY_DEFAULTS,enabled:savedEntryCfg.enabled??(core.CFG.elliottInfluence!==false)};
-   if(saved.v33EntryConfig?.enabled===undefined)this.v33EntryCfg.enabled=core.CFG.elliottInfluence!==false;
-   this.v33EntryMemory=clone(saved.v33EntryMemory||{blocks:{}});
+   super(saved);this.elliott=new Observer(saved.v33Memory||{});
+   const cfg=saved.v33EntryConfig||{};
+   this.v33EntryCfg=cfg.profile===ENTRY_DEFAULTS.profile?{...ENTRY_DEFAULTS,...cfg}:{...ENTRY_DEFAULTS,enabled:cfg.enabled??(core.CFG.elliottInfluence!==false)};
+   this.v33EntryMemory=clone(saved.v33EntryMemory||{blocks:{}});this.v33Frame=null;
   }
   serialize(){return {...super.serialize(),v33Memory:this.elliott.serialize(),v33EntryConfig:clone(this.v33EntryCfg),v33EntryMemory:clone(this.v33EntryMemory)};}
-  step(x){
-   const preSignals=this.signals.slice(),preLastSignal=this.v3LastSignal;
-   const preEpisode=this.v3Episode?{id:this.v3Episode.id,lastEntryAt:this.v3Episode.lastEntryAt,baseConfirmed:this.v3Episode.baseConfirmed,issuedLegKeys:[...(this.v3Episode.issuedLegKeys||[])]}:null;
-   const view=super.step(x);
+  v33PrepareThesis(x,preview,thesis,reader){
    try{
-    const elliott=this.elliott.observe(x,view);view.v33Elliott=elliott;
+    const observed=this.elliott.observe(x,preview);this.v33Frame={observed,ts:x.ts};
+    if(!this.v33EntryCfg.enabled||thesis.playbook)return thesis;
+    const p=observed.preferred,dir=p?.next?.direction;
+    const decision=elliottEntryDecision(observed,dir,x.price,preview.f?.atr,'WAVE_EARLY',this.v33EntryCfg);
+    const waveResume=['3','5','C'].includes(p?.next?.wave),marketOK=['TRANSITION','PULLBACK','TREND_ADVANCE'].includes(reader.state);
+    if(decision.allowWaveEarly&&waveResume&&marketOK&&(reader.dir===dir||reader.structure.structuralDir===dir))return {...thesis,
+     code:'V33_WAVE_RESUMPTION',d:dir,playbook:'trend_continuation',v33WaveEntry:true,why:'คลื่นพักตัวที่ยืนยันแล้วเริ่มกลับไปต่อ Wave '+p.next.wave,
+     trigger:'ผ่าน Trigger คลื่น พร้อมโครงสร้างและตำแหน่งเข้า',invalidation:'จุดอ้างอิงคลื่นหรือโครงสร้างเสีย',nextPlan:'ติดตามแรงไปต่อภายใน 10 นาที'};
+   }catch(error){this.v33Frame={error:String(error.message),ts:x.ts};}
+   return thesis;
+  }
+  v33ApplyEntryBundle(x,preview,bundle,thesis,reader,ep){
+   if(!this.v33EntryCfg.enabled)return bundle;
+   try{
+    const observed=this.v33Frame?.observed;if(!observed)return bundle;
+    observed.timestamp=x.ts;
+    const p=observed.degrees?.Working?.preferred||observed.preferred,n=observed.box?.candidateKey===p?.key?observed.box:p?.next,t=n?.trigger;
+    const triggerKey=p?.key+'|'+t?.direction+'|'+t?.price,held=this.v33EntryMemory.trigger;
+    if(t&&t.direction*(x.price-t.price)>=0){
+     const continuous=held?.key===triggerKey&&x.ts>held.lastTs&&x.ts-held.lastTs<=5000;
+     const h=continuous?{...held,ticks:held.ticks+1,lastTs:x.ts}:{key:triggerKey,since:x.ts,lastTs:x.ts,ticks:1};
+     this.v33EntryMemory.trigger=h;observed.entryTriggerConfirmed=x.ts-h.since>=(t.holdMs||350)&&h.ticks>=(t.minTicks||2);
+    }else{this.v33EntryMemory.trigger=null;observed.entryTriggerConfirmed=false;}
+    const decision=elliottEntryDecision(observed,thesis.d,x.price,preview.f?.atr,bundle.mode,this.v33EntryCfg);
+    const adjusted=adjustEntryBundle(bundle,decision,thesis,this.v33EntryCfg);this.v33Frame.decision=decision;this.v33Frame.bundle=adjusted;
+    const blockKey=ep.id+'|'+ep.legKey+'|'+thesis.d,blockStore=this.v33EntryMemory.blocks||(this.v33EntryMemory.blocks={});
+    if(bundle.entryReady&&!adjusted.entryReady&&!(ep.issuedLegKeys||[]).includes(ep.legKey)&&finite(this.v33PrevTs)&&x.ts-this.v33PrevTs<=5000){
+     const key=ep.id+'|'+ep.legKey+'|'+thesis.d,blocks=this.v33EntryMemory.blocks||(this.v33EntryMemory.blocks={});
+     let item=blocks[key];if(!item)item=blocks[key]={since:x.ts,ticks:0,logged:false};if(item.lastTs==null||x.ts-item.lastTs>5000||!item.qualified){item.since=x.ts;item.ticks=0;}item.ticks++;item.lastTs=x.ts;item.qualified=true;
+     const needed=bundle.fullReady?(core.CFG.v3ConfirmMs||500):(core.CFG.v3EarlyConfirmMs||650);
+     if(!item.logged&&item.ticks>=2&&x.ts-item.since>=needed){
+      item.logged=true;this.log('v33_elliott_entry_blocked',x.ts,{episodeId:ep.id,legKey:ep.legKey,direction:dirLabelForEntry(thesis.d),elliott:clone(decision),entryQuality:adjusted.v33?.quality,signalIssued:false});
+      this.elliott.addForecast(x,{id:'BLOCKED:'+key,kind:'BLOCKED',direction:thesis.d,candidateId:decision.candidateId,score:adjusted.v33?.quality||0,regime:reader.state,decision:clone(decision)});
+     }
+     const keys=Object.keys(blocks);if(keys.length>300)delete blocks[keys[0]];
+    }else if(blockStore[blockKey]){blockStore[blockKey].qualified=false;blockStore[blockKey].ticks=0;}
+    return adjusted;
+   }catch(error){this.v33Frame.error=String(error.message);return bundle;}
+  }
+  step(x){
+   this.v33Frame=null;this.v33PrevTs=this.previous?.ts;const view=super.step(x);
+   try{
+    const observed=this.v33Frame?.observed||this.elliott.observe(x,view);view.v33Elliott=observed;
     const direction=view.signal?.direction||view.gate?.direction||view.watch?.direction||null;
-    const mode=view.signal?.dataset?.entry?.v3EntryMode||view.gate?.metrics?.entryMode||'WAIT';
-    const decision=elliottEntryDecision(elliott,direction,x.price,view.f?.atr||view.signal?.features?.atr||null,mode,this.v33EntryCfg);
-    view.v33EntryContext=decision;
-    if(view.gate)view.gate={...view.gate,metrics:{...(view.gate.metrics||{}),v33ElliottGate:decision.state,v33ElliottScore:decision.score??null,v33ElliottNextWave:decision.nextWave??null,v33ElliottNextDirection:decision.nextDirection??null},elliott:clone(decision)};
+    const decision=this.v33Frame?.decision||elliottEntryDecision(observed,direction,x.price,view.f?.atr,'WAIT',this.v33EntryCfg);
+    const quality=this.v33Frame?.bundle?.v33;
+    view.v33EntryContext={...decision,baseQuality:quality?.baseQuality??null,entryQuality:quality?.quality??null,qualityThreshold:quality?.threshold??null};
+    if(view.gate&&this.v33EntryCfg.enabled)view.gate={...view.gate,elliott:clone(view.v33EntryContext),metrics:{...view.gate.metrics,v33ElliottGate:decision.state,v33EntryQuality:quality?.quality??null,v33EntryQualityDelta:decision.entryScoreDelta||0,v33ElliottNextWave:decision.nextWave||null,v33EntryQualityThreshold:quality?.threshold??null}};
     if(view.signal){
      const sig=view.signal,e=sig.dataset?.entry;
-     if(e&&!e.v33Elliott)e.v33Elliott=clone({schema:elliott.schema,symbol:elliott.symbol,timeframe:elliott.timeframe,timestamp:elliott.timestamp,unknown:elliott.unknown,preferred:elliott.preferred,alternate:elliott.alternate,box:elliott.box,experimental:true});
-     if(e)e.v33EntryContext=clone(decision);
-     if(decision.state==='OFF'){
-      // Strict A/B mode: keep the frozen 3.1-style signal/view untouched.
-     }else if(!decision.allow){
-      const blockedId=sig.id;
-      this.signals=preSignals;
-      for(let i=this.audit.length-1;i>=0;i--){const q=this.audit[i];if(q?.type==='issued'&&q?.id===blockedId){this.audit.splice(i,1);break;}}
-      const ep=this.v3Episode,entry=e||{},leg=entry.v3StructuralLegKey;
-      if(ep&&entry.v3EpisodeId===ep.id){
-       ep.issuedLegKeys=preEpisode?.id===ep.id?[...preEpisode.issuedLegKeys]:(ep.issuedLegKeys||[]).filter(k=>k!==leg);
-       ep.lastEntryAt=preEpisode?.id===ep.id?preEpisode.lastEntryAt:0;
-       ep.baseConfirmed=preEpisode?.id===ep.id?preEpisode.baseConfirmed:false;
-      }
-      const cand=view.event?clone(view.event):(sig.event?clone(sig.event):null);
-      if(cand){delete cand.issued;delete cand.type;cand.logged=true;this.v3Candidate=cand;}
-      this.v3LastSignal=preLastSignal;
-      const blockKey=(entry.v3EpisodeId||'EP')+'|'+(leg||decision.candidateKey||'COUNT');
-      const signature=[decision.candidateKey,decision.nextWave,decision.nextDirection,decision.score,decision.unknown,decision.reason].join('|');
-      const prior=this.v33EntryMemory.blocks[blockKey];
-      if(!prior||prior.signature!==signature){
-       this.log('v33_elliott_entry_blocked',x.ts,{signalId:blockedId,episodeId:entry.v3EpisodeId||null,legKey:leg||null,direction,elliott:clone(decision)});
-       this.v33EntryMemory.blocks[blockKey]={signature,ts:x.ts,reason:decision.reason};
-      }
-      view.signal=null;view.status='confirming';view.reason='ARIS 3.3 · Elliott รอจุดเข้า · '+decision.reason;
-      view.event=cand?{...cand,issued:false}:view.event;
-      view.gate={...(view.gate||{}),state:'WAIT',code:'v33_elliott_gate',blocker:decision.reason,waitingFor:['รอ Wave Count/Next Wave กลับมาหนุน หรือรอ structural leg ใหม่'],metrics:{...(view.gate?.metrics||{}),v33ElliottGate:'BLOCK'}};
-     }else{
-      sig.decisionPolicy='aris_v33_elliott_entry_context';
-      if(e)e.decisionPolicy='aris_v33_elliott_entry_context';
-      const label=decision.state==='BOOST'?'Elliott หนุนแรง':decision.state==='PASS'?'Elliott หนุน':decision.state==='CAUTION'?'Elliott ระวัง':'Elliott เป็นกลาง';
-      sig.reason='ARIS 3.3 · '+label+' · '+decision.reason+' · '+String(sig.reason||'').replace(/^ARIS V3\.1 · /,'');
-      view.reason=sig.reason;
-      this.log('v33_elliott_entry_pass',x.ts,{signalId:sig.id,direction:sig.direction,elliott:clone(decision)});
-      const blockKey=(e?.v3EpisodeId||'EP')+'|'+(e?.v3StructuralLegKey||decision.candidateKey||'COUNT');delete this.v33EntryMemory.blocks[blockKey];
+     if(e)e.v33Elliott=clone({schema:observed.schema,symbol:observed.symbol,timeframe:observed.timeframe,timestamp:observed.timestamp,unknown:observed.unknown,preferred:observed.preferred,alternate:observed.alternate,consensus:observed.consensus,box:observed.box,experimental:true});
+     if(e)e.v33EntryContext=clone(view.v33EntryContext);
+     if(this.v33EntryCfg.enabled){
+      sig.decisionPolicy='aris_v33_pre_entry_t10';if(e)e.decisionPolicy=sig.decisionPolicy;
+      if(e?.v3Thesis?.code==='V33_WAVE_RESUMPTION'){sig.type='v33_wave_resumption';e.setupType=sig.type;}
+      sig.reason='ARIS 3.3 · '+decision.reason+(quality?' · คุณภาพจุดเข้า '+Math.round(quality.quality)+'/100':'')+' · '+String(sig.reason||'').replace(/^ARIS V3\.1 · /,'');
+      view.reason=sig.reason;this.log('v33_elliott_entry_pass',x.ts,{signalId:sig.id,direction:sig.direction,elliott:clone(view.v33EntryContext)});
      }
-    }else if(view.signal?.dataset?.entry&&!view.signal.dataset.entry.v33Elliott){
-     view.signal.dataset.entry.v33Elliott=clone({schema:elliott.schema,symbol:elliott.symbol,timeframe:elliott.timeframe,timestamp:elliott.timestamp,unknown:elliott.unknown,preferred:elliott.preferred,alternate:elliott.alternate,box:elliott.box,experimental:true});
+     this.elliott.addForecast(x,{id:'ENTRY:'+sig.id,kind:'ENTRY',direction:sig.direction==='HIGH'?1:-1,score:quality?.quality??observed.preferred?.score??0,regime:view.v3Story?.state||'UNKNOWN',decision:clone(view.v33EntryContext),signalId:sig.id});
     }
+    if(this.v33Frame?.error)view.v33Elliott.error=this.v33Frame.error;
     this.lastView=view;
-   }catch(error){view.v33Elliott={unknown:'UNRESOLVED',error:String(error.message),degrees:{}};view.v33EntryContext={allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'Elliott entry context error — ใช้ 3.1 ต่อเพื่อ fail-safe'};}
+   }catch(error){view.v33Elliott={unknown:'UNRESOLVED',error:String(error.message),degrees:{}};view.v33EntryContext={allow:true,state:'NEUTRAL',entryScoreDelta:0,reason:'ส่วนวิเคราะห์คลื่นขัดข้อง ใช้จุดเข้าฐานเดิม'};}
    return view;
   }
  };
 }
+function dirLabelForEntry(d){return d>0?'HIGH':'LOW';}
 })(typeof globalThis!=='undefined'?globalThis:window);

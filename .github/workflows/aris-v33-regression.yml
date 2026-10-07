@@ -13,8 +13,12 @@ on:
       - 'v2.js'
       - 'training-engine-core.js'
       - 'training-engine-registry.js'
+      - 'replay-engine.js'
+      - 'training-validation.js'
       - 'index.html'
       - 'tests/v33-smoke.cjs'
+      - 'tests/v33-timing.cjs'
+      - 'tests/v2-regression.cjs'
       - '.github/workflows/aris-v33-regression.yml'
   pull_request:
     paths:
@@ -27,8 +31,12 @@ on:
       - 'v2.js'
       - 'training-engine-core.js'
       - 'training-engine-registry.js'
+      - 'replay-engine.js'
+      - 'training-validation.js'
       - 'index.html'
       - 'tests/v33-smoke.cjs'
+      - 'tests/v33-timing.cjs'
+      - 'tests/v2-regression.cjs'
       - '.github/workflows/aris-v33-regression.yml'
 
 jobs:
@@ -42,3 +50,7 @@ jobs:
           node-version: '22'
       - name: Run ARIS 3.3 smoke/regression
         run: node tests/v33-smoke.cjs
+      - name: Run Elliott timing, forecasts and Training regression
+        run: node tests/v33-timing.cjs
+      - name: Protect ARIS 2.0 and previous engines
+        run: node tests/v2-regression.cjs

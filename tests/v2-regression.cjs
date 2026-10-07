@@ -52,7 +52,7 @@ test('missing settlement is not counted as a win or loss',()=>{const e=new c.Eve
 test('reload and reset discard half-confirmed candidate without deleting history',()=>{const e=new c.EventSignalV6.Engine();e.v2Candidate={id:'C',stage:'CONFIRMING'};e.signals=[{id:'S'}];e.reset('disconnect',1000);assert.equal(e.v2Candidate,null);assert.equal(e.signals.length,1);});
 test('older engines are not patched by v2.js',()=>{
  for(const version of ['6.5.0','6.6.0','7.0.0','7.0.1','7.1.0','7.1.1','7.2.0','ARIS-1.0.0','ARIS-1.1.0','ARIS-1.2.0']){
-  const old={localStorage:{getItem(){return version;}}};vm.createContext(old);vm.runInContext(core,old);const fn=old.EventSignalV6.Engine.prototype.step;vm.runInContext(source,old);assert.equal(old.EventSignalV6.Engine.prototype.step,fn);assert.equal(old.EventSignalV6.CFG.version,version);
+  const old={localStorage:{getItem(){return version;}}};vm.createContext(old);vm.runInContext(core,old);const fn=old.EventSignalV6.Engine.prototype.step;vm.runInContext(source,old);assert.equal(old.EventSignalV6.Engine.prototype.step,fn);assert.equal(old.EventSignalV6.CFG.version,({'6.5.0':'6.6.0','7.0.0':'7.2.0','7.0.1':'7.2.0','7.1.0':'7.2.0','7.1.1':'7.2.0','ARIS-1.0.0':'ARIS-1.2.0','ARIS-1.1.0':'ARIS-1.2.0'})[version]||version);
  }
 });
 function streamFixture(){
