@@ -41,7 +41,7 @@ test('Ambiguous confirmed counts may agree in direction without claiming a clear
  const opposed=api.selectCounts([wave.preferred,{...other,next:{...other.next,direction:-1}}]);
  assert.equal(api.elliottEntryDecision({...wave,...opposed},'HIGH',104,2,'EARLY').state,'NEUTRAL');
 });
-const bundle={entryReady:false,fullReady:false,earlyReady:false,hardReady:true,softBlocked:false,policyBlocked:false,alignedEvidence:.09,passed:2,total:4,state:'DEVELOPING',mode:'WAIT',blocked:[],gates:{structure:{state:'PASS'},location:{state:'PASS'},behavior:{state:'DEVELOPING'},micro:{state:'DEVELOPING',coverage:60}}};
+const bundle={entryReady:false,fullReady:false,earlyReady:false,hardReady:true,softBlocked:false,policyBlocked:false,alignedEvidence:.09,passed:3,total:4,state:'DEVELOPING',mode:'WAIT',blocked:[],gates:{structure:{state:'PASS'},location:{state:'PASS'},behavior:{state:'DEVELOPING'},micro:{state:'PASS',coverage:60}}};
 test('BOOST really opens qualified early entry and cannot bypass hard gates, flow or HTF',()=>{
  const decision=api.elliottEntryDecision(wave,'HIGH',104,2,'EARLY'),thesis={playbook:'trend_continuation'};
  const q=api.adjustEntryBundle(bundle,decision,thesis);assert(q.entryReady);assert.equal(q.mode,'WAVE_EARLY');assert(q.v33.quality>q.v33.baseQuality);
@@ -51,6 +51,39 @@ test('BOOST really opens qualified early entry and cannot bypass hard gates, flo
  assert.equal(api.adjustEntryBundle({...bundle,entryReady:true},caution,thesis).entryReady,false);
  assert.equal(api.adjustEntryBundle({...bundle,entryReady:true},{...decision,state:'NEUTRAL',entryScoreDelta:0,allowWaveEarly:false},thesis).entryReady,true);
  assert.equal(api.adjustEntryBundle({...bundle,entryReady:true},{...decision,state:'NEUTRAL',entryScoreDelta:0,allowWaveEarly:false},{...thesis,v33WaveEntry:true}).entryReady,false);
+});
+test('Neither neutral nor boosted scores can issue while both live confirmations are developing',()=>{
+ const both={...bundle,entryReady:true,alignedEvidence:.8,gates:{...bundle.gates,micro:{state:'DEVELOPING',coverage:60}}};
+ const boost=api.elliottEntryDecision(wave,'HIGH',104,2,'EARLY'),thesis={playbook:'trend_continuation'};
+ for(const decision of [boost,{...boost,state:'NEUTRAL',entryScoreDelta:0,allowWaveEarly:false}]){
+  const q=api.adjustEntryBundle(both,decision,thesis);assert.equal(q.entryReady,false);assert.equal(q.v33.softConfirmed,false);
+ }
+ const onlyCandle={...bundle,gates:{...bundle.gates,behavior:{state:'PASS'},micro:{state:'DEVELOPING',coverage:60}}};
+ assert.equal(api.adjustEntryBundle(onlyCandle,boost,thesis).entryReady,false,'a wave-created entry must have confirmed flow');
+});
+test('Quality threshold is always active and positive wave support never vetoes an eligible entry',()=>{
+ const thesis={playbook:'trend_continuation'},neutral={allow:true,state:'NEUTRAL',entryScoreDelta:0,structurallyUsable:false,allowWaveEarly:false};
+ const oldWeak={...bundle,entryReady:true,alignedEvidence:.24,gates:{...bundle.gates,micro:{state:'DEVELOPING',coverage:60}}};
+ const low=api.adjustEntryBundle(oldWeak,neutral,thesis);assert.equal(low.entryReady,false);assert.equal(low.v33.threshold,70);
+ const ready={...bundle,entryReady:true,alignedEvidence:.1};
+ const base=api.adjustEntryBundle(ready,neutral,thesis);assert(base.entryReady);assert.equal(base.v33.threshold,70);
+ for(const delta of [4,8,12]){
+  const supported=api.adjustEntryBundle(ready,{...neutral,state:'PASS',structurallyUsable:true,entryScoreDelta:delta},thesis);
+  assert(supported.entryReady);assert(supported.v33.quality>=base.v33.quality);assert.equal(supported.v33.threshold,base.v33.threshold);
+ }
+ const missingFlow={...ready,gates:{...ready.gates,micro:{state:'PASS',coverage:0}}};
+ assert.equal(api.adjustEntryBundle(missingFlow,neutral,thesis).entryReady,false);
+ assert.equal(api.adjustEntryBundle(oldWeak,{...neutral,state:'OFF'},thesis),oldWeak,'disabled influence keeps the original baseline');
+});
+test('T+10 reporting separates entry modes and revisions without relabeling legacy history',()=>{
+ const o=new api.Observer(),x={symbol:'BTCUSDT',timeframe:'1m',timeframeSeconds:60,ts:1000000,price:100,bars:[],fresh:true};o.observe(x);
+ o.addForecast(x,{id:'FULL',kind:'ENTRY',entryMode:'FULL',engineRevision:'r9',direction:1,score:82});
+ o.addForecast(x,{id:'EARLY',kind:'ENTRY',entryMode:'EARLY',engineRevision:'r9',direction:-1,score:72});
+ o.addForecast(x,{id:'LEGACY',kind:'ENTRY',direction:1,score:72});
+ o.observe({...x,ts:1600000,price:101});
+ const report=o.report().fixed10m;
+ assert.equal(report.byEntryMode['ENTRY:FULL'].wins,1);assert.equal(report.byEntryMode['ENTRY:EARLY'].losses,1);
+ assert.equal(report.byEntryMode['ENTRY:LEGACY_UNKNOWN'].n,1);assert.equal(report.byRevision.r9.n,2);assert.equal(report.byRevision.LEGACY_UNKNOWN.n,1);
 });
 test('Frozen prediction clock is used at entry and terminal predictions do not restart',()=>{
  const frozen={...wave.preferred.next,candidateKey:'C',currentState:'CONFIRMED_COMPLETE',state:'ACTIVE',endTime:1001};
@@ -99,8 +132,8 @@ test('Replay cannot score ten later available bars when the T+10 candle is missi
 });
 function runtime(training){const c={console,structuredClone,performance,setTimeout,document:doc,localStorage:{getItem:()=> 'ARIS-3.3.0'},__TRAINING_VERSION:'ARIS-3.3.0'};vm.createContext(c);vm.runInContext(training?read('training-engine-core.js'):boot,c);for(const f of ['v2.js','v3.js','v31.js','v33-base.js','v33.js'])vm.runInContext(read(f),c);return c;}
 test('Live and Training share the exact 3.3 revision and entry engine',()=>{
- const live=runtime(false),train=runtime(true);assert.equal(live.EventSignalV6.CFG.arisRevision,train.EventSignalV6.CFG.arisRevision);assert.equal(live.EventSignalV6.CFG.arisRevision,'elliott-entry-v33-r8-t10');
- for(const asset of ['v33-base.js','v33.js']){assert(html.includes(asset+'?v=20261007-r8-t10'));assert(read('training-engine-registry.js').includes("asset('"+asset+"','20261007-r8-t10')"));}
+ const live=runtime(false),train=runtime(true);assert.equal(live.EventSignalV6.CFG.arisRevision,train.EventSignalV6.CFG.arisRevision);assert.equal(live.EventSignalV6.CFG.arisRevision,'elliott-entry-v33-r9-confirmed-entry');
+ for(const asset of ['v33-base.js','v33.js']){assert(html.includes(asset+'?v=20261010-r9-confirmed-entry'));assert(read('training-engine-registry.js').includes("asset('"+asset+"','20261010-r9-confirmed-entry')"));}
  const reader={state:'PULLBACK',dir:1,structure:{structuralDir:1}},thesis={code:'WAIT',playbook:null};
  const engine=new live.EventSignalV6.Engine();engine.elliott.observe=()=>structuredClone(wave);
  const next=engine.v33PrepareThesis({price:104,ts:1000000},{f:{atr:2}},thesis,reader);assert.equal(next.code,'V33_WAVE_RESUMPTION');
@@ -137,7 +170,7 @@ async function replayChecks(){
  c.TrainingEngineRegistryV1={async load(){return {Core:c.EventSignalV6};}};
  vm.runInContext(read('replay-engine.js'),c);
  const report=await c.HistoricalReplayV1.start(session.id,{engineVersion:'ARIS-3.3.0'});
- assert.equal(report.engineRevision,'elliott-entry-v33-r8-t10');assert(report.counts.signals>0);assert(report.elliottEvaluation);
+ assert.equal(report.engineRevision,'elliott-entry-v33-r9-confirmed-entry');assert(report.counts.signals>0);assert(report.elliottEvaluation);
  assert(report.elliottEvaluation.contexts['XAUUSDT|1m']);assert.equal(report.elliottEvaluation.contexts['XAUUSDT|1m'].samples,360);
  for(const r of db.signals.values()){
   const s=r.signal;assert(s.entry.v33EntryContext);assert.equal(s.entry.revision,report.engineRevision);assert(s.entryTime>=session.analysisStart);
@@ -149,3 +182,4 @@ async function replayChecks(){
  console.log(JSON.stringify({checks,syntheticReplaySignals:report.counts.signals,revision:report.engineRevision,marketAccuracyClaim:false}));
 }
 replayChecks().catch(error=>{console.error(error);process.exitCode=1;});
+

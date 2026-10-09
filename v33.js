@@ -289,7 +289,7 @@ class Observer{
   s.forecasts=s.forecasts||[];
   const existing=s.forecasts.find(f=>f.id===data.id);if(existing)return existing;
   if(s.forecasts.length>=800){const i=s.forecasts.findIndex(f=>f.result!=='pending');if(i<0){this.record(s,'FORECAST_CAPACITY_REACHED',{id:data.id},x.ts);return null;}s.forecasts.splice(i,1);s.evictedForecasts=(s.evictedForecasts||0)+1;}
-  const f={...clone(data),symbol:s.symbol,timeframe:s.timeframe,entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+HORIZON_MS,horizonMs:HORIZON_MS,result:'pending',inputScope:'decision_time_only'};
+  const f={...clone(data),engineRevision:data.engineRevision||core?.CFG?.arisRevision||null,symbol:s.symbol,timeframe:s.timeframe,entryTime:x.ts,entryPrice:x.price,expiresAt:x.ts+HORIZON_MS,horizonMs:HORIZON_MS,result:'pending',inputScope:'decision_time_only'};
   s.forecasts.push(f);this.record(s,'T10_FORECAST_CREATED',{forecast:f},x.ts);return f;
  }
  resetEvaluation(){
@@ -390,14 +390,14 @@ class Observer{
   const forecasts=Object.values(this.contexts).flatMap(s=>s.forecasts||[]),t10=a=>{const wins=a.filter(f=>f.result==='correct').length,losses=a.filter(f=>f.result==='incorrect').length;return {n:a.length,wins,losses,equal:a.filter(f=>f.result==='equal').length,missing:a.filter(f=>f.result==='missing').length,pending:a.filter(f=>f.result==='pending').length,scored:wins+losses,winRate:wins+losses?wins/(wins+losses):null};};
   const t10Group=fn=>{const m={};for(const f of forecasts){const k=String(fn(f)??'UNKNOWN');(m[k]||(m[k]=[])).push(f);}return Object.fromEntries(Object.entries(m).map(([k,a])=>[k,t10(a)]));};
   return {schema:'elliott-evaluation-2',experimental:true,scoresAreProbabilities:false,metricPolicy:'Projection metrics measure box lifecycle only, not trade win probability. T+10 outcomes freeze direction/price/time at creation, are never cancelled by recount, and accept the first observed price within 3 seconds of expiry. Missing observations are excluded, never guessed.',
-   fixed10m:{horizonMs:HORIZON_MS,maxSettlementDelayMs:MAX_SETTLEMENT_DELAY_MS,overall:t10(forecasts),byKind:t10Group(f=>f.kind),byScore:t10Group(f=>f.kind+':'+Math.floor(f.score/10)*10),byRegime:t10Group(f=>f.regime),bySymbol:t10Group(f=>f.symbol),byTimeframe:t10Group(f=>f.timeframe)},
+   fixed10m:{horizonMs:HORIZON_MS,maxSettlementDelayMs:MAX_SETTLEMENT_DELAY_MS,overall:t10(forecasts),byKind:t10Group(f=>f.kind),byEntryMode:t10Group(f=>f.kind+':'+(f.entryMode||(f.kind==='WAVE'?'NOT_APPLICABLE':'LEGACY_UNKNOWN'))),byRevision:t10Group(f=>f.engineRevision||'LEGACY_UNKNOWN'),byScore:t10Group(f=>f.kind+':'+Math.floor(f.score/10)*10),byRegime:t10Group(f=>f.regime),bySymbol:t10Group(f=>f.symbol),byTimeframe:t10Group(f=>f.timeframe)},
    totalPredictions:rows.length,completed:stats(terminal),scoreBuckets:group(q=>q.score<50?'0–49':q.score>=90?'90–100':Math.floor(q.score/10)*10+'–'+(Math.floor(q.score/10)*10+9)),
    byWave:group(q=>q.wave),byPattern:group(q=>q.pattern),byDegree:group(q=>q.degree),byRegime:group(q=>q.regime),byTimeframe:group(q=>q.timeframe),bySymbol:group(q=>q.symbol),
    contexts:Object.fromEntries(Object.entries(this.contexts).map(([k,s])=>{const stability=(s.stabilityBars||[]).filter(finite);return [k,{coverage:s.samples?s.known/s.samples:null,unknownRate:s.samples?1-s.known/s.samples:null,recountRate:s.samples?s.recounts/s.samples:null,countStabilityAvgBars:stability.length?mean(stability):null,countStabilityMedianBars:stability.length?median(stability):null,samples:s.samples,evictedAudit:s.evictedAudit,evictedForecasts:s.evictedForecasts||0}];}))};
  }
 }
 
-const ENTRY_DEFAULTS=Object.freeze({profile:'balanced-r8-t10',enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,entryMinQuality:70,waveEarlyMinEvidence:.06});
+const ENTRY_DEFAULTS=Object.freeze({profile:'balanced-r9-confirmed-entry',enabled:true,oppositionScore:78,supportScore:58,minTargetRoomAtr:.18,hardTargetRoomAtr:.08,entryMinQuality:70,waveEarlyMinEvidence:.06});
 function elliottEntryDecision(elliott,direction,price,atrValue,mode='WAIT',cfg={}){
  const c={...ENTRY_DEFAULTS,...(cfg||{})},d=direction==='HIGH'?1:direction==='LOW'?-1:Math.sign(Number(direction)||0);
  if(!c.enabled)return {allow:true,state:'OFF',entryScoreDelta:0,reason:'Elliott entry influence ปิดอยู่'};
@@ -439,17 +439,19 @@ function adjustEntryBundle(bundle,decision,thesis,cfg=ENTRY_DEFAULTS){
  if(decision.state==='OFF'||!bundle.gates)return bundle;
  const g=bundle.gates,weight=q=>q.state==='PASS'?20:q.state==='DEVELOPING'?10:0;
  const baseQuality=clip(weight(g.structure)+weight(g.location)+weight(g.behavior)+weight(g.micro)+clip(bundle.alignedEvidence*15,0,10),0,100);
- const quality=clip(baseQuality+(decision.entryScoreDelta||0),0,100),impacts=decision.structurallyUsable&&decision.entryScoreDelta!==0;
+ const quality=clip(baseQuality+(decision.entryScoreDelta||0),0,100);
  const continuation=['trend_continuation','breakout_continuation','pullback_reclaim'].includes(thesis.playbook);
  const source=g.micro.source,coverageOK=source==='historical_1m_adapter'||g.micro.coverage>=(core?.CFG?.v3FlowCoverageSec||20);
- const waveEarly=!!(decision.allowWaveEarly&&continuation&&bundle.hardReady&&!bundle.softBlocked&&!bundle.policyBlocked&&coverageOK&&bundle.alignedEvidence>=cfg.waveEarlyMinEvidence&&quality>=cfg.entryMinQuality);
+ const softConfirmed=g.behavior.state==='PASS'||g.micro.state==='PASS';
+ const timingReady=!!(bundle.hardReady&&!bundle.softBlocked&&!bundle.policyBlocked&&coverageOK&&softConfirmed);
+ const waveEarly=!!(decision.allowWaveEarly&&continuation&&timingReady&&g.micro.state==='PASS'&&bundle.alignedEvidence>=cfg.waveEarlyMinEvidence&&quality>=cfg.entryMinQuality);
  const waveWaiting=thesis.v33WaveEntry&&!decision.allowWaveEarly;
- const eligible=(bundle.entryReady||waveEarly)&&!waveWaiting,qualityOK=!impacts||quality>=cfg.entryMinQuality;
- const entryReady=eligible&&decision.allow&&qualityOK&&!bundle.policyBlocked;
- const reason=!decision.allow?decision.reason:waveWaiting?'แผนคลื่น 3.3 ยังรอ Trigger ที่ยืนได้และเป้าในช่วง 10 นาที':eligible&&!qualityOK?'คะแนนจุดเข้า 3.3 ยังไม่ถึงเกณฑ์หลังประเมินคลื่น':null;
+ const eligible=(bundle.entryReady||waveEarly)&&!waveWaiting,qualityOK=quality>=cfg.entryMinQuality;
+ const entryReady=eligible&&decision.allow&&qualityOK&&timingReady;
+ const reason=!decision.allow?decision.reason:waveWaiting?'แผนคลื่น 3.3 ยังรอ Trigger ที่ยืนได้และเป้าในช่วง 10 นาที':eligible&&!timingReady?'รอโครงสร้าง ตำแหน่ง และหลักฐานสดอย่างน้อยหนึ่งด้านยืนยัน พร้อมข้อมูลแรงซื้อขายเพียงพอ':eligible&&!qualityOK?'คะแนนจุดเข้า 3.3 ยังไม่ถึงเกณฑ์หลังประเมินคลื่น':null;
  return {...bundle,entryReady,earlyReady:entryReady&&!bundle.fullReady,mode:entryReady?(bundle.fullReady?'FULL':waveEarly&&!bundle.entryReady?'WAVE_EARLY':'EARLY'):'WAIT',
   state:entryReady?'READY':reason?'BLOCKED':bundle.state,softBlocked:bundle.softBlocked||!!reason,
-  blocked:reason?[...bundle.blocked,reason]:bundle.blocked,v33:{decision:clone(decision),baseQuality,quality,threshold:impacts?cfg.entryMinQuality:null,waveEarly,baseEntryReady:bundle.entryReady},elliottBlocked:!!reason};
+  blocked:reason?[...bundle.blocked,reason]:bundle.blocked,v33:{decision:clone(decision),baseQuality,quality,threshold:cfg.entryMinQuality,softConfirmed,coverageOK,timingReady,waveEarly,baseEntryReady:bundle.entryReady},elliottBlocked:!!reason};
 }
 
 const api={Observer,DEFAULTS,ENTRY_DEFAULTS,HORIZON_MS,MAX_SETTLEMENT_DELAY_MS,feed,degreePivots,hardRules,correctionGeometry,subdivision,makeCandidate,generate,selectCounts,directionConsensus,resolveUnknown,project,previousCountStatus,updateBox,settleForecast,candidateIdentity,elliottEntryDecision,adjustEntryBundle,STATE_TH,UNKNOWN_TH};root.ArisV33=api;
@@ -499,7 +501,7 @@ if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
      const needed=bundle.fullReady?(core.CFG.v3ConfirmMs||500):(core.CFG.v3EarlyConfirmMs||650);
      if(!item.logged&&item.ticks>=2&&x.ts-item.since>=needed){
       item.logged=true;this.log('v33_elliott_entry_blocked',x.ts,{episodeId:ep.id,legKey:ep.legKey,direction:dirLabelForEntry(thesis.d),elliott:clone(decision),entryQuality:adjusted.v33?.quality,signalIssued:false});
-      this.elliott.addForecast(x,{id:'BLOCKED:'+key,kind:'BLOCKED',direction:thesis.d,candidateId:decision.candidateId,score:adjusted.v33?.quality||0,regime:reader.state,decision:clone(decision)});
+      this.elliott.addForecast(x,{id:'BLOCKED:'+key,kind:'BLOCKED',entryMode:bundle.mode,direction:thesis.d,candidateId:decision.candidateId,score:adjusted.v33?.quality||0,regime:reader.state,decision:clone(decision)});
      }
      const keys=Object.keys(blocks);if(keys.length>300)delete blocks[keys[0]];
     }else if(blockStore[blockKey]){blockStore[blockKey].qualified=false;blockStore[blockKey].ticks=0;}
@@ -525,7 +527,7 @@ if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
       sig.reason='ARIS 3.3 · '+decision.reason+(quality?' · คุณภาพจุดเข้า '+Math.round(quality.quality)+'/100':'')+' · '+String(sig.reason||'').replace(/^ARIS V3\.1 · /,'');
       view.reason=sig.reason;this.log('v33_elliott_entry_pass',x.ts,{signalId:sig.id,direction:sig.direction,elliott:clone(view.v33EntryContext)});
      }
-     this.elliott.addForecast(x,{id:'ENTRY:'+sig.id,kind:'ENTRY',direction:sig.direction==='HIGH'?1:-1,score:quality?.quality??observed.preferred?.score??0,regime:view.v3Story?.state||'UNKNOWN',decision:clone(view.v33EntryContext),signalId:sig.id});
+     this.elliott.addForecast(x,{id:'ENTRY:'+sig.id,kind:'ENTRY',entryMode:e?.v3EntryMode||this.v33Frame?.bundle?.mode||null,direction:sig.direction==='HIGH'?1:-1,score:quality?.quality??observed.preferred?.score??0,regime:view.v3Story?.state||'UNKNOWN',decision:clone(view.v33EntryContext),signalId:sig.id});
     }
     if(this.v33Frame?.error)view.v33Elliott.error=this.v33Frame.error;
     this.lastView=view;
@@ -536,3 +538,4 @@ if(core?.CFG?.version==='ARIS-3.3.0'&&root.ArisV33BaseEngine){
 }
 function dirLabelForEntry(d){return d>0?'HIGH':'LOW';}
 })(typeof globalThis!=='undefined'?globalThis:window);
+

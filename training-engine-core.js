@@ -149,7 +149,7 @@ const ARIS_V31_CONFIG=Object.freeze({...ARIS_V2_CONFIG,
  v3ReplayMinFlow:.015,v3ShockExhaustExtension:2.25,v3AbsorbProgressAtr:.12,v3ShockMaxResolveMs:10000,v3ShockReleaseMs:22000,
  v3HtfObstacleAtr:.25,v3BreakoutMaxChaseAtr:1.05,v31DualHtfNewLegGuard:true
 });
-const ARIS_V33_CONFIG=Object.freeze({...ARIS_V31_CONFIG,version:'ARIS-3.3.0',arisRevision:'elliott-entry-v33-r8-t10',elliottInfluence:true});
+const ARIS_V33_CONFIG=Object.freeze({...ARIS_V31_CONFIG,version:'ARIS-3.3.0',arisRevision:'elliott-entry-v33-r9-confirmed-entry',elliottInfluence:true});
 const ARIS_V32_CONFIG=Object.freeze({...ARIS_V31_CONFIG,
  version:'ARIS-3.2.0',arisRevision:'stage-adaptive-v3.2-r1'
 });
@@ -1688,3 +1688,4 @@ globalThis.__TRAINING_ENGINE_READY__={
   version:globalThis.EventSignalV6?.CFG?.version||null,
   schema:globalThis.EventSignalV6?.DATASET_SCHEMA||null
 };
+
