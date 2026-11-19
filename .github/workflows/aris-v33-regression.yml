@@ -16,6 +16,8 @@ on:
       - 'replay-engine.js'
       - 'training-validation.js'
       - 'index.html'
+      - 'liquidation-heatmap.js'
+      - 'tests/liquidation-heatmap.cjs'
       - 'tests/v33-smoke.cjs'
       - 'tests/v33-timing.cjs'
       - 'tests/v2-regression.cjs'
@@ -34,6 +36,8 @@ on:
       - 'replay-engine.js'
       - 'training-validation.js'
       - 'index.html'
+      - 'liquidation-heatmap.js'
+      - 'tests/liquidation-heatmap.cjs'
       - 'tests/v33-smoke.cjs'
       - 'tests/v33-timing.cjs'
       - 'tests/v2-regression.cjs'
@@ -54,3 +58,5 @@ jobs:
         run: node tests/v33-timing.cjs
       - name: Protect ARIS 2.0 and previous engines
         run: node tests/v2-regression.cjs
+      - name: Test observed liquidation heatmap
+        run: node tests/liquidation-heatmap.cjs
