@@ -17,6 +17,8 @@ on:
       - 'training-validation.js'
       - 'index.html'
       - 'liquidation-heatmap.js'
+      - 'estimated-liquidation.js'
+      - 'tests/estimated-liquidation.cjs'
       - 'tests/liquidation-heatmap.cjs'
       - 'tests/v33-smoke.cjs'
       - 'tests/v33-timing.cjs'
@@ -37,6 +39,8 @@ on:
       - 'training-validation.js'
       - 'index.html'
       - 'liquidation-heatmap.js'
+      - 'estimated-liquidation.js'
+      - 'tests/estimated-liquidation.cjs'
       - 'tests/liquidation-heatmap.cjs'
       - 'tests/v33-smoke.cjs'
       - 'tests/v33-timing.cjs'
@@ -60,3 +64,5 @@ jobs:
         run: node tests/v2-regression.cjs
       - name: Test observed liquidation heatmap
         run: node tests/liquidation-heatmap.cjs
+      - name: Test estimated liquidation stress scenarios
+        run: node tests/estimated-liquidation.cjs

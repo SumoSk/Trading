@@ -1183,6 +1183,16 @@ main{padding-top:10px}
 
 .setup-profile-compact .compact-brief-summary:empty{display:none!important}
 
+
+/* Estimated scenario map: distinct from observed executed forceOrder tape. */
+#estimated-liq-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.liq-maps-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end;width:100%}
+.liq-maps-toolbar .liq-heatmap-control{margin-left:0}
+.liq-maps-title{font:600 10px/1.3 'Segoe UI',Tahoma,sans-serif;color:#b3c4db;margin-right:auto}
+.liq-model-note{font:10px/1.4 'Segoe UI',Tahoma,sans-serif;color:#e3c77e;padding:2px 8px}
+.liq-maps-toolbar .liq-heatmap-note{max-width:100%}
+@media(max-width:620px){.liq-maps-toolbar{justify-content:flex-start}.liq-maps-title{width:100%}.liq-maps-toolbar .liq-heatmap-control{width:auto}}
+
 /* Binance observed liquidation snapshots: drawn on top of the existing chart. */
 .liq-heatmap-control{display:flex;align-items:center;gap:7px;margin-left:auto;flex-wrap:wrap}
 .liq-heatmap-toggle{min-height:27px;padding:4px 9px;border:1px solid #60502d;border-radius:7px;background:#201d1b;color:#ead18a;font:600 10px/1.2 'Segoe UI',Tahoma,sans-serif}
@@ -2144,9 +2154,9 @@ body.toolbar-floating #chart-toolbar>*:not(.timeframes):not(:last-child)::after,
       </details>
     </div>
   </div>
-  <div class="chart-meta"><span><span id="chart-symbol">BTCUSDT</span> <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span><div class="liq-heatmap-control"><button type="button" id="liq-heatmap-toggle" class="liq-heatmap-toggle" aria-pressed="true" title="ข้อมูล Binance @forceOrder: เหตุการณ์ล้างพอร์ตที่เกิดขึ้นแล้ว ไม่ใช่จุดล้างพอร์ตของสถานะที่ยังเปิดอยู่">Liq Heatmap <b>เปิด</b></button><small id="liq-heatmap-note" class="liq-heatmap-note" title="ข้อมูล Binance @forceOrder เป็นสแนปช็อตสูงสุดหนึ่งรายการต่อวินาทีต่อสัญลักษณ์ ไม่ครอบคลุมการล้างพอร์ตทั้งหมด">รอการล้างพอร์ตจริงจาก Binance</small></div></div>
+  <div class="chart-meta"><span><span id="chart-symbol">BTCUSDT</span> <b id="tf-label">1 นาที</b></span><span id="ohlc" class="ohlc">กำลังโหลดข้อมูล</span><div class="liq-maps-toolbar" role="group" aria-label="เลือกการแสดงแผนที่ Liquidation"><span class="liq-maps-title">Liquidation · Binance</span><div class="liq-heatmap-control"><button type="button" id="estimated-liq-toggle" class="liq-heatmap-toggle" aria-pressed="true" title="แบบจำลองจาก OI ที่เพิ่มและราคาแท่ง 5 นาที โดยสมมติ Leverage 10/20/50/100 เท่า ไม่ใช่ข้อมูลสถานะที่เปิดจริง">ประมาณการ <b>เปิด</b></button></div><div class="liq-heatmap-control"><button type="button" id="liq-heatmap-toggle" class="liq-heatmap-toggle" aria-pressed="true" title="Binance forceOrder: การล้างพอร์ตที่เกิดขึ้นแล้วเท่านั้น">เกิดขึ้นแล้ว <b>เปิด</b></button></div></div><div class="liq-model-note" id="estimated-liq-status" role="status" title="แถบเป็นแรงกระจุกสัมพัทธ์จากสถานการณ์สมมติ ไม่ใช่ตัวเลข USD หรือราคาล้างพอร์ตจริง">ประมาณการ: กำลังเตรียมข้อมูล</div><div class="liq-heatmap-note" id="liq-heatmap-note" title="Binance forceOrder ส่งเพียงบางสแนปช็อต ไม่ครอบคลุมทุกเหตุการณ์">รอการล้างพอร์ตจริงจาก Binance</div></div>
   <div id="feed-banner" class="feed-banner" role="status">กำลังโหลดข้อมูลจริงจาก Binance</div>
-  <div class="chart-wrap"><div id="chart"></div><canvas id="liq-heatmap-canvas" aria-hidden="true"></canvas><svg id="drawing-overlay" class="drawing-overlay" aria-label="พื้นที่ตีเส้นบนกราฟ"></svg><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" id="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
+  <div class="chart-wrap"><div id="chart"></div><canvas id="estimated-liq-canvas" aria-hidden="true"></canvas><canvas id="liq-heatmap-canvas" aria-hidden="true"></canvas><svg id="drawing-overlay" class="drawing-overlay" aria-label="พื้นที่ตีเส้นบนกราฟ"></svg><div id="left-line-labels" class="left-line-labels" aria-hidden="true"></div><div id="right-order-labels" class="right-order-labels" aria-hidden="true"></div><div class="chart-watermark" id="chart-watermark" aria-hidden="true">BTC<span>EVENT SIGNALS</span></div></div>
   <span id="zone-legend" hidden></span>
 </section>
 <aside class="signal-panel wait" id="signal-panel">
@@ -4271,6 +4281,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
 <script src="replay-engine.js?v=20261010-r9-confirmed-entry"></script>
 <script src="training-analytics.js?v=20261001-r1"></script>\n<script src="10-candle-challenge.js?v=20261003-r10"></script>\n<script src="training-lab.js?v=20261004-r18"></script>\n<script src="training-validation.js?v=20261010-r9-confirmed-entry"></script>
 <script src="liquidation-heatmap.js?v=20261120-r1"></script>
+<script src="estimated-liquidation.js?v=20261120-r1"></script>
 <script>
 'use strict';
 (() => {
@@ -4323,6 +4334,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
     tradeTape: [],
     liquidationTape: [],
     heatmap: null,
+    estimatedHeatmap: null,
     book: null,
     socket: null,
     bookSocket: null,
@@ -4592,6 +4604,7 @@ root.ArisV1Engine={version:CFG.version,BIAS_WEIGHTS,arisBias,arisRegimeRaw,timin
   document.addEventListener('elliott-export',()=>{if(engine.elliott)downloadText(JSON.stringify({evaluation:engine.elliott.report(),state:engine.elliott.serialize()},null,2),'ARIS-3.3-Elliott-'+Date.now()+'.json','application/json');});
   function renderDrawingOverlay(){
    state.heatmap?.render();
+   state.estimatedHeatmap?.render();
    cancelAnimationFrame(drawingRenderFrame);
    drawingRenderFrame=requestAnimationFrame(()=>{
     const svg=$('drawing-overlay');if(!svg||!state.chartReady)return;
@@ -7192,6 +7205,7 @@ function openReport(){
     $('chart')?.addEventListener('pointerup',()=>requestAnimationFrame(renderDrawingOverlay),{passive:true});
     state.chartReady=true;
     try{if(window.ArisLiquidationHeatmap)state.heatmap=window.ArisLiquidationHeatmap.create({chart,series:state.candleSeries,canvas:$('liq-heatmap-canvas'),toggle:$('liq-heatmap-toggle'),status:$('liq-heatmap-note'),symbol:SYMBOL});}catch(err){console.warn('Liquidation Heatmap unavailable',err);}
+    try{if(window.ArisEstimatedLiq)state.estimatedHeatmap=window.ArisEstimatedLiq.create({chart,series:state.candleSeries,canvas:$('estimated-liq-canvas'),toggle:$('estimated-liq-toggle'),status:$('estimated-liq-status'),symbol:SYMBOL});}catch(err){console.warn('Estimated liquidation scenario unavailable',err);}
     setIndicatorsExpanded(state.indicatorsExpanded);
     // Safari sometimes measures the auto-sized canvas before grid/font layout settles.
     requestAnimationFrame(()=>{const el=$('chart');if(state.chart&&el?.clientWidth>0&&el.clientHeight>0)state.chart.resize(el.clientWidth,el.clientHeight);});
